@@ -26,24 +26,24 @@
       <url>http://www.eclipse.org/legal/epl-v10.html</url>
     </license>
   </licenses>
-
+  
   <distributionManagement>
-    <repository>
-      <id>repo.eclipse.org</id>
-      <name>Eclipse SmartHome Repository - Releases</name>
-      <url>https://repo.eclipse.org/content/repositories/smarthome-releases/</url>
-    </repository>
-    <snapshotRepository>
-      <id>repo.eclipse.org</id>
-      <name>Eclipse SmartHome Repository - Snapshots</name>
-      <url>https://repo.eclipse.org/content/repositories/smarthome-snapshots/</url>
-    </snapshotRepository>
+      <repository>
+          <id>repo.eclipse.org</id>
+          <name>Eclipse SmartHome Repository - Releases</name>
+          <url>https://repo.eclipse.org/content/repositories/smarthome-releases/</url>
+      </repository>
+      <snapshotRepository>
+          <id>repo.eclipse.org</id>
+          <name>Eclipse SmartHome Repository - Snapshots</name>
+          <url>https://repo.eclipse.org/content/repositories/smarthome-snapshots/</url>
+      </snapshotRepository>
   </distributionManagement>
 
   <description>This is the Eclipse SmartHome project</description>
 
   <properties>
-    <tycho-version>0.20.0</tycho-version>
+    <tycho-version>0.22.0</tycho-version>
     <tycho-groupid>org.eclipse.tycho</tycho-groupid>
     <xtext-version>2.6.2</xtext-version>
     <build.helper.maven.plugin.version>1.8</build.helper.maven.plugin.version>
