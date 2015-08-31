@@ -10,6 +10,8 @@ package org.eclipse.smarthome.core.thing.dto;
 import java.util.List;
 import java.util.Map;
 
+import org.eclipse.smarthome.config.core.Configuration;
+
 /**
  * This is a data transfer object that is used to serialize channels.
  *
@@ -21,15 +23,17 @@ public class ChannelDTO {
     public List<String> linkedItems;
     public String id;
     public String itemType;
+    public Map<String, Object> configuration;
     public Map<String, String> properties;
 
     public ChannelDTO() {
     }
 
-    public ChannelDTO(String id, String itemType, List<String> linkedItems, Map<String, String> properties) {
+    public ChannelDTO(String id, String itemType, List<String> linkedItems, Configuration configuration, Map<String, String> properties) {
         this.id = id;
         this.itemType = itemType;
         this.linkedItems = linkedItems;
+        this.configuration = DTOUtil.toMap(configuration);
         this.properties = properties;
     }
 
