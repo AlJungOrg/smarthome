@@ -55,6 +55,7 @@ import org.slf4j.LoggerFactory;
  * @author Andre Fuechsel - implemented getFullLights(), startSearch()
  * @author Thomas Höfer - added thing properties
  * @author Stefan Bußweiler - Added new thing status handling
+ * @author Jochen Hiller - fixed status updates, use reachable=true/false for state compare
  */
 public class HueBridgeHandler extends BaseBridgeHandler {
 
@@ -203,7 +204,7 @@ public class HueBridgeHandler extends BaseBridgeHandler {
             try {
                 bridge.setLightState(light, stateUpdate);
             } catch (DeviceOffException e) {
-                updateLightState(light, LightStateConverter.toColorLightState(OnOffType.ON));
+                updateLightState(light, LightStateConverter.toOnOffLightState(OnOffType.ON));
                 updateLightState(light, stateUpdate);
             } catch (IOException | ApiException e) {
                 throw new RuntimeException(e);
@@ -301,6 +302,8 @@ public class HueBridgeHandler extends BaseBridgeHandler {
                     logger.info("User '{}' has been successfully added to Hue bridge.", userName);
                 } catch (Exception ex) {
                     logger.debug("Failed adding user '{}' to Hue bridge.", userName);
+                    updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.OFFLINE.CONFIGURATION_ERROR,
+                            "Not authenticated - press pairing button on the bridge or change username.");
                 }
             }
         }
@@ -378,7 +381,9 @@ public class HueBridgeHandler extends BaseBridgeHandler {
                     && state1.getBrightness() == state2.getBrightness()
                     && state1.getColorMode().equals(state2.getColorMode())
                     && state1.getColorTemperature() == state2.getColorTemperature()
-                    && state1.getHue() == state2.getHue() && state1.getSaturation() == state2.getSaturation();
+                    && state1.getHue() == state2.getHue()
+                    && state1.getSaturation() == state2.getSaturation()
+                    && state1.isReachable() == state2.isReachable();
         } catch (Exception e) {
             // if a device does not support color, the Jue library throws an NPE
             // when testing for color-related properties
