@@ -31,7 +31,6 @@ public class ChannelDTOMapper {
         for (Item item : channel.getLinkedItems()) {
             linkedItemNames.add(item.getName());
         }
-        return new ChannelDTO(channel.getUID().getId(), channel.getAcceptedItemType().toString(), linkedItemNames,
-                channel.getProperties());
+        return new ChannelDTO(channel.getUID().getId(), channel.getAcceptedItemType().toString(), linkedItemNames, channel.getConfiguration(), channel.getProperties());
     }
 }

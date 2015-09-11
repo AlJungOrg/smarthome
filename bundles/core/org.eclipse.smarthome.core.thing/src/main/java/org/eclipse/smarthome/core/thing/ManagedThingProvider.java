@@ -13,6 +13,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import org.eclipse.smarthome.config.core.Configuration;
 import org.eclipse.smarthome.core.common.registry.DefaultAbstractManagedProvider;
 import org.eclipse.smarthome.core.thing.binding.ThingHandlerFactory;
+import org.eclipse.smarthome.core.thing.binding.builder.ChannelBuilder;
+import org.eclipse.smarthome.core.thing.util.ThingHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +33,17 @@ public class ManagedThingProvider extends DefaultAbstractManagedProvider<Thing, 
     private final Logger logger = LoggerFactory.getLogger(ManagedThingProvider.class);
 
     private List<ThingHandlerFactory> thingHandlerFactories = new CopyOnWriteArrayList<>();
+    
+    
+    protected void addThingHandlerFactory(ThingHandlerFactory thingHandlerFactory) {
+        this.thingHandlerFactories.add(thingHandlerFactory);
+    }
 
+    protected void removeThingHandlerFactory(ThingHandlerFactory thingHandlerFactory) {
+        this.thingHandlerFactories.remove(thingHandlerFactory);
+    }
+
+    
     /**
      * Creates a thing based on the given configuration properties, adds it and
      * informs all listeners.
@@ -48,8 +60,7 @@ public class ManagedThingProvider extends DefaultAbstractManagedProvider<Thing, 
      *            the configuration
      * @return the created thing
      */
-    public Thing createThing(ThingTypeUID thingTypeUID, ThingUID thingUID, ThingUID bridgeUID,
-            Configuration configuration) {
+    public Thing createThing(ThingTypeUID thingTypeUID, ThingUID thingUID, ThingUID bridgeUID, Configuration configuration) {
         logger.debug("Creating thing for type '{}'.", thingTypeUID);
         for (ThingHandlerFactory thingHandlerFactory : thingHandlerFactories) {
             if (thingHandlerFactory.supportsThingType(thingTypeUID)) {
@@ -63,12 +74,13 @@ public class ManagedThingProvider extends DefaultAbstractManagedProvider<Thing, 
         return null;
     }
 
-    protected void addThingHandlerFactory(ThingHandlerFactory thingHandlerFactory) {
-        this.thingHandlerFactories.add(thingHandlerFactory);
-    }
+    public Channel createChannel(ThingTypeUID thingTypeUID, ChannelUID channelUIDObject, String itemType, Configuration configuration) {
+		return ChannelBuilder.create(channelUIDObject, itemType).withConfiguration(configuration).build();
+	}
 
-    protected void removeThingHandlerFactory(ThingHandlerFactory thingHandlerFactory) {
-        this.thingHandlerFactories.remove(thingHandlerFactory);
+    public void addChannelsToThing(Thing thing, List<Channel> channels) {
+    	ThingHelper.addChannelsToThing(thing, channels);
+        update(thing);
     }
 
     @Override

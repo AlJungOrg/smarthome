@@ -9,9 +9,11 @@ package org.eclipse.smarthome.io.rest.core.thing;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -44,6 +46,7 @@ import org.eclipse.smarthome.core.thing.ManagedThingProvider;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingRegistry;
 import org.eclipse.smarthome.core.thing.ThingUID;
+import org.eclipse.smarthome.core.thing.dto.ChannelDTO;
 import org.eclipse.smarthome.core.thing.dto.ThingDTO;
 import org.eclipse.smarthome.core.thing.link.ItemChannelLink;
 import org.eclipse.smarthome.core.thing.link.ItemChannelLinkRegistry;
@@ -77,20 +80,60 @@ public class ThingResource implements RESTResource {
 
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response create(ThingDTO thingBean) throws IOException {
+    public Response create(ThingDTO thingDTO) throws IOException {
+    	
+        ThingUID thingUIDObject = new ThingUID(thingDTO.UID);
+        ThingUID bridgeUIDObject = null;
 
-        ThingUID thingUIDObject = new ThingUID(thingBean.UID);
-        ThingUID bridgeUID = null;
-
-        if (thingBean.bridgeUID != null) {
-            bridgeUID = new ThingUID(thingBean.bridgeUID);
+        if (thingDTO.bridgeUID != null) {
+        	bridgeUIDObject = new ThingUID(thingDTO.bridgeUID);
         }
 
-        Configuration configuration = getConfiguration(thingBean);
+        Configuration configuration = convertConfiguration(thingDTO.configuration);
 
-        managedThingProvider.createThing(thingUIDObject.getThingTypeUID(), thingUIDObject, bridgeUID, configuration);
+        Thing thing = managedThingProvider.createThing(
+        	thingUIDObject.getThingTypeUID(), thingUIDObject, bridgeUIDObject, configuration);
 
-        return Response.ok().build();
+        List<Channel> channels = new ArrayList<Channel>();
+        for (ChannelDTO channelDTO : thingDTO.channels) {
+        	
+        	String channelId = channelDTO.id;
+        	if (channelId == null) {
+        		channelId = channelDTO.itemType + "_" + System.nanoTime(); 
+        	}
+        	
+        	ChannelUID channelUIDObject = new ChannelUID(thingUIDObject, channelId);
+        	configuration = convertConfiguration(channelDTO.configuration);
+        	Channel channel = managedThingProvider.createChannel(
+        		thingUIDObject.getThingTypeUID(), channelUIDObject, channelDTO.itemType, configuration);
+        	channels.add(channel);
+        }
+        
+        managedThingProvider.addChannelsToThing(thing, channels);
+    	
+        return buildThingResponse(thing);
+    }
+
+    
+    @POST
+    @Path("build/{thingUID}/{bridgeUID}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response build(@PathParam("thingUID") String thingUID, @PathParam("bridgeUID") String bridgeUID, Map<String, Object> thingConfiguration) throws IOException {
+
+        ThingUID thingUIDObject = new ThingUID(thingUID);
+        ThingUID bridgeUIDObject = null;
+
+        if (bridgeUID != null) {
+        	bridgeUIDObject = new ThingUID(bridgeUID);
+        }
+
+        Configuration configuration = new Configuration();
+        configuration.setProperties(convertDoublesToBigDecimal(thingConfiguration));
+
+        Thing thing = managedThingProvider.createThing(
+        	thingUIDObject.getThingTypeUID(), thingUIDObject, bridgeUIDObject, configuration);
+
+        return buildThingResponse(thing);
     }
 
     @GET
@@ -108,11 +151,7 @@ public class ThingResource implements RESTResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getByUID(@PathParam("thingUID") String thingUID) {
         Thing thing = thingRegistry.get((new ThingUID(thingUID)));
-        if (thing != null) {
-            return Response.ok(EnrichedThingDTOMapper.map(thing, uriInfo.getBaseUri())).build();
-        } else {
-            return Response.noContent().build();
-        }
+        return buildThingResponse(thing);
     }
 
     @POST
@@ -205,11 +244,11 @@ public class ThingResource implements RESTResource {
 
         thing.setBridgeUID(bridgeUID);
 
-        updateConfiguration(thing, getConfiguration(thingBean));
+        updateConfiguration(thing, convertConfiguration(thingBean.configuration));
 
         managedThingProvider.update(thing);
 
-        return Response.ok().build();
+        return buildThingResponse(thing);
     }
 
     @PUT
@@ -316,10 +355,18 @@ public class ThingResource implements RESTResource {
         }
     }
 
-    public static Configuration getConfiguration(ThingDTO thingBean) {
+	private Response buildThingResponse(Thing thing) {
+		if (thing != null) {
+            return Response.ok(EnrichedThingDTOMapper.map(thing, uriInfo.getBaseUri())).build();
+        } else {
+            return Response.noContent().build();
+        }
+	}
+
+    public static Configuration convertConfiguration(Map<String, Object> configurationMap) {
         Configuration configuration = new Configuration();
 
-        Map<String, Object> convertDoublesToBigDecimal = convertDoublesToBigDecimal(thingBean.configuration);
+        Map<String, Object> convertDoublesToBigDecimal = convertDoublesToBigDecimal(configurationMap);
         configuration.setProperties(convertDoublesToBigDecimal);
 
         return configuration;

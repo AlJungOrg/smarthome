@@ -66,7 +66,7 @@ public class ThingSetupManagerResource implements RESTResource {
             bridgeUID = new ThingUID(thingBean.bridgeUID);
         }
 
-        Configuration configuration = ThingResource.getConfiguration(thingBean);
+        Configuration configuration = ThingResource.convertConfiguration(thingBean.configuration);
 
         thingSetupManager.addThing(thingUIDObject, configuration, bridgeUID, thingBean.item.label,
                 thingBean.item.groupNames);
@@ -86,7 +86,7 @@ public class ThingSetupManagerResource implements RESTResource {
             bridgeUID = new ThingUID(thingBean.bridgeUID);
         }
 
-        Configuration configuration = ThingResource.getConfiguration(thingBean);
+        Configuration configuration = ThingResource.convertConfiguration(thingBean.configuration);
 
         Thing thing = thingSetupManager.getThing(thingUID);
 

@@ -7,7 +7,6 @@
  */
 package org.eclipse.smarthome.core.thing.dto;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -37,21 +36,8 @@ public class ThingDTO {
         this.UID = UID;
         this.bridgeUID = bridgeUID;
         this.channels = channels;
-        this.configuration = toMap(configuration);
+        this.configuration = DTOUtil.toMap(configuration);
         this.properties = properties;
     }
-
-    private Map<String, Object> toMap(Configuration configuration) {
-
-        if (configuration == null) {
-            return null;
-        }
-
-        Map<String, Object> configurationMap = new HashMap<>(configuration.keySet().size());
-        for (String key : configuration.keySet()) {
-            configurationMap.put(key, configuration.get(key));
-        }
-        return configurationMap;
-    }
-
+    
 }
