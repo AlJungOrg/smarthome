@@ -429,14 +429,13 @@ public class ThingManager extends AbstractItemEventSubscriber implements ThingTr
 
                         @Override
                         public Void call() throws Exception {
-                            thingHandler.thingUpdated(thing);
+                    		thingHandler.thingUpdated(thing);
                             return null;
                         }
                     });
                 }
             } catch (Exception ex) {
-                logger.error("Exception occured while calling thing updated at ThingHandler '" + thingHandler + ": "
-                        + ex.getMessage(), ex);
+                logger.error("Exception occured while calling thing updated at ThingHandler " + thingHandler + ": ", ex);
             }
         } else {
             registerHandler(thing);
