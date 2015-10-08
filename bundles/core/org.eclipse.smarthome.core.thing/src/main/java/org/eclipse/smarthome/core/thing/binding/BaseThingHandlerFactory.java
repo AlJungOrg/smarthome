@@ -87,15 +87,15 @@ public abstract class BaseThingHandlerFactory implements ThingHandlerFactory {
 
     private void unregisterHandler(ServiceRegistration<ThingHandler> serviceRegistration) {
         ThingHandler thingHandler = bundleContext.getService(serviceRegistration.getReference());
-        removeHandler(thingHandler);
-        serviceRegistration.unregister();
         if (thingHandler instanceof BaseThingHandler) {
             ((BaseThingHandler) thingHandler).preDispose();
         }
-        thingHandler.dispose();
+        removeHandler(thingHandler);
+        serviceRegistration.unregister();
         if (thingHandler instanceof BaseThingHandler) {
             ((BaseThingHandler) thingHandler).unsetBundleContext(bundleContext);
         }
+        thingHandler.dispose();
     }
 
     @Override
