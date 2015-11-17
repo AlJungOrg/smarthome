@@ -22,6 +22,7 @@ public class ChannelDTO {
 
     public List<String> linkedItems;
     public String id;
+    public String channelTypeUID;
     public String itemType;
     public Map<String, Object> configuration;
     public Map<String, String> properties;
@@ -29,8 +30,10 @@ public class ChannelDTO {
     public ChannelDTO() {
     }
 
-    public ChannelDTO(String id, String itemType, List<String> linkedItems, Configuration configuration, Map<String, String> properties) {
+    public ChannelDTO(String id, String channelTypeUID, String itemType, List<String> linkedItems, Configuration configuration,
+            Map<String, String> properties) {
         this.id = id;
+        this.channelTypeUID = channelTypeUID;
         this.itemType = itemType;
         this.linkedItems = linkedItems;
         this.configuration = DTOUtil.toMap(configuration);
