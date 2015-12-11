@@ -59,7 +59,7 @@ import io.swagger.annotations.ApiResponses;
  * @author Yordan Zhelev - Added Swagger annotations
  */
 @Path(ThingTypeResource.PATH_THINGS_TYPES)
-@Api
+@Api(value = ThingTypeResource.PATH_THINGS_TYPES)
 public class ThingTypeResource implements RESTResource {
 
     /** The URI path to this resource */
@@ -120,8 +120,13 @@ public class ThingTypeResource implements RESTResource {
 
     private ThingTypeDTO convertToThingTypeDTO(ThingType thingType, Locale locale) {
 
-        ConfigDescription configDescription = this.configDescriptionRegistry
-                .getConfigDescription(thingType.getConfigDescriptionURI(), locale);
+        final ConfigDescription configDescription;
+        if (thingType.hasConfigDescriptionURI()) {
+            configDescription = this.configDescriptionRegistry.getConfigDescription(thingType.getConfigDescriptionURI(),
+                    locale);
+        } else {
+            configDescription = null;
+        }
 
         List<ConfigDescriptionParameterDTO> parameters;
         List<ConfigDescriptionParameterGroupDTO> parameterGroups;

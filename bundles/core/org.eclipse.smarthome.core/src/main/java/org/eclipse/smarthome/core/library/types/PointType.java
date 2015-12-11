@@ -22,6 +22,7 @@ import org.eclipse.smarthome.core.types.State;
  * location awareness functionality.
  *
  * @author Gaël L'hopital
+ * @author John Cocula
  *
  */
 public class PointType implements ComplexType, Command, State {
@@ -70,12 +71,18 @@ public class PointType implements ComplexType, Command, State {
     }
 
     public PointType(String value) {
+        if (value == null) {
+            throw new IllegalArgumentException("Constructor argument must not be null");
+        }
         if (!value.isEmpty()) {
             String[] elements = value.split(",");
             if (elements.length >= 2) {
                 canonicalize(new DecimalType(elements[0]), new DecimalType(elements[1]));
                 if (elements.length == 3) {
                     setAltitude(new DecimalType(elements[2]));
+                } else if (elements.length > 3) {
+                    throw new IllegalArgumentException(value
+                            + " is not a valid PointType syntax. The syntax must not consist of more than 3 elements.");
                 }
             } else {
                 throw new IllegalArgumentException(value + " is not a valid PointType syntax");
@@ -197,6 +204,39 @@ public class PointType implements ComplexType, Command, State {
             longitude = longitude.add(circle);
         longitude = longitude.subtract(flat);
 
+    }
+
+    @Override
+    public int hashCode() {
+        int tmp = 10000 * (getLatitude() == null ? 0 : getLatitude().hashCode());
+        tmp += 100 * (getLongitude() == null ? 0 : getLongitude().hashCode());
+        tmp += (getAltitude() == null ? 0 : getAltitude().hashCode());
+        return tmp;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (!(obj instanceof PointType))
+            return false;
+        PointType other = (PointType) obj;
+        if ((getLatitude() != null && other.getLatitude() == null)
+                || (getLatitude() == null && other.getLatitude() != null)
+                || (getLongitude() != null && other.getLongitude() == null)
+                || (getLongitude() == null && other.getLongitude() != null)
+                || (getAltitude() != null && other.getAltitude() == null)
+                || (getAltitude() == null && other.getAltitude() != null)) {
+            return false;
+        }
+        if (!getLatitude().equals(other.getLatitude())
+                || !getLongitude().equals(other.getLongitude())
+                || !getAltitude().equals(other.getAltitude())) {
+            return false;
+        }
+        return true;
     }
 
 }

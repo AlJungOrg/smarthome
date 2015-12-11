@@ -12,6 +12,7 @@ package org.eclipse.smarthome.binding.hue.test
  * Builder for the current state of a hue light.
  *
  * @author Dominic Lerbs - Initial contribution
+ * @author Markus Mazurczak - Added possibility to set modelId to "PAR16 50 TW" to test osram workaround
  */
 class HueLightState {
 
@@ -46,7 +47,6 @@ class HueLightState {
         this.isOn = isOn
         return this
     }
-
 
     public String toString(){
         def state = """

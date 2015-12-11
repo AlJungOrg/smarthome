@@ -45,6 +45,7 @@ import nl.q42.jue.StateUpdate;
  * @author Andre Fuechsel - implemented switch off when brightness == 0
  * @author Thomas Höfer - added thing properties
  * @author Jochen Hiller - fixed status updates for reachable=true/false
+ * @author Markus Mazurczak - added code for command handling of OSRAM PAR16 50 bulbs
  */
 public class HueLightHandler extends BaseThingHandler implements LightStatusListener {
 
@@ -53,7 +54,7 @@ public class HueLightHandler extends BaseThingHandler implements LightStatusList
             THING_TYPE_LLC010, THING_TYPE_LLC011, THING_TYPE_LLC012, THING_TYPE_LLC013, THING_TYPE_LWL001,
             THING_TYPE_LST001, THING_TYPE_LST002, THING_TYPE_LCT003, THING_TYPE_LWB004, THING_TYPE_LWB006,
             THING_TYPE_LWB007, THING_TYPE_CLASSIC_A60_RGBW, THING_TYPE_SURFACE_LIGHT_TW, THING_TYPE_ZLL_LIGHT,
-            THING_TYPE_LLC020);
+            THING_TYPE_LLC020, THING_TYPE_PAR16_50_TW);
 
     private String lightId;
 
@@ -61,6 +62,9 @@ public class HueLightHandler extends BaseThingHandler implements LightStatusList
     private Integer lastSentBrightness;
 
     private Logger logger = LoggerFactory.getLogger(HueLightHandler.class);
+
+    // Flag to indicate whether the bulb is of type Osram par16 50 TW or not
+    private boolean isOsramPar16 = false;
 
     private HueBridgeHandler bridgeHandler;
 
@@ -81,6 +85,7 @@ public class HueLightHandler extends BaseThingHandler implements LightStatusList
                 FullLight fullLight = getLight();
                 if (fullLight != null) {
                     updateProperty(Thing.PROPERTY_FIRMWARE_VERSION, fullLight.getSoftwareVersion());
+                    isOsramPar16 = THING_TYPE_PAR16_50_TW.equals(getThing().getThingTypeUID());
                 }
             }
         }
@@ -122,13 +127,15 @@ public class HueLightHandler extends BaseThingHandler implements LightStatusList
         }
 
         StateUpdate lightState = null;
-
         switch (channelUID.getId()) {
             case CHANNEL_COLORTEMPERATURE:
                 if (command instanceof PercentType) {
                     lightState = LightStateConverter.toColorTemperatureLightState((PercentType) command);
                 } else if (command instanceof OnOffType) {
                     lightState = LightStateConverter.toOnOffLightState((OnOffType) command);
+                    if (isOsramPar16) {
+                        lightState = addOsramSpecificCommands(lightState, (OnOffType) command);
+                    }
                 } else if (command instanceof IncreaseDecreaseType) {
                     lightState = convertColorTempChangeToStateUpdate((IncreaseDecreaseType) command, light);
                 }
@@ -138,6 +145,9 @@ public class HueLightHandler extends BaseThingHandler implements LightStatusList
                     lightState = LightStateConverter.toBrightnessLightState((PercentType) command);
                 } else if (command instanceof OnOffType) {
                     lightState = LightStateConverter.toOnOffLightState((OnOffType) command);
+                    if (isOsramPar16) {
+                        lightState = addOsramSpecificCommands(lightState, (OnOffType) command);
+                    }
                 } else if (command instanceof IncreaseDecreaseType) {
                     lightState = convertBrightnessChangeToStateUpdate((IncreaseDecreaseType) command, light);
                 }
@@ -164,6 +174,19 @@ public class HueLightHandler extends BaseThingHandler implements LightStatusList
         } else {
             logger.warn("Command send to an unknown channel id: " + channelUID);
         }
+    }
+
+    /*
+     * Applies additional {@link StateUpdate} commands as a workaround for Osram Lightify PAR16 TW firmware bug.
+     * Also see http://www.everyhue.com/vanilla/discussion/1756/solved-lightify-turning-off
+     */
+    private StateUpdate addOsramSpecificCommands(StateUpdate lightState, OnOffType actionType) {
+        if (actionType.equals(OnOffType.ON)) {
+            lightState.setBrightness(254);
+        } else {
+            lightState.setTransitionTime(0);
+        }
+        return lightState;
     }
 
     private StateUpdate convertColorTempChangeToStateUpdate(IncreaseDecreaseType command, FullLight light) {
@@ -214,7 +237,7 @@ public class HueLightHandler extends BaseThingHandler implements LightStatusList
             lightUpdate.turnOff();
         } else {
             lightUpdate.setBrightness(newBrightness);
-            if (currentBrightness == 0){
+            if (currentBrightness == 0) {
                 lightUpdate.turnOn();
             }
         }

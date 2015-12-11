@@ -14,6 +14,7 @@ import static org.junit.matchers.JUnitMatchers.*
 import nl.q42.jue.MockedHttpClient
 import nl.q42.jue.HttpClient.Result
 
+import org.eclipse.smarthome.binding.hue.HueBindingConstants
 import org.eclipse.smarthome.binding.hue.handler.HueBridgeHandler
 import org.eclipse.smarthome.binding.hue.handler.HueLightHandler
 import org.eclipse.smarthome.config.core.Configuration
@@ -47,12 +48,14 @@ import org.junit.Test
  *
  * @author Oliver Libutzki - Initial contribution
  * @author Michael Grammling - Initial contribution
+ * @author Markus Mazurczak - Added test for OSRAM Par16 50 TW bulbs
  */
 class HueLightHandlerOSGiTest extends OSGiTest {
 
     final ThingTypeUID BRIDGE_THING_TYPE_UID = new ThingTypeUID("hue", "bridge")
     final ThingTypeUID COLOR_LIGHT_THING_TYPE_UID = new ThingTypeUID("hue", "LCT001")
     final ThingTypeUID LUX_LIGHT_THING_TYPE_UID = new ThingTypeUID("hue", "LWB004")
+    final ThingTypeUID OSRAM_PAR16_LIGHT_THING_TYPE_UID = new ThingTypeUID("hue", "PAR16_50_TW")
 
     ManagedThingProvider managedThingProvider
     VolatileStorageService volatileStorageService = new VolatileStorageService()
@@ -126,90 +129,74 @@ class HueLightHandlerOSGiTest extends OSGiTest {
     }
 
     @Test
+    void 'assert command for osram par16 50 for color temperature channel: on'() {
+        def expectedReply = '{"on" : true, "bri" : 254}'
+        assertSendCommandForColorTempForPar16(OnOffType.ON, new HueLightState(), expectedReply)
+    }
+
+    @Test
+    void 'assert command for osram par16 50 for color temperature channel: off'() {
+        def expectedReply = '{"on" : false, "transitiontime" : 0}'
+        assertSendCommandForColorTempForPar16(OnOffType.OFF, new HueLightState(), expectedReply)
+    }
+
+    @Test
+    void 'assert command for osram par16 50 for brightness channel: on'() {
+        def expectedReply = '{"on" : true, "bri" : 254}'
+        assertSendCommandForBrightnessForPar16(OnOffType.ON, new HueLightState(), expectedReply)
+    }
+
+    @Test
+    void 'assert command for osram par16 50 for brightness channel: off'() {
+        def expectedReply = '{"on" : false, "transitiontime" : 0}'
+        assertSendCommandForBrightnessForPar16(OnOffType.OFF, new HueLightState(), expectedReply)
+    }
+
+    @Test
     void 'assert command for color channel: on'() {
-        def expectedReply =
-                """
-                {
-                    "on" : true
-                }
-                """
+        def expectedReply = '{"on" : true}'
         assertSendCommandForColor(OnOffType.ON, new HueLightState(), expectedReply)
     }
 
     @Test
     void 'assert command for color temperature channel: on'() {
-        def expectedReply =
-                """
-                {
-                    "on" : true
-                }
-                """
+        def expectedReply = '{"on" : true}'
         assertSendCommandForColorTemp(OnOffType.ON, new HueLightState(), expectedReply)
     }
 
     @Test
     void 'assert command for color channel: off'() {
-        def expectedReply =
-                """
-                {
-                    "on" : false
-                }
-                """
+        def expectedReply = '{"on" : false}'
         assertSendCommandForColor(OnOffType.OFF, new HueLightState(), expectedReply)
     }
 
     @Test
     void 'assert command for color temperature channel: off'() {
-        def expectedReply =
-                """
-                {
-                    "on" : false
-                }
-                """
+        def expectedReply = '{"on" : false}'
         assertSendCommandForColorTemp(OnOffType.OFF, new HueLightState(), expectedReply)
     }
 
     @Test
     void 'assert command for color temperature channel: 0%'() {
-        def expectedReply =
-                """
-                {
-                    "ct" : 153
-                }
-                """
+        def expectedReply = '{"ct" : 153}'
         assertSendCommandForColorTemp(new PercentType(0), new HueLightState(), expectedReply)
     }
 
     @Test
     void 'assert command for color temperature channel: 50%'() {
-        def expectedReply =
-                """
-                {
-                    "ct" : 327
-                }
-                """
+        def expectedReply = '{"ct" : 327}'
         assertSendCommandForColorTemp(new PercentType(50), new HueLightState(), expectedReply)
     }
 
     @Test
     void 'assert command for color temperature channel: 100%'() {
-        def expectedReply =
-                """
-                {
-                    "ct" : 500
-                }
-                """
+        def expectedReply = '{"ct" : 500}'
         assertSendCommandForColorTemp(new PercentType(100), new HueLightState(), expectedReply)
     }
 
     @Test
     void 'assert command for color channel: 0%'() {
-        def expectedReply =
-                """
-                {
-                    "on" : false
-                }
-                """
+        def expectedReply = '{"on" : false}'
         assertSendCommandForColor(new PercentType(0), new HueLightState(), expectedReply)
     }
 
@@ -239,13 +226,8 @@ class HueLightHandlerOSGiTest extends OSGiTest {
 
     @Test
     void 'assert command for color channel: black'() {
-        def expectedBody =
-                """
-                {
-                    "on" : false
-                }
-                """
-        assertSendCommandForColor(HSBType.BLACK, new HueLightState(), expectedBody)
+        def expectedReply = '{"on" : false}'
+        assertSendCommandForColor(HSBType.BLACK, new HueLightState(), expectedReply)
     }
 
     @Test
@@ -346,6 +328,27 @@ class HueLightHandlerOSGiTest extends OSGiTest {
         assertSendCommandForBrightness(IncreaseDecreaseType.DECREASE, currentState, expectedReply)
     }
 
+    @Test
+    void 'assert command for brightness channel: off'() {
+        def currentState = new HueLightState()
+        def expectedReply ='{"on" : false}'
+        assertSendCommandForBrightness(OnOffType.OFF, currentState, expectedReply)
+    }
+
+    @Test
+    void 'assert command for brightness channel: on'() {
+        def currentState = new HueLightState()
+        def expectedReply ='{"on" : true}'
+        assertSendCommandForBrightness(OnOffType.ON, currentState, expectedReply)
+    }
+
+    private void assertSendCommandForColorTempForPar16(Command command, HueLightState currentState, String expectedReply) {
+        assertSendCommand(CHANNEL_COLORTEMPERATURE, command, OSRAM_PAR16_LIGHT_THING_TYPE_UID, currentState, expectedReply)
+    }
+
+    private void assertSendCommandForBrightnessForPar16(Command command, HueLightState currentState, String expectedReply) {
+        assertSendCommand(CHANNEL_BRIGHTNESS, command, OSRAM_PAR16_LIGHT_THING_TYPE_UID, currentState, expectedReply)
+    }
 
     private void assertSendCommandForColor(Command command, HueLightState currentState, String expectedReply) {
         assertSendCommand(CHANNEL_COLOR, command, COLOR_LIGHT_THING_TYPE_UID, currentState, expectedReply)
@@ -394,6 +397,7 @@ class HueLightHandlerOSGiTest extends OSGiTest {
 
             assertBridgeOnline(hueLightHandler.getBridge())
             enableHueLightChannels(hueLight)
+            hueLightHandler.initialize()
             postCommand(hueLight, channel, command)
 
             waitForAssert({assertTrue addressWrapper.isSet}, 10000)
