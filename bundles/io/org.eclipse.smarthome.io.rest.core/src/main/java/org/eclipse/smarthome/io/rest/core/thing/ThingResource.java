@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -57,7 +58,7 @@ import org.eclipse.smarthome.core.thing.link.ManagedItemChannelLinkProvider;
 import org.eclipse.smarthome.io.rest.ConfigUtil;
 import org.eclipse.smarthome.io.rest.LocaleUtil;
 import org.eclipse.smarthome.io.rest.RESTResource;
-import org.eclipse.smarthome.io.rest.core.internal.JSONResponse;
+import org.eclipse.smarthome.io.rest.core.JSONResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -109,7 +110,9 @@ public class ThingResource implements RESTResource {
     @ApiOperation(value = "Adds a new thing to the registry.")
     @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
             @ApiResponse(code = 400, message = "No binding can create the thing.") })
-    public Response create(@ApiParam(value = "thing data", required = true) ThingDTO thingBean) {
+    public Response create(@HeaderParam(HttpHeaders.ACCEPT_LANGUAGE) @ApiParam(value = "language") String language,
+            @ApiParam(value = "thing data", required = true) ThingDTO thingBean) {
+        final Locale locale = LocaleUtil.getLocale(language);
 
         ThingUID thingUIDObject = new ThingUID(thingBean.UID);
         ThingUID bridgeUIDObject = null;
@@ -152,14 +155,15 @@ public class ThingResource implements RESTResource {
             status = Status.CONFLICT;
         }
 
-        return getThingResponse(status, thing, "Thing " + thingUIDObject.toString() + " already exists!");
+        return getThingResponse(status, thing, locale, "Thing " + thingUIDObject.toString() + " already exists!");
     }
     
     @POST
     @Path("build/{thingUID}/{bridgeUID}")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response build(@PathParam("thingUID") String thingUID, @PathParam("bridgeUID") String bridgeUID, Map<String, Object> thingConfiguration) throws IOException {
-    	
+    public Response build(@HeaderParam(HttpHeaders.ACCEPT_LANGUAGE) @ApiParam(value = "language") String language, @PathParam("thingUID") String thingUID, @PathParam("bridgeUID") String bridgeUID, Map<String, Object> thingConfiguration) throws IOException {
+        final Locale locale = LocaleUtil.getLocale(language);
+
     	ThingUID thingUIDObject = new ThingUID(thingUID);
         ThingUID bridgeUIDObject = null;
         ThingTypeUID thingTypeUIDObject = thingUIDObject.getThingTypeUID();
@@ -180,16 +184,18 @@ public class ThingResource implements RESTResource {
             return Response.status(Status.BAD_REQUEST).build();
         }
 
-        return buildThingResponse(createdThing);
+        return buildThingResponse(createdThing, locale);
     }
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(value = "Get all available things.", response = EnrichedThingDTO.class, responseContainer = "Set")
     @ApiResponses(value = { @ApiResponse(code = 200, message = "OK") })
-    public Response getAll() {
+    public Response getAll(@HeaderParam(HttpHeaders.ACCEPT_LANGUAGE) @ApiParam(value = "language") String language) {
+        final Locale locale = LocaleUtil.getLocale(language);
+
         Collection<Thing> things = thingRegistry.getAll();
-        Set<EnrichedThingDTO> thingBeans = convertToListBean(things);
+        Set<EnrichedThingDTO> thingBeans = convertToListBean(things, locale);
         return Response.ok(thingBeans).build();
     }
 
@@ -199,12 +205,15 @@ public class ThingResource implements RESTResource {
     @ApiOperation(value = "Gets thing by UID.")
     @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
             @ApiResponse(code = 404, message = "Thing with provided thingUID does not exist.") })
-    public Response getByUID(@PathParam("thingUID") @ApiParam(value = "thingUID") String thingUID) {
+    public Response getByUID(@HeaderParam(HttpHeaders.ACCEPT_LANGUAGE) @ApiParam(value = "language") String language,
+            @PathParam("thingUID") @ApiParam(value = "thingUID") String thingUID) {
+        final Locale locale = LocaleUtil.getLocale(language);
+
         Thing thing = thingRegistry.get((new ThingUID(thingUID)));
 
         // return Thing data if it does exist
         if (thing != null) {
-            return getThingResponse(Status.OK, thing, null);
+            return getThingResponse(Status.OK, thing, locale, null);
         } else {
             return getThingNotFoundResponse(thingUID);
         }
@@ -272,8 +281,10 @@ public class ThingResource implements RESTResource {
     @ApiOperation(value = "Removes a thing from the registry. Set \'force\' to __true__ if you want the thing te be removed immediately.")
     @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
             @ApiResponse(code = 404, message = "Thing not found.") })
-    public Response remove(@PathParam("thingUID") @ApiParam(value = "thingUID") String thingUID,
+    public Response remove(@HeaderParam(HttpHeaders.ACCEPT_LANGUAGE) @ApiParam(value = "language") String language,
+            @PathParam("thingUID") @ApiParam(value = "thingUID") String thingUID,
             @DefaultValue("false") @QueryParam("force") @ApiParam(value = "force") boolean force) {
+        final Locale locale = LocaleUtil.getLocale(language);
 
         ThingUID thingUIDObject = new ThingUID(thingUID);
 
@@ -290,19 +301,19 @@ public class ThingResource implements RESTResource {
         if (null == managed) {
             logger.info("Received HTTP DELETE request for update at '{}' for an unmanaged thing '{}'.",
                     uriInfo.getPath(), thingUID);
-            return getThingResponse(Status.CONFLICT, thing,
+            return getThingResponse(Status.CONFLICT, thing, locale,
                     "Cannot delete Thing " + thingUID + ". Maybe it is not managed.");
         }
 
         // only move on if Thing is known to be managed, so it can get updated
         if (force) {
             if (null == thingRegistry.forceRemove(thingUIDObject)) {
-                return getThingResponse(Status.INTERNAL_SERVER_ERROR, thing,
+                return getThingResponse(Status.INTERNAL_SERVER_ERROR, thing, locale,
                         "Cannot delete Thing " + thingUID + " for unknown reasons.");
             }
         } else {
             if (null != thingRegistry.remove(thingUIDObject)) {
-                return getThingResponse(Status.ACCEPTED, thing, null);
+                return getThingResponse(Status.ACCEPTED, thing, locale, null);
             }
         }
 
@@ -348,8 +359,10 @@ public class ThingResource implements RESTResource {
     @ApiOperation(value = "Updates a thing.")
     @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
             @ApiResponse(code = 404, message = "Thing not found") })
-    public Response update(@PathParam("thingUID") @ApiParam(value = "thingUID") String thingUID,
+    public Response update(@HeaderParam(HttpHeaders.ACCEPT_LANGUAGE) @ApiParam(value = "language") String language,
+            @PathParam("thingUID") @ApiParam(value = "thingUID") String thingUID,
             @ApiParam(value = "thing", required = true) ThingDTO thingBean) throws IOException {
+        final Locale locale = LocaleUtil.getLocale(language);
 
         ThingUID thingUIDObject = new ThingUID(thingUID);
         ThingUID bridgeUID = null;
@@ -371,7 +384,7 @@ public class ThingResource implements RESTResource {
         if (null == managed) {
             logger.info("Received HTTP PUT request for update at '{}' for an unmanaged thing '{}'.", uriInfo.getPath(),
                     thingUID);
-            return getThingResponse(Status.CONFLICT, thing,
+            return getThingResponse(Status.CONFLICT, thing, locale,
                     "Cannot update Thing " + thingUID + ". Maybe it is not managed.");
         }
 
@@ -386,7 +399,7 @@ public class ThingResource implements RESTResource {
         }
 
         // everything went well
-        return getThingResponse(Status.OK, thing, null);
+        return getThingResponse(Status.OK, thing, locale, null);
     }
 
     /**
@@ -407,6 +420,7 @@ public class ThingResource implements RESTResource {
             @PathParam("thingUID") @ApiParam(value = "thing") String thingUID,
             @ApiParam(value = "configuration parameters") Map<String, Object> configurationParameters)
                     throws IOException {
+        final Locale locale = LocaleUtil.getLocale(language);
 
         ThingUID thingUIDObject = new ThingUID(thingUID);
 
@@ -423,7 +437,7 @@ public class ThingResource implements RESTResource {
         if (null == managed) {
             logger.info("Received HTTP PUT request for update configuration at '{}' for an unmanaged thing '{}'.",
                     uriInfo.getPath(), thingUID);
-            return getThingResponse(Status.CONFLICT, thing,
+            return getThingResponse(Status.CONFLICT, thing, locale,
                     "Cannot update Thing " + thingUID + ". Maybe it is not managed.");
         }
 
@@ -441,7 +455,7 @@ public class ThingResource implements RESTResource {
             return getThingNotFoundResponse(thingUID);
         }
 
-        return getThingResponse(Status.OK, thing, null);
+        return getThingResponse(Status.OK, thing, locale, null);
     }
 
     @GET
@@ -474,8 +488,8 @@ public class ThingResource implements RESTResource {
      * @param errormessage
      * @return Response
      */
-    private Response getThingResponse(Status status, Thing thing, String errormessage) {
-        Object entity = null != thing ? EnrichedThingDTOMapper.map(thing, uriInfo.getBaseUri()) : null;
+    private Response getThingResponse(Status status, Thing thing, Locale locale, String errormessage) {
+        Object entity = null != thing ? EnrichedThingDTOMapper.map(thing, uriInfo.getBaseUri(), locale) : null;
         return JSONResponse.createResponse(status, entity, errormessage);
     }
 
@@ -543,10 +557,10 @@ public class ThingResource implements RESTResource {
         this.configStatusService = null;
     }
 
-    private Set<EnrichedThingDTO> convertToListBean(Collection<Thing> things) {
+    private Set<EnrichedThingDTO> convertToListBean(Collection<Thing> things, Locale locale) {
         Set<EnrichedThingDTO> thingBeans = new LinkedHashSet<>();
         for (Thing thing : things) {
-            EnrichedThingDTO thingBean = EnrichedThingDTOMapper.map(thing, uriInfo.getBaseUri());
+            EnrichedThingDTO thingBean = EnrichedThingDTOMapper.map(thing, uriInfo.getBaseUri(), locale);
             thingBeans.add(thingBean);
         }
         return thingBeans;
@@ -573,9 +587,9 @@ public class ThingResource implements RESTResource {
         }
     }
 
-	private Response buildThingResponse(Thing thing) {
+	private Response buildThingResponse(Thing thing, Locale locale) {
 		if (thing != null) {
-            return Response.ok(EnrichedThingDTOMapper.map(thing, uriInfo.getBaseUri())).build();
+            return Response.ok(EnrichedThingDTOMapper.map(thing, uriInfo.getBaseUri(), locale)).build();
         } else {
             return Response.noContent().build();
         }
