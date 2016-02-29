@@ -25,6 +25,7 @@ public class ItemDTO {
     public String category;
     public Set<String> tags;
     public List<String> groupNames;
+	public String groupFunction;
 
     public ItemDTO() {
     }
