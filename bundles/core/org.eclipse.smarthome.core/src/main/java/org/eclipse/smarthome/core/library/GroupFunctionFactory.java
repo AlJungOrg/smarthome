@@ -43,7 +43,7 @@ public class GroupFunctionFactory {
     	if (groupFunctionElements.length < 1) {
     		logger.debug("groupFunction '{}' doesn't contain any elements. "
     				+ "Please provide a proper function with all arguments separated by '{}'.", SEPARATOR, groupFunctionElements.toString());
-    		return new GroupFunction.Equality()																																																																																																																																																																																																	;
+    		return GroupItem.createDefaultGroupFunction();
     	}
     	
     	final String function = groupFunctionElements[0];
@@ -120,10 +120,7 @@ public class GroupFunctionFactory {
                 break;
             default:
                 logger.error("Unknown group function '" + function + "'. Using Equality instead.");
-        }
-
-        if (groupFunction == null) {
-            groupFunction = new GroupFunction.Equality();
+                groupFunction = GroupItem.createDefaultGroupFunction();
         }
 
         return groupFunction;
