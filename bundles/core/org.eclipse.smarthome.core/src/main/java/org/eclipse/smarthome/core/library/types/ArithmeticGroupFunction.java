@@ -18,6 +18,8 @@ import org.eclipse.smarthome.core.items.Item;
 import org.eclipse.smarthome.core.types.State;
 import org.eclipse.smarthome.core.types.UnDefType;
 
+import static org.eclipse.smarthome.core.library.GroupFunctionFactory.SEPARATOR;
+
 /**
  * This interface is only a container for functions that require the core type library
  * for its calculations.
@@ -101,6 +103,11 @@ public interface ArithmeticGroupFunction extends GroupFunction {
             return count;
 
         }
+
+        @Override
+		public String toString() {
+			return "AND" + SEPARATOR + activeState + SEPARATOR + passiveState;
+		}
     }
 
     /**
@@ -169,6 +176,11 @@ public interface ArithmeticGroupFunction extends GroupFunction {
             }
             return count;
         }
+        
+        @Override
+		public String toString() {
+			return "OR" + SEPARATOR + activeState + SEPARATOR + passiveState;
+		}
     }
 
     /**
@@ -191,6 +203,11 @@ public interface ArithmeticGroupFunction extends GroupFunction {
             State notResult = result.equals(activeState) ? passiveState : activeState;
             return notResult;
         }
+        
+        @Override
+		public String toString() {
+			return "NAND" + SEPARATOR + activeState + SEPARATOR + passiveState;
+		}
 
     }
 
@@ -214,6 +231,11 @@ public interface ArithmeticGroupFunction extends GroupFunction {
             State notResult = result.equals(activeState) ? passiveState : activeState;
             return notResult;
         }
+        
+        @Override
+		public String toString() {
+			return "NOR" + SEPARATOR + activeState + SEPARATOR + passiveState;
+		}
 
     }
 
@@ -263,6 +285,12 @@ public interface ArithmeticGroupFunction extends GroupFunction {
                 return null;
             }
         }
+        
+        @Override
+		public String toString() {
+			return "AVG";
+		}
+        
     }
 
     /**
@@ -305,6 +333,12 @@ public interface ArithmeticGroupFunction extends GroupFunction {
                 return null;
             }
         }
+        
+        @Override
+		public String toString() {
+			return "SUM";
+		}
+        
     }
 
     /**
@@ -352,6 +386,12 @@ public interface ArithmeticGroupFunction extends GroupFunction {
                 return null;
             }
         }
+        
+        @Override
+		public String toString() {
+			return "MIN";
+		}
+        
     }
 
     /**
@@ -399,6 +439,11 @@ public interface ArithmeticGroupFunction extends GroupFunction {
                 return null;
             }
         }
+        
+        @Override
+		public String toString() {
+			return "MAX";
+		}
     }
     
 	/**
@@ -449,6 +494,11 @@ public interface ArithmeticGroupFunction extends GroupFunction {
 			} else {
 				return null;
 			}
+		}
+		
+		@Override
+		public String toString() {
+			return "COUNT";
 		}
 	}
 

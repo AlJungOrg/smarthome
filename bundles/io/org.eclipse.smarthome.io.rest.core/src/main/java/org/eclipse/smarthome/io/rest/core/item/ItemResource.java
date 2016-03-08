@@ -48,6 +48,7 @@ import org.eclipse.smarthome.core.items.ItemRegistry;
 import org.eclipse.smarthome.core.items.ManagedItemProvider;
 import org.eclipse.smarthome.core.items.dto.ItemDTO;
 import org.eclipse.smarthome.core.items.events.ItemEventFactory;
+import org.eclipse.smarthome.core.library.GroupFunctionFactory;
 import org.eclipse.smarthome.core.library.items.RollershutterItem;
 import org.eclipse.smarthome.core.library.items.SwitchItem;
 import org.eclipse.smarthome.core.library.types.ArithmeticGroupFunction;
@@ -469,7 +470,7 @@ public class ItemResource implements RESTResource {
         GenericItem newItem = null;
 
         if (item.type != null && item.type.equals("GroupItem")) {
-            newItem = new GroupItem(itemname, null, applyGroupFunction(item.groupFunction));
+            newItem = new GroupItem(itemname, null, GroupFunctionFactory.create(item.groupFunction));
         } else {
             String itemType = item.type.substring(0, item.type.length() - 4);
             for (ItemFactory itemFactory : itemFactories) {
@@ -511,119 +512,6 @@ public class ItemResource implements RESTResource {
             return JSONResponse.createErrorResponse(Status.CONFLICT, "Cannot update non-managed Item " + itemname);
         }
     }
-    
-    
-    /*
-     * FIXME: TEE: ab hier beginnt ein zum Teil fieser Hack. Ziel war die GroupFunction ueber REST
-     * anlegen zu koennen. Das Problem ist, dass kein BaseItem zur Verfuegung steht und damit auch
-     * keine Liste von AcceptedCommandTypes gegen die die uebergebenen Parameter geprueft werden
-     * koennten. Aus diesem Grund ist hier eine gewisse Menge Code dupliziert.
-     */
-    private static List<Class<? extends State>> acceptedDataTypes = new ArrayList<Class<? extends State>>();
-    
-    static {
-        acceptedDataTypes.add(OpenClosedType.class);
-        acceptedDataTypes.add(OnOffType.class);
-    }
-    
-    /* TEE: diese Methode ist komplett dupliziert von GenericItemProvider */
-    private GroupFunction applyGroupFunction(String groupFunctionString) {
-    	if (groupFunctionString == null) {
-    		return new GroupFunction.Equality();
-    	}
-    	
-    	String[] groupFunctionElements = groupFunctionString.split(";");
-    	if (groupFunctionElements.length < 1) {
-    		logger.debug("groupFunction '{}' doesn't contain any elements. Please provide a proper function with all arguments separated by ';'.", groupFunctionElements.toString());
-    		return new GroupFunction.Equality()																																																																																																																																																																																																	;
-    	}
-    	
-    	String function = groupFunctionElements[0];
-    	
-        List<State> args = new ArrayList<State>();
-        
-        for (int indx = 1; indx < groupFunctionElements.length; indx++) {
-            for (Class<? extends Type> type : acceptedDataTypes) {
-	        	try {
-	                Method valueOf = type.getMethod("valueOf", String.class);
-	                State state = (State) valueOf.invoke(type, groupFunctionElements[indx]);
-	                if (state != null) {
-	                	args.add(state);
-	                    break;
-	                }
-	            } catch (NoSuchMethodException e) {
-	            } catch (IllegalArgumentException e) {
-	            } catch (IllegalAccessException e) {
-	            } catch (InvocationTargetException e) {
-	            }
-            }
-        }
-
-        GroupFunction groupFunction = null;
-        
-        switch (function) {
-            case "AND":
-                if (args.size() == 2) {
-                    groupFunction = new ArithmeticGroupFunction.And(args.get(0), args.get(1));
-                    break;
-                } else {
-                    logger.error("Group function 'AND' requires two arguments. Using Equality instead.");
-                }
-            case "OR":
-                if (args.size() == 2) {
-                    groupFunction = new ArithmeticGroupFunction.Or(args.get(0), args.get(1));
-                    break;
-                } else {
-                    logger.error("Group function 'OR' requires two arguments. Using Equality instead.");
-                }
-            case "NAND":
-                if (args.size() == 2) {
-                    groupFunction = new ArithmeticGroupFunction.NAnd(args.get(0), args.get(1));
-                    break;
-                } else {
-                    logger.error("Group function 'NOT AND' requires two arguments. Using Equality instead.");
-                }
-                break;
-            case "NOR":
-                if (args.size() == 2) {
-                    groupFunction = new ArithmeticGroupFunction.NOr(args.get(0), args.get(1));
-                    break;
-                } else {
-                    logger.error("Group function 'NOT OR' requires two arguments. Using Equality instead.");
-                }
-            case "COUNT":
-            	if (args.size() == 1) {
-            		groupFunction = new ArithmeticGroupFunction.Count(args.get(0));
-            		break;
-            	} else {
-            		logger.error("Group function 'COUNT' requires one argument. Using Equality instead.");
-            	}
-            case "AVG":
-                groupFunction = new ArithmeticGroupFunction.Avg();
-                break;
-            case "SUM":
-                groupFunction = new ArithmeticGroupFunction.Sum();
-                break;
-            case "MIN":
-                groupFunction = new ArithmeticGroupFunction.Min();
-                break;
-            case "MAX":
-                groupFunction = new ArithmeticGroupFunction.Max();
-                break;
-            default:
-                logger.error("Unknown group function '" + function + "'. Using Equality instead.");
-        }
-
-        if (groupFunction == null) {
-            groupFunction = new GroupFunction.Equality();
-        }
-
-        return groupFunction;
-    }
-
-    /*
-     * FIXME:TEE: Ende - teilweise fieser Hack!!
-     */
     
     
     /**

@@ -32,13 +32,13 @@ public class GroupItem extends GenericItem implements StateChangeListener {
     protected final Set<Item> members;
 
     protected GroupFunction function;
-
+    
     public GroupItem(String name) {
         this(name, null);
     }
 
     public GroupItem(String name, GenericItem baseItem) {
-        this(name, baseItem, new GroupFunction.Equality());
+        this(name, baseItem, createDefaultGroupFunction());
     }
 
     public GroupItem(String name, GenericItem baseItem, GroupFunction function) {
@@ -47,7 +47,11 @@ public class GroupItem extends GenericItem implements StateChangeListener {
         this.function = function;
         this.baseItem = baseItem;
     }
-
+    
+    public static GroupFunction createDefaultGroupFunction() {
+    	return new GroupFunction.Equality();
+    }
+    
     /**
      * Returns the base item of this {@link GroupItem}. This method is only
      * intended to allow instance checks of the underlying BaseItem. It must
@@ -199,6 +203,13 @@ public class GroupItem extends GenericItem implements StateChangeListener {
             newState = super.getStateAs(typeClass);
         }
         return newState;
+    }
+    
+    /**
+     * @return The group item function.
+     */
+    public GroupFunction getGroupFunction() {
+    	return function;
     }
 
     /**
