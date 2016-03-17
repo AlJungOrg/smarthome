@@ -88,17 +88,9 @@ public class HueBridgeHandler extends BaseBridgeHandler {
                 try {
                     FullConfig fullConfig = bridge.getFullConfig();
                     if (!lastBridgeConnectionState) {
-                        logger.debug("Connection to Hue Bridge {} established.", bridge.getIPAddress());
-                        if (getConfig().get(USER_NAME) == null) {
-                            logger.warn("User name for Hue bridge authentication not available in configuration. "
-                                    + "Setting ThingStatus to offline.");
-                            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
-                                    "User name is not properly configured - please check log files");
-                        } else {
-                            lastBridgeConnectionState = true;
-                            onConnectionResumed(bridge);
-                        }
-                    } else {
+                        lastBridgeConnectionState = tryResumeBridgeConnection();
+                    } 
+                    if (lastBridgeConnectionState) {
                         Map<String, FullLight> lastLightStateCopy = new HashMap<>(lastLightStates);
                         for (final FullLight fullLight : fullConfig.getLights()) {
                             final String lightId = fullLight.getId();
@@ -243,10 +235,19 @@ public class HueBridgeHandler extends BaseBridgeHandler {
     private synchronized void onUpdate() {
         if (bridge != null) {
             if (pollingJob == null || pollingJob.isCancelled()) {
-            	int pollingInterval = DEFAULT_POLLING_INTERVAL;
-            	try {
-            		pollingInterval = ((BigDecimal) getConfig().get(POLLING_INTERVAL)).intValue();
-            	} catch(NumberFormatException ex) {}
+                int pollingInterval = DEFAULT_POLLING_INTERVAL;
+                try {
+                    Object pollingIntervalConfig = getConfig().get(POLLING_INTERVAL);
+                    if (pollingIntervalConfig != null) {
+                        pollingInterval = ((BigDecimal) pollingIntervalConfig).intValue();
+                    } else {
+                        logger.info("Polling interval not configured for this hue bridge. Using default value: {}s",
+                                pollingInterval);
+                    }
+                } catch (NumberFormatException ex) {
+                    logger.info("Wrong configuration value for polling interval. Using default value: {}s",
+                            pollingInterval);
+                }
                 pollingJob = scheduler.scheduleAtFixedRate(pollingRunnable, 1, pollingInterval, TimeUnit.SECONDS);
             }
         }
@@ -276,6 +277,24 @@ public class HueBridgeHandler extends BaseBridgeHandler {
             if (handler != null) {
                 handler.initialize();
             }
+        }
+    }
+    
+    /**
+     * Check USER_NAME config for null. Call onConnectionResumed() otherwise.
+     * @return True if USER_NAME was not null.
+     */
+    private boolean tryResumeBridgeConnection() {
+        logger.debug("Connection to Hue Bridge {} established.", bridge.getIPAddress());
+        if (getConfig().get(USER_NAME) == null) {
+            logger.warn("User name for Hue bridge authentication not available in configuration. "
+                    + "Setting ThingStatus to offline.");
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
+                    "User name is not properly configured - please check log files");
+            return false;
+        } else {
+            onConnectionResumed(bridge);
+            return true;
         }
     }
 
