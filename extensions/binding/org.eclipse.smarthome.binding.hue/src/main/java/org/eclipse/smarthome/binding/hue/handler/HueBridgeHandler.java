@@ -60,6 +60,10 @@ import nl.q42.jue.exceptions.UnauthorizedException;
  */
 public class HueBridgeHandler extends BaseBridgeHandler {
 
+    private static final String LIGHT_STATE_ADDED = "added";
+
+    private static final String LIGHT_STATE_CHANGED = "changed";
+
     public final static Set<ThingTypeUID> SUPPORTED_THING_TYPES = Collections.singleton(THING_TYPE_BRIDGE);
 
     private static final int DEFAULT_POLLING_INTERVAL = 10; // in seconds
@@ -94,8 +98,7 @@ public class HueBridgeHandler extends BaseBridgeHandler {
                             lastBridgeConnectionState = true;
                             onConnectionResumed(bridge);
                         }
-                    }
-                    if (lastBridgeConnectionState) {
+                    } else {
                         Map<String, FullLight> lastLightStateCopy = new HashMap<>(lastLightStates);
                         for (final FullLight fullLight : fullConfig.getLights()) {
                             final String lightId = fullLight.getId();
@@ -105,27 +108,12 @@ public class HueBridgeHandler extends BaseBridgeHandler {
                                 lastLightStates.put(lightId, fullLight);
                                 if (!isEqual(lastFullLightState, fullLight.getState())) {
                                     logger.debug("Status update for Hue light {} detected.", lightId);
-                                    for (LightStatusListener lightStatusListener : lightStatusListeners) {
-                                        try {
-                                            lightStatusListener.onLightStateChanged(bridge, fullLight);
-                                        } catch (Exception e) {
-                                            logger.error(
-                                                    "An exception occurred while calling the BridgeHeartbeatListener",
-                                                    e);
-                                        }
-                                    }
+                                    notifyLightStatusListeners(fullLight, LIGHT_STATE_CHANGED);
                                 }
                             } else {
                                 lastLightStates.put(lightId, fullLight);
                                 logger.debug("Hue light {} added.", lightId);
-                                for (LightStatusListener lightStatusListener : lightStatusListeners) {
-                                    try {
-                                        lightStatusListener.onLightAdded(bridge, fullLight);
-                                    } catch (Exception e) {
-                                        logger.error("An exception occurred while calling the BridgeHeartbeatListener",
-                                                e);
-                                    }
-                                }
+                                notifyLightStatusListeners(fullLight, LIGHT_STATE_ADDED);
                             }
                         }
                         // Check for removed lights
@@ -422,6 +410,32 @@ public class HueBridgeHandler extends BaseBridgeHandler {
                 bridge.startSearch(serialNumbers);
             } catch (Exception e) {
                 logger.error("Bridge cannot start search mode", e);
+            }
+        }
+    }
+    
+    /**
+     * Iterate through lightStatusListeners and notify them about a changed ot added light state.
+     * @param fullLight
+     * @param type Can be "changed" if just a state has changed or "added" if this is a new light on the bridge.
+     */
+    private void notifyLightStatusListeners(final FullLight fullLight, final String type) {
+        for (LightStatusListener lightStatusListener : lightStatusListeners) {
+            try {
+                switch (type) {
+                    case LIGHT_STATE_ADDED:
+                        lightStatusListener.onLightAdded(bridge, fullLight);
+                        break;
+                    case LIGHT_STATE_CHANGED:
+                        lightStatusListener.onLightStateChanged(bridge, fullLight);
+                        break;
+                    default:
+                        throw new IllegalArgumentException(
+                                "Could not notify lightStatusListeners for unknown event type " + type);
+                }
+
+            } catch (Exception e) {
+                logger.error("An exception occurred while calling the BridgeHeartbeatListener", e);
             }
         }
     }
