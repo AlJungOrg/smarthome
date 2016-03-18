@@ -228,6 +228,11 @@ public class GroupItem extends GenericItem implements StateChangeListener {
             sb.append(baseItem.getClass().getSimpleName());
             sb.append(", ");
         }
+        if (getGroupFunction() != null) {
+            sb.append("GroupFunction=");
+            sb.append(function.toString());
+            sb.append(", ");
+        }
         sb.append("Members=");
         sb.append(members.size());
         sb.append(", ");

@@ -182,6 +182,72 @@ public interface ArithmeticGroupFunction extends GroupFunction {
 			return "OR" + SEPARATOR + activeState + SEPARATOR + passiveState;
 		}
     }
+    
+    /**
+     * This does a logical 'xor' operation. If just one item is of 'activeState' this
+     * is returned, otherwise the 'passiveState' is returned.
+     * 
+     * Through the getStateAs() method, it can be determined, how many
+     * items actually are in the 'activeState'.
+     * 
+     * @author Sebastian Janzen - Initial contribution and API
+     *
+     */
+    static class XOr implements GroupFunction {
+
+        protected final State activeState;
+        protected final State passiveState;
+
+        public XOr(State activeValue, State passiveValue) {
+            if (activeValue == null || passiveValue == null) {
+                throw new IllegalArgumentException("Parameters must not be null!");
+            }
+            this.activeState = activeValue;
+            this.passiveState = passiveValue;
+        }
+
+        /**
+         * @{inheritDoc
+         */
+        @Override
+        public State calculate(Set<Item> items) {
+            if (items != null) {
+                boolean foundOne = false;
+                for (Item item : items) {
+                    if (activeState.equals(item.getState())) {
+                        if (foundOne == true) {
+                            return passiveState;
+                        } else {
+                            foundOne = true;
+                        }
+                    }
+                }
+                if (foundOne) { 
+                    return activeState;
+                }
+            }
+            return passiveState;
+        }
+
+        /**
+         * @{inheritDoc
+         */
+        @Override
+        public State getStateAs(Set<Item> items, Class<? extends State> stateClass) {
+            final State state = calculate(items);
+            if (stateClass.isInstance(state)) {
+                return state;
+            } else {
+                return UnDefType.UNDEF;
+            }
+        }
+        
+        @Override
+        public String toString() {
+            return "XOR" + SEPARATOR + activeState + SEPARATOR + passiveState;
+        }
+    }
+
 
     /**
      * This does a logical 'nand' operation. The state is 'calculated' by

@@ -79,6 +79,11 @@ abstract public interface GroupFunction {
                 return null;
             }
         }
+        
+        @Override
+        public String toString() {
+            return "EQUALITY";
+        }
     }
 
 }
