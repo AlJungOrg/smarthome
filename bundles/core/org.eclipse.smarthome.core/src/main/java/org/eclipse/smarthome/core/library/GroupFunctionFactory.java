@@ -84,10 +84,7 @@ public class GroupFunctionFactory {
 	                	args.add(state);
 	                    break;
 	                }
-	            } catch (NoSuchMethodException e) {
-	            } catch (IllegalArgumentException e) {
-	            } catch (IllegalAccessException e) {
-	            } catch (InvocationTargetException e) {
+	            } catch (NoSuchMethodException | IllegalArgumentException | IllegalAccessException | InvocationTargetException e) {
 	            }
             }
         }
@@ -110,12 +107,18 @@ public class GroupFunctionFactory {
 
     private static GroupFunction createGroupFunctionInstance(final String function, final List<State> args, Class<? extends GroupFunction> groupFunctionClass) {
         try {
-            Constructor<? extends GroupFunction> constructor = groupFunctionClass.getDeclaredConstructor(State.class, State.class);
+            Constructor<? extends GroupFunction> constructor;
+            switch (args.size()) {
+                case 2: constructor = groupFunctionClass.getDeclaredConstructor(State.class, State.class); break;
+                case 1: constructor = groupFunctionClass.getDeclaredConstructor(State.class); break;
+                case 0: constructor = groupFunctionClass.getDeclaredConstructor(); break;
+                default: throw new IllegalArgumentException("Could not fina any constructor for ");
+            }
             return constructor.newInstance(args.toArray());
         } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
                 | InvocationTargetException | NoSuchMethodException e) {
             logger.error("Could not instantiate GroupFunction for {} and args {}", function, args);
-            logger.trace("Instantiation for GroupFunction resulted in ", e);
+            logger.debug("Instantiation for GroupFunction resulted in ", e);
             return null;
         }
     }
