@@ -12,7 +12,10 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -22,29 +25,26 @@ import org.apache.commons.lang.reflect.FieldUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-
 /**
  * This class is a wrapper for configuration settings of {@link Thing}s.
  *
  * @author Dennis Nobel - Initial API and contribution, Changed Logging
- * @author Kai Kreuzer - added constructors
+ * @author Kai Kreuzer - added constructors and normalization
  * @author Gerhard Riegler - added converting BigDecimal values to the type of the configuration class field
+ * @author Chris Jackson - fix concurrent modification exception when removing properties
  */
 public class Configuration {
 
     final private Map<String, Object> properties;
 
-    private static transient final Logger logger = LoggerFactory.getLogger(Configuration.class);
+    private transient final Logger logger = LoggerFactory.getLogger(Configuration.class);
 
     public Configuration() {
         this(new HashMap<String, Object>());
     }
 
     public Configuration(Map<String, Object> properties) {
-        this.properties = properties;
+        this.properties = ConfigUtil.normalizeTypes(properties);
     }
 
     public <T> T as(Class<T> configurationClass) {
@@ -110,7 +110,27 @@ public class Configuration {
         return fields;
     }
 
+    /**
+     * Check if the given key is present in the configuration.
+     *
+     * @param key the key that existence should be checked
+     * @return true if the key is part of the configuration, false if not
+     */
+    public boolean containsKey(String key) {
+        synchronized (this) {
+            return properties.containsKey(key);
+        }
+    }
+
+    /**
+     * @deprecated Use {@link #get(String)} instead.
+     */
+    @Deprecated
     public Object get(Object key) {
+        return this.get((String) key);
+    }
+
+    public Object get(String key) {
         synchronized (this) {
             return properties.get(key);
         }
@@ -122,7 +142,15 @@ public class Configuration {
         }
     }
 
+    /**
+     * @deprecated Use {@link #remove(String)} instead.
+     */
+    @Deprecated
     public Object remove(Object key) {
+        return remove((String) key);
+    }
+
+    public Object remove(String key) {
         synchronized (this) {
             return properties.remove(key);
         }
@@ -130,29 +158,30 @@ public class Configuration {
 
     public Set<String> keySet() {
         synchronized (this) {
-            return ImmutableSet.copyOf(properties.keySet());
+            return Collections.unmodifiableSet(new HashSet<>(properties.keySet()));
         }
     }
 
     public Collection<Object> values() {
         synchronized (this) {
-            return ImmutableList.copyOf(properties.values());
+            return Collections.unmodifiableCollection(new ArrayList<>(properties.values()));
         }
     }
 
     public Map<String, Object> getProperties() {
         synchronized (this) {
-            return ImmutableMap.copyOf(properties);
+            return Collections.unmodifiableMap(new HashMap<>(properties));
         }
     }
 
     public void setProperties(Map<String, Object> properties) {
         for (Entry<String, Object> entrySet : properties.entrySet()) {
-            this.put(entrySet.getKey(), entrySet.getValue());
+            this.put(entrySet.getKey(), ConfigUtil.normalizeType(entrySet.getValue()));
         }
-        for (String key : this.properties.keySet()) {
-            if (!properties.containsKey(key)) {
-                this.remove(key);
+        for (Iterator<String> it = this.properties.keySet().iterator(); it.hasNext();) {
+            String entry = it.next();
+            if (!properties.containsKey(entry)) {
+                it.remove();
             }
         }
     }
@@ -166,10 +195,13 @@ public class Configuration {
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj)
+        if (this == obj) {
             return true;
-        if (!(obj instanceof Configuration))
+        }
+        if (!(obj instanceof Configuration)) {
             return false;
+        }
         return this.hashCode() == obj.hashCode();
     }
+
 }

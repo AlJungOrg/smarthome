@@ -7,16 +7,7 @@
  */
 package org.eclipse.smarthome.core.thing;
 
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-
-import org.eclipse.smarthome.config.core.Configuration;
 import org.eclipse.smarthome.core.common.registry.DefaultAbstractManagedProvider;
-import org.eclipse.smarthome.core.thing.binding.ThingHandlerFactory;
-import org.eclipse.smarthome.core.thing.binding.builder.ChannelBuilder;
-import org.eclipse.smarthome.core.thing.util.ThingHelper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * {@link ManagedThingProvider} is an OSGi service, that allows to add or remove
@@ -29,59 +20,6 @@ import org.slf4j.LoggerFactory;
  * @author Michael Grammling - Added dynamic configuration update
  */
 public class ManagedThingProvider extends DefaultAbstractManagedProvider<Thing, ThingUID> implements ThingProvider {
-
-    private final Logger logger = LoggerFactory.getLogger(ManagedThingProvider.class);
-
-    private List<ThingHandlerFactory> thingHandlerFactories = new CopyOnWriteArrayList<>();
-    
-    
-    protected void addThingHandlerFactory(ThingHandlerFactory thingHandlerFactory) {
-        this.thingHandlerFactories.add(thingHandlerFactory);
-    }
-
-    protected void removeThingHandlerFactory(ThingHandlerFactory thingHandlerFactory) {
-        this.thingHandlerFactories.remove(thingHandlerFactory);
-    }
-
-    
-    /**
-     * Creates a thing based on the given configuration properties, adds it and
-     * informs all listeners.
-     *
-     * @param thingTypeUID
-     *            thing type unique id
-     * @param thingUID
-     *            thing unique id which should be created. This id might be
-     *            null.
-     * @param bridge
-     *            the thing's bridge. Null if there is no bridge or if the thing
-     *            is a bridge by itself.
-     * @param properties
-     *            the configuration
-     * @return the created thing
-     */
-    public Thing createThing(ThingTypeUID thingTypeUID, ThingUID thingUID, ThingUID bridgeUID, Configuration configuration) {
-        logger.debug("Creating thing for type '{}'.", thingTypeUID);
-        for (ThingHandlerFactory thingHandlerFactory : thingHandlerFactories) {
-            if (thingHandlerFactory.supportsThingType(thingTypeUID)) {
-                Thing thing = thingHandlerFactory.createThing(thingTypeUID, configuration, thingUID, bridgeUID);
-                add(thing);
-                return thing;
-            }
-        }
-        logger.warn("Cannot create thing. No binding found that supports creating a thing" + " of type {}.",
-                thingTypeUID);
-        return null;
-    }
-
-    public Channel createChannel(ThingTypeUID thingTypeUID, ChannelUID channelUIDObject, String itemType, Configuration configuration) {
-		return ChannelBuilder.create(channelUIDObject, itemType).withConfiguration(configuration).build();
-	}
-
-    public void addChannelsToThing(Thing thing, List<Channel> channels) {
-    	ThingHelper.addChannelsToThing(thing, channels);
-        update(thing);
-    }
 
     @Override
     protected ThingUID getKey(Thing thing) {

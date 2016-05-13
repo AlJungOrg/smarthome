@@ -92,10 +92,10 @@ public class ThingSetupManagerResource implements RESTResource {
             bridgeUID = new ThingUID(thingBean.bridgeUID);
         }
 
-        Configuration configuration = ThingResource.convertConfiguration(thingBean.configuration);
+        Configuration configuration = new Configuration(thingBean.configuration);
 
-        thingSetupManager.addThing(thingUIDObject, configuration, bridgeUID, thingBean.item.label,
-                thingBean.item.groupNames, enableChannels, locale);
+        thingSetupManager.addThing(thingUIDObject, configuration, bridgeUID, thingBean.label, thingBean.item.groupNames,
+                enableChannels, locale);
 
         return Response.ok().build();
     }
@@ -115,12 +115,12 @@ public class ThingSetupManagerResource implements RESTResource {
             bridgeUID = new ThingUID(thingBean.bridgeUID);
         }
 
-        Configuration configuration = ThingResource.convertConfiguration(thingBean.configuration);
+        Configuration configuration = new Configuration(thingBean.configuration);
 
         Thing thing = thingSetupManager.getThing(thingUID);
 
         if (thingBean.item != null && thing != null) {
-            String label = thingBean.item.label;
+            String label = thingBean.label;
             List<String> groupNames = thingBean.item.groupNames;
 
             @SuppressWarnings("deprecation")

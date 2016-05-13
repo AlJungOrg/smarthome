@@ -17,6 +17,7 @@ import org.eclipse.smarthome.automation.Action;
 import org.eclipse.smarthome.automation.Condition;
 import org.eclipse.smarthome.automation.Module;
 import org.eclipse.smarthome.automation.Trigger;
+import org.eclipse.smarthome.automation.core.internal.ReferenceResolverUtil;
 import org.eclipse.smarthome.automation.core.internal.RuleEngine;
 import org.eclipse.smarthome.automation.core.internal.type.ModuleTypeManager;
 import org.eclipse.smarthome.automation.handler.ActionHandler;
@@ -59,9 +60,9 @@ public class CompositeModuleHandlerFactory extends BaseModuleHandlerFactory impl
      * @param re is a rule engine
      */
     public CompositeModuleHandlerFactory(BundleContext bc, ModuleTypeManager mtManager, RuleEngine re) {
-        super(bc);
         this.mtManager = mtManager;
         this.ruleEngine = re;
+        activate(bc);
     }
 
     /**
@@ -153,7 +154,7 @@ public class CompositeModuleHandlerFactory extends BaseModuleHandlerFactory impl
                 mapModuleToHandler = null;
                 return null;
             }
-            resolveConfigurationProperties(compositeConfig, child);
+            ReferenceResolverUtil.updateModuleConfiguration(child, compositeConfig);
             MT childHandler = (MT) childMhf.getHandler(child, ruleUID);
             if (childHandler == null) {
                 mapModuleToHandler.clear();

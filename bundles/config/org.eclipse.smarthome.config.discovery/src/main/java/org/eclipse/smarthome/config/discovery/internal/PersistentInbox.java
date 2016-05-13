@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -152,6 +153,11 @@ public final class PersistentInbox implements Inbox, DiscoveryListener, ThingReg
                     thingTypeUID);
             return null;
         }
+        if (label != null && !label.isEmpty()) {
+            newThing.setLabel(label);
+        } else {
+            newThing.setLabel(result.getLabel());
+        }
         addThingSafely(newThing);
         return newThing;
     }
@@ -202,21 +208,28 @@ public final class PersistentInbox implements Inbox, DiscoveryListener, ThingReg
     private boolean synchronizeConfiguration(Map<String, Object> properties, Configuration config) {
         boolean configUpdated = false;
 
-        Set<Map.Entry<String, Object>> propertySet = properties.entrySet();
+        final Set<Map.Entry<String, Object>> propertySet = properties.entrySet();
 
         for (Map.Entry<String, Object> propertyEntry : propertySet) {
-            String propertyKey = propertyEntry.getKey();
-            Object propertyValue = propertyEntry.getValue();
+            final String propertyKey = propertyEntry.getKey();
+            final Object propertyValue = propertyEntry.getValue();
 
-            Object configValue = config.get(propertyKey);
-
-            if (((propertyValue == null) && (configValue != null))
-                    || (propertyValue != null && !propertyValue.equals(configValue))) {
-
-                // update value
-                config.put(propertyKey, propertyValue);
-                configUpdated = true;
+            // Check if the key is present in the configuration.
+            if (!config.containsKey(propertyKey)) {
+                continue;
             }
+
+            // If the value is equal to the one of the configuration, there is nothing to do.
+            if (Objects.equals(propertyValue, config.get(propertyKey))) {
+                continue;
+            }
+
+            // - the given key is part of the configuration
+            // - the values differ
+
+            // update value
+            config.put(propertyKey, propertyValue);
+            configUpdated = true;
         }
 
         return configUpdated;
@@ -285,8 +298,9 @@ public final class PersistentInbox implements Inbox, DiscoveryListener, ThingReg
             Collection<ThingTypeUID> thingTypeUIDs) {
         HashSet<ThingUID> removedThings = new HashSet<>();
         for (DiscoveryResult discoveryResult : getAll()) {
-            ThingUID thingUID = discoveryResult.getThingUID();
-            if (thingTypeUIDs.contains(thingUID.getThingTypeUID()) && discoveryResult.getTimestamp() < timestamp) {
+            if (thingTypeUIDs.contains(discoveryResult.getThingTypeUID())
+                    && discoveryResult.getTimestamp() < timestamp) {
+                ThingUID thingUID = discoveryResult.getThingUID();
                 removedThings.add(thingUID);
                 remove(thingUID);
                 logger.debug("Removed {} from inbox because it was older than {}", thingUID, new Date(timestamp));

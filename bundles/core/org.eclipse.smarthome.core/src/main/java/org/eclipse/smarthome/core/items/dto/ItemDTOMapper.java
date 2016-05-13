@@ -7,12 +7,9 @@
  */
 package org.eclipse.smarthome.core.items.dto;
 
-import java.util.Collection;
-import java.util.LinkedHashSet;
 import java.util.Set;
 
 import org.eclipse.smarthome.core.items.GenericItem;
-import org.eclipse.smarthome.core.items.GroupFunction;
 import org.eclipse.smarthome.core.items.GroupItem;
 import org.eclipse.smarthome.core.items.Item;
 import org.eclipse.smarthome.core.items.ItemFactory;
@@ -70,21 +67,19 @@ public class ItemDTOMapper {
      * @param uri the uri
      * @return item DTO object
      */
-    public static ItemDTO map(Item item, boolean drillDown) {
+    public static ItemDTO map(Item item) {
         ItemDTO itemDTO = item instanceof GroupItem ? new GroupItemDTO() : new ItemDTO();
-        fillProperties(itemDTO, item, drillDown);
+        fillProperties(itemDTO, item);
         return itemDTO;
     }
 
-    private static void fillProperties(ItemDTO itemDTO, Item item, boolean drillDown) {
-        if (item instanceof GroupItem && drillDown) {
+    private static void fillProperties(ItemDTO itemDTO, Item item) {
+        if (item instanceof GroupItem) {
             GroupItem groupItem = (GroupItem) item;
-            itemDTO.groupFunction = getGroupFunctionString(groupItem.getGroupFunction()); 
-            Collection<ItemDTO> memberDTOs = new LinkedHashSet<ItemDTO>();
-            for (Item member : groupItem.getMembers()) {
-                memberDTOs.add(map(member, drillDown));
+            GroupItemDTO groupItemDTO = (GroupItemDTO) itemDTO;
+            if (groupItem.getBaseItem() != null) {
+                groupItemDTO.groupType = groupItem.getBaseItem().getType();
             }
-            ((GroupItemDTO) itemDTO).members = memberDTOs.toArray(new ItemDTO[memberDTOs.size()]);
         }
         itemDTO.name = item.getName();
         itemDTO.type = item.getClass().getSimpleName();
@@ -93,12 +88,5 @@ public class ItemDTOMapper {
         itemDTO.category = item.getCategory();
         itemDTO.groupNames = item.getGroupNames();
     }
-
-	private static String getGroupFunctionString(GroupFunction groupFunction) {
-		if (groupFunction != null && groupFunction.toString().length() > 0) {
-			return groupFunction.toString();
-		}
-		return null;
-	}
 
 }

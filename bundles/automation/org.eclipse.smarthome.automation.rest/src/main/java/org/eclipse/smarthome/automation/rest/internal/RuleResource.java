@@ -8,6 +8,7 @@
 package org.eclipse.smarthome.automation.rest.internal;
 
 import java.io.IOException;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
@@ -33,9 +34,9 @@ import org.eclipse.smarthome.automation.Rule;
 import org.eclipse.smarthome.automation.RuleRegistry;
 import org.eclipse.smarthome.automation.Trigger;
 import org.eclipse.smarthome.automation.rest.internal.dto.EnrichedRuleDTO;
-import org.eclipse.smarthome.io.rest.ConfigUtil;
+import org.eclipse.smarthome.config.core.ConfigUtil;
+import org.eclipse.smarthome.io.rest.JSONResponse;
 import org.eclipse.smarthome.io.rest.RESTResource;
-import org.eclipse.smarthome.io.rest.core.JSONResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,6 +45,7 @@ import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
+import io.swagger.annotations.ResponseHeader;
 
 /**
  * This class acts as a REST resource for rules and is registered with the Jersey servlet.
@@ -51,7 +53,7 @@ import io.swagger.annotations.ApiResponses;
  * @author Kai Kreuzer - Initial contribution
  */
 @Path("rules")
-@Api
+@Api("rules")
 public class RuleResource implements RESTResource {
 
     private final Logger logger = LoggerFactory.getLogger(RuleResource.class);
@@ -96,17 +98,25 @@ public class RuleResource implements RESTResource {
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @ApiOperation(value = "Creates a rule.")
-    @ApiResponses(value = { @ApiResponse(code = 201, message = "Created"),
-            @ApiResponse(code = 409, message = "Creation of the rule is refused. Rule with the same UID already exists.") })
+    @ApiResponses(value = {
+            @ApiResponse(code = 201, message = "Created", responseHeaders = @ResponseHeader(name = "Location", description = "Newly created Rule", response = String.class) ),
+            @ApiResponse(code = 409, message = "Creation of the rule is refused. Rule with the same UID already exists."),
+            @ApiResponse(code = 400, message = "Creation of the rule is refused. Missing required parameter.") })
     public Response create(@ApiParam(value = "rule data", required = true) Rule rule) throws IOException {
-
         try {
-            ruleRegistry.add(rule);
-            return Response.status(Status.CREATED).build();
+            Rule newRule = ruleRegistry.add(rule);
+            return Response.status(Status.CREATED)
+                    .header("Location", "rules/" + URLEncoder.encode(newRule.getUID(), "UTF-8")).build();
+
         } catch (IllegalArgumentException e) {
             String errMessage = "Creation of the rule is refused: " + e.getMessage();
             logger.warn(errMessage);
             return JSONResponse.createErrorResponse(Status.CONFLICT, errMessage);
+
+        } catch (RuntimeException e) {
+            String errMessage = "Creation of the rule is refused: " + e.getMessage();
+            logger.warn(errMessage);
+            return JSONResponse.createErrorResponse(Status.BAD_REQUEST, errMessage);
         }
     }
 

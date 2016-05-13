@@ -27,6 +27,7 @@ public class CoreActivator implements BundleActivator {
     @Override
     public void start(BundleContext bc) throws Exception {
         context = bc;
+        PortableBase64.initialize();
         logger.debug("Core bundle has been started.");
     }
 
@@ -41,11 +42,10 @@ public class CoreActivator implements BundleActivator {
 
     /**
      * Returns the bundle context of this bundle
-     * 
+     *
      * @return the bundle context
      */
     public static BundleContext getContext() {
         return context;
     }
-
 }

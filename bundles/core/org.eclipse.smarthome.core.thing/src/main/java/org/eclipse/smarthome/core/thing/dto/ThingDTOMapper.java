@@ -12,17 +12,22 @@ import java.util.List;
 
 import org.eclipse.smarthome.core.thing.Channel;
 import org.eclipse.smarthome.core.thing.Thing;
+import org.eclipse.smarthome.core.thing.ThingTypeUID;
+import org.eclipse.smarthome.core.thing.ThingUID;
+import org.eclipse.smarthome.core.thing.binding.builder.ThingBuilder;
+import org.eclipse.smarthome.core.thing.util.ThingHelper;
 
 /**
  * The {@link ThingDTOMapper} is an utility class to map things into data transfer objects (DTO).
- * 
+ *
  * @author Stefan Bußweiler - Initial contribution
+ * @author Kai Kreuzer - Added DTO to Thing mapping
  */
 public class ThingDTOMapper {
 
     /**
      * Maps thing into thing data transfer object (DTO).
-     * 
+     *
      * @param thing the thing
      * @return the thing DTO object
      */
@@ -33,10 +38,24 @@ public class ThingDTOMapper {
             channelDTOs.add(channelDTO);
         }
 
+        String thingTypeUID = thing.getThingTypeUID().getAsString();
         String thingUID = thing.getUID().toString();
         String bridgeUID = thing.getBridgeUID() != null ? thing.getBridgeUID().toString() : null;
 
-        return new ThingDTO(thingUID, bridgeUID, channelDTOs, thing.getConfiguration(), thing.getProperties());
+        return new ThingDTO(thingTypeUID, thingUID, thing.getLabel(), bridgeUID, channelDTOs, thing.getConfiguration(),
+                thing.getProperties());
     }
 
+    /**
+     * Maps thing DTO into thing
+     *
+     * @param thingDTO the thingDTO
+     * @return the corresponding thing 
+     */
+    public static Thing map(ThingDTO thingDTO) {
+    	ThingUID thingUID = new ThingUID(thingDTO.UID);
+    	ThingTypeUID thingTypeUID = thingDTO.thingTypeUID==null ? new ThingTypeUID("") : new ThingTypeUID(thingDTO.thingTypeUID);
+    	Thing thing = ThingBuilder.create(thingTypeUID, thingUID).build();    	
+    	return ThingHelper.merge(thing, thingDTO);
+    }
 }

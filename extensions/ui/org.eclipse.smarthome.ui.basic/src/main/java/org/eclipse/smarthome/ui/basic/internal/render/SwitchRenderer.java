@@ -74,11 +74,14 @@ public class SwitchRenderer extends AbstractWidgetRenderer {
 
         String snippet = getSnippet(snippetName);
         State state = itemUIRegistry.getState(w);
+        String value = getValue(w);
 
         snippet = StringUtils.replace(snippet, "%id%", itemUIRegistry.getWidgetId(w));
         snippet = StringUtils.replace(snippet, "%category%", getCategory(w));
         snippet = StringUtils.replace(snippet, "%icon_type%", config.getIconType());
         snippet = StringUtils.replace(snippet, "%state%", getState(w));
+        snippet = StringUtils.replace(snippet, "%value%", value);
+        snippet = StringUtils.replace(snippet, "%has_value%", new Boolean(value != "").toString());
         snippet = StringUtils.replace(snippet, "%item%", w.getItem());
         snippet = StringUtils.replace(snippet, "%label%", getLabel(w));
         snippet = StringUtils.replace(snippet, "%servletname%", WebAppServlet.SERVLET_NAME);
@@ -99,13 +102,13 @@ public class SwitchRenderer extends AbstractWidgetRenderer {
                 String button = getSnippet("button");
                 button = StringUtils.replace(button, "%item%", w.getItem());
                 button = StringUtils.replace(button, "%cmd%", mapping.getCmd());
-                button = StringUtils.replace(button, "%label%", mapping.getLabel());
+                button = StringUtils.replace(button, "%label%", escapeHtml(mapping.getLabel()));
                 if (s.getMappings().size() > 1 && state.toString().equals(mapping.getCmd())) {
                     button = StringUtils.replace(button, "%class%", "mdl-button--accent");
                 } else {
                     button = StringUtils.replace(button, "%class%", "mdl-button");
                 }
-                buttons.insert(0, button);
+                buttons.append(button);
             }
             snippet = StringUtils.replace(snippet, "%buttons%", buttons.toString());
         }

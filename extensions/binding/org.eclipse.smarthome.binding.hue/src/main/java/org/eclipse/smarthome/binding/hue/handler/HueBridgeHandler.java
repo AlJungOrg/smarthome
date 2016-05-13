@@ -282,6 +282,7 @@ public class HueBridgeHandler extends BaseBridgeHandler {
     
     /**
      * Check USER_NAME config for null. Call onConnectionResumed() otherwise.
+     * 
      * @return True if USER_NAME was not null.
      */
     private boolean tryResumeBridgeConnection() {
@@ -435,6 +436,7 @@ public class HueBridgeHandler extends BaseBridgeHandler {
     
     /**
      * Iterate through lightStatusListeners and notify them about a changed ot added light state.
+     * 
      * @param fullLight
      * @param type Can be "changed" if just a state has changed or "added" if this is a new light on the bridge.
      */
@@ -460,7 +462,7 @@ public class HueBridgeHandler extends BaseBridgeHandler {
     }
 
     /**
-     * Because the State can produce NPEs on getColorMode() and getAlertMode(), at first we check for the common
+     * Because the State can produce NPEs on getColorMode() and getEffect(), at first we check for the common
      * properties which are set for every light type. If they equal, we additionally try to check the colorMode. If we
      * get an NPE,
      * the light does not support color mode and the common properties equality is our result: true. Otherwise if no NPE
@@ -469,12 +471,11 @@ public class HueBridgeHandler extends BaseBridgeHandler {
      * 
      * @param state1 Reference state
      * @param state2 State which is checked for equality.
-     * @return True if both states are equal.
+     * @return True if the available informations of both states are equal.
      */
     private boolean isEqual(State state1, State state2) {
         boolean commonStateIsEqual = state1.getAlertMode().equals(state2.getAlertMode())
-                && state1.isOn() == state2.isOn()
-                && state1.getBrightness() == state2.getBrightness()
+                && state1.isOn() == state2.isOn() && state1.getBrightness() == state2.getBrightness()
                 && state1.getColorTemperature() == state2.getColorTemperature() && state1.getHue() == state2.getHue()
                 && state1.getSaturation() == state2.getSaturation() && state1.isReachable() == state2.isReachable();
         if (!commonStateIsEqual) {
@@ -495,4 +496,5 @@ public class HueBridgeHandler extends BaseBridgeHandler {
         }
         return colorModeIsEqual && effectIsEqual;
     }
+
 }

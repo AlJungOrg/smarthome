@@ -10,13 +10,16 @@ package org.eclipse.smarthome.core.items;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.eclipse.smarthome.core.common.registry.AbstractManagedProvider;
 import org.eclipse.smarthome.core.items.ManagedItemProvider.PersistedItem;
-import org.eclipse.smarthome.core.library.GroupFunctionFactory;
 import org.eclipse.smarthome.core.storage.StorageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,189 +38,211 @@ import org.slf4j.LoggerFactory;
  */
 public class ManagedItemProvider extends AbstractManagedProvider<Item, String, PersistedItem>implements ItemProvider {
 
-	public static class PersistedItem {
+    public static class PersistedItem {
 
-		public String baseItemType;
+        public String baseItemType;
 
-		public List<String> groupNames;
+        public List<String> groupNames;
 
-		public String itemType;
+        public String itemType;
 
-		public Set<String> tags;
+        public Set<String> tags;
 
-		public String label;
+        public String label;
 
-		public String category;
+        public String category;
 
-		public String groupFunction;
+    }
 
-	}
+    private static final String ITEM_TYPE_GROUP = "Group";
 
-	private static final String ITEM_TYPE_GROUP = "Group";
+    private final Logger logger = LoggerFactory.getLogger(ManagedItemProvider.class);
 
-	private final Logger logger = LoggerFactory.getLogger(ManagedItemProvider.class);
+    private Collection<ItemFactory> itemFactories = new CopyOnWriteArrayList<ItemFactory>();
 
-	private Collection<ItemFactory> itemFactories = new CopyOnWriteArrayList<ItemFactory>();
+    private final Map<String, PersistedItem> failedToCreate = new ConcurrentHashMap<>();
 
-	/**
-	 * Removes an item and it´s member if recursive flag is set to true.
-	 *
-	 * @param itemName
-	 *            item name to remove
-	 * @param recursive
-	 *            if set to true all members of the item will be removed, too.
+    /**
+     * Removes an item and it´s member if recursive flag is set to true.
+     *
+     * @param itemName
+     *            item name to remove
+     * @param recursive
+     *            if set to true all members of the item will be removed, too.
      * @return
      *         removed item or null if no item with that name exists
-	 */
-	public Item remove(String itemName, boolean recursive) {
-		Item item = get(itemName);
-		if (recursive && item instanceof GroupItem) {
-			List<String> members = getMemberNamesRecursively((GroupItem) item, getAll());
-			for (String member : members) {
-				this.remove(member);
-			}
-		}
-		if (item != null) {
-			this.remove(item.getName());
-			return item;
-		} else {
-			return null;
-		}
-	}
+     */
+    public Item remove(String itemName, boolean recursive) {
+        Item item = get(itemName);
+        if (recursive && item instanceof GroupItem) {
+            List<String> members = getMemberNamesRecursively((GroupItem) item, getAll());
+            for (String member : members) {
+                this.remove(member);
+            }
+        }
+        if (item != null) {
+            this.remove(item.getName());
+            return item;
+        } else {
+            return null;
+        }
+    }
 
-	private List<String> getMemberNamesRecursively(GroupItem groupItem, Collection<Item> allItems) {
-		List<String> memberNames = new ArrayList<>();
-		for (Item item : allItems) {
-			if (item.getGroupNames().contains(groupItem.getName())) {
-				memberNames.add(item.getName());
-				if (item instanceof GroupItem) {
-					memberNames.addAll(getMemberNamesRecursively((GroupItem) item, allItems));
-				}
-			}
-		}
-		return memberNames;
-	}
+    private List<String> getMemberNamesRecursively(GroupItem groupItem, Collection<Item> allItems) {
+        List<String> memberNames = new ArrayList<>();
+        for (Item item : allItems) {
+            if (item.getGroupNames().contains(groupItem.getName())) {
+                memberNames.add(item.getName());
+                if (item instanceof GroupItem) {
+                    memberNames.addAll(getMemberNamesRecursively((GroupItem) item, allItems));
+                }
+            }
+        }
+        return memberNames;
+    }
 
-	private GenericItem createItem(String itemType, String itemName) {
+    private GenericItem createItem(String itemType, String itemName) {
+        for (ItemFactory factory : this.itemFactories) {
+            GenericItem item = factory.createItem(itemType, itemName);
+            if (item != null) {
+                return item;
+            }
+        }
 
-		for (ItemFactory factory : this.itemFactories) {
-			GenericItem item = factory.createItem(itemType, itemName);
-			if (item != null) {
-				return item;
-			}
-		}
+        logger.debug("Couldn't find ItemFactory for item '{}' of type '{}'", itemName, itemType);
 
-		logger.debug("Couldn't find ItemFactory for item '{}' of type '{}'", itemName, itemType);
+        return null;
+    }
 
-		return null;
-	}
-
-	/**
-	 * Translates the Items class simple name into a type name understandable by
-	 * the {@link ItemFactory}s.
-	 *
-	 * @param item
-	 *            the Item to translate the name
+    /**
+     * Translates the Items class simple name into a type name understandable by
+     * the {@link ItemFactory}s.
+     *
+     * @param item
+     *            the Item to translate the name
      * @return the translated ItemTypeName understandable by the {@link ItemFactory}s
-	 */
-	private String toItemFactoryName(Item item) {
-		return item.getType();
-	}
+     */
+    private String toItemFactoryName(Item item) {
+        return item.getType();
+    }
 
-	protected void addItemFactory(ItemFactory itemFactory) {
-		itemFactories.add(itemFactory);
-	}
+    protected void addItemFactory(ItemFactory itemFactory) {
+        itemFactories.add(itemFactory);
 
-	@Override
-	protected String getKey(Item element) {
-		return element.getName();
-	}
+        if (failedToCreate.size() > 0) {
+            // retry failed creation attempts
+            Iterator<Entry<String, PersistedItem>> iterator = failedToCreate.entrySet().iterator();
+            while (iterator.hasNext()) {
+                Entry<String, PersistedItem> entry = iterator.next();
+                String itemName = entry.getKey();
+                PersistedItem persistedItem = entry.getValue();
+                ActiveItem item = itemFactory.createItem(persistedItem.itemType, itemName);
+                if (item != null) {
+                    iterator.remove();
+                    configureItem(persistedItem, item);
+                    notifyListenersAboutAddedElement(item);
+                } else {
+                    logger.debug("The added item factory '{}' still could not instantiate item '{}'.", itemFactory,
+                            itemName);
+                }
+            }
 
-	@Override
-	protected String getStorageName() {
-		return Item.class.getName();
-	}
+            if (failedToCreate.isEmpty()) {
+                logger.info("Finished loading the items which could not have been created before.");
+            }
+        }
+    }
 
-	@Override
-	protected String keyToString(String key) {
-		return key;
-	}
+    @Override
+    protected String getKey(Item element) {
+        return element.getName();
+    }
 
-	protected void removeItemFactory(ItemFactory itemFactory) {
-		itemFactories.remove(itemFactory);
-	}
+    @Override
+    protected String getStorageName() {
+        return Item.class.getName();
+    }
 
-	@Override
-	protected Item toElement(String itemName, PersistedItem persistedItem) {
-		ActiveItem item = null;
+    @Override
+    protected String keyToString(String key) {
+        return key;
+    }
 
-		if (persistedItem.itemType.equals(ITEM_TYPE_GROUP)) {
-			
-			GroupFunction groupFunction = GroupFunctionFactory.create(persistedItem.groupFunction);
-			GenericItem baseItem = null;
+    protected void removeItemFactory(ItemFactory itemFactory) {
+        itemFactories.remove(itemFactory);
+    }
 
-			if (persistedItem.baseItemType != null) {
-				baseItem = createItem(persistedItem.baseItemType, itemName);
-			}
+    @Override
+    protected Item toElement(String itemName, PersistedItem persistedItem) {
+        ActiveItem item = null;
 
-			item = new GroupItem(itemName, baseItem, groupFunction);
-			
-		} else {
-			item = createItem(persistedItem.itemType, itemName);
-		}
+        if (persistedItem.itemType.equals(ITEM_TYPE_GROUP)) {
+            if (persistedItem.baseItemType != null) {
+                GenericItem baseItem = createItem(persistedItem.baseItemType, itemName);
+                item = new GroupItem(itemName, baseItem);
+            } else {
+                item = new GroupItem(itemName);
+            }
+        } else {
+            item = createItem(persistedItem.itemType, itemName);
+        }
 
-		if (item != null) {
-			List<String> groupNames = persistedItem.groupNames;
-			if (groupNames != null) {
-				for (String groupName : groupNames) {
-					item.addGroupName(groupName);
-				}
-			}
+        configureItem(persistedItem, item);
 
-			Set<String> tags = persistedItem.tags;
-			if (tags != null) {
-				for (String tag : tags) {
-					item.addTag(tag);
-				}
-			}
+        if (item == null) {
+            failedToCreate.put(itemName, persistedItem);
+            logger.debug("Couldn't restore item '{}' of type '{}' ~ there is no appropriate ItemFactory available.",
+                    itemName, persistedItem.itemType);
+        }
 
-			item.setLabel(persistedItem.label);
-			item.setCategory(persistedItem.category);
-		}
+        return item;
+    }
 
-		if (item == null) {
-			logger.debug("Couldn't restore item '{}' of type '{}' ~ there is no appropriate ItemFactory available.",
-					itemName, persistedItem.itemType);
-		}
+    private void configureItem(PersistedItem persistedItem, ActiveItem item) {
+        if (item != null) {
+            List<String> groupNames = persistedItem.groupNames;
+            if (groupNames != null) {
+                for (String groupName : groupNames) {
+                    item.addGroupName(groupName);
+                }
+            }
 
-		return item;
-	}
+            Set<String> tags = persistedItem.tags;
+            if (tags != null) {
+                for (String tag : tags) {
+                    item.addTag(tag);
+                }
+            }
 
-	@Override
-	protected PersistedItem toPersistableElement(Item item) {
+            item.setLabel(persistedItem.label);
+            item.setCategory(persistedItem.category);
+        }
+    }
 
-		PersistedItem persistedItem = new PersistedItem();
+    @Override
+    protected PersistedItem toPersistableElement(Item item) {
 
-		if (item instanceof GroupItem) {
-			String baseItemType = null;
-			GenericItem baseItem = ((GroupItem) item).getBaseItem();
-			if (baseItem != null) {
-				baseItemType = toItemFactoryName(baseItem);
-			}
-			persistedItem.itemType = ITEM_TYPE_GROUP;
-			persistedItem.baseItemType = baseItemType;
-			persistedItem.groupFunction = ((GroupItem) item).getGroupFunction().toString();
-		} else {
-			String itemType = toItemFactoryName(item);
-			persistedItem.itemType = itemType;
-		}
+        PersistedItem persistedItem = new PersistedItem();
 
-		persistedItem.label = item.getLabel();
-		persistedItem.groupNames = new ArrayList<>(item.getGroupNames());
-		persistedItem.tags = new HashSet<>(item.getTags());
-		persistedItem.category = item.getCategory();
+        if (item instanceof GroupItem) {
+            String baseItemType = null;
+            GenericItem baseItem = ((GroupItem) item).getBaseItem();
+            if (baseItem != null) {
+                baseItemType = toItemFactoryName(baseItem);
+            }
+            persistedItem.itemType = ITEM_TYPE_GROUP;
+            persistedItem.baseItemType = baseItemType;
+        } else {
+            String itemType = toItemFactoryName(item);
+            persistedItem.itemType = itemType;
+        }
 
-		return persistedItem;
-	}
+        persistedItem.label = item.getLabel();
+        persistedItem.groupNames = new ArrayList<>(item.getGroupNames());
+        persistedItem.tags = new HashSet<>(item.getTags());
+        persistedItem.category = item.getCategory();
+
+        return persistedItem;
+    }
 
 }

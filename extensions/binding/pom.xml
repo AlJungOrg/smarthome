@@ -16,8 +16,10 @@
   <packaging>pom</packaging>
 
   <modules>
+    <module>org.eclipse.smarthome.binding.digitalstrom</module>
     <module>org.eclipse.smarthome.binding.hue</module>
     <module>org.eclipse.smarthome.binding.hue.test</module>
+    <module>org.eclipse.smarthome.binding.fsinternetradio</module>
     <module>org.eclipse.smarthome.binding.lifx</module>
     <module>org.eclipse.smarthome.binding.ntp</module>
     <module>org.eclipse.smarthome.binding.sonos</module>

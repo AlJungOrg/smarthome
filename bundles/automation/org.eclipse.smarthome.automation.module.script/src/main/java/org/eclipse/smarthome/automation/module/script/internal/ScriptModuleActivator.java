@@ -17,7 +17,6 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
-import javax.script.ScriptException;
 
 import org.eclipse.smarthome.automation.handler.ModuleHandlerFactory;
 import org.eclipse.smarthome.automation.module.script.ScriptScopeProvider;
@@ -69,8 +68,8 @@ public class ScriptModuleActivator implements BundleActivator {
     @Override
     public void start(final BundleContext bundleContext) throws Exception {
         this.context = bundleContext;
-        this.moduleHandlerFactory = new ScriptModuleHandlerFactory(context);
-        moduleHandlerFactory.activate();
+        this.moduleHandlerFactory = new ScriptModuleHandlerFactory();
+        this.moduleHandlerFactory.activate(context);
         this.factoryRegistration = bundleContext.registerService(ModuleHandlerFactory.class.getName(),
                 this.moduleHandlerFactory, null);
         scriptScopeProviders = new CopyOnWriteArraySet<ScriptScopeProvider>();
@@ -228,8 +227,8 @@ public class ScriptModuleActivator implements BundleActivator {
         String scriptToEval = Joiner.on(",\n").join(expressions);
         try {
             engine.eval(scriptToEval);
-        } catch (ScriptException e) {
-            logger.error("ScriptException while importing scope: {}", e.getMessage());
+        } catch (Exception e) {
+            logger.error("Exception while importing scope: {}", e.getMessage());
         }
     }
 

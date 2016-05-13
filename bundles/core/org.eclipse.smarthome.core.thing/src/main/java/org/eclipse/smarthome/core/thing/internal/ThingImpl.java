@@ -38,9 +38,12 @@ import com.google.common.collect.ImmutableMap;
  *         https://bugs.eclipse.org/bugs/show_bug.cgi?id=450236 - Considering
  *         ThingType Description
  * @author Thomas Höfer - Added thing and thing type properties
+ * @author Simon Kaufmann - Added label
  *
  */
 public class ThingImpl implements Thing {
+
+    private String label;
 
     private ThingUID bridgeUID;
 
@@ -54,8 +57,8 @@ public class ThingImpl implements Thing {
 
     private ThingTypeUID thingTypeUID;
 
-    transient volatile private ThingStatusInfo status = ThingStatusInfoBuilder.create(ThingStatus.UNINITIALIZED,
-            ThingStatusDetail.NONE).build();
+    transient volatile private ThingStatusInfo status = ThingStatusInfoBuilder
+            .create(ThingStatus.UNINITIALIZED, ThingStatusDetail.NONE).build();
 
     transient volatile private ThingHandler thingHandler;
 
@@ -81,11 +84,38 @@ public class ThingImpl implements Thing {
     /**
      * @param thingUID
      * @throws IllegalArgumentException
+     * @deprecated use {@link #ThingImpl(ThingTypeUID, ThingUID)} instead.
      */
+    @Deprecated
     public ThingImpl(ThingUID thingUID) throws IllegalArgumentException {
+        if ("".equals(thingUID.getThingTypeId())) {
+            throw new IllegalArgumentException(
+                    "The given ThingUID does not specify a ThingType. You might want to use ThingImpl(ThingTypeUID, ThingUID) instead.");
+        }
         this.uid = thingUID;
         this.thingTypeUID = new ThingTypeUID(thingUID.getBindingId(), thingUID.getThingTypeId());
         this.channels = new ArrayList<>(0);
+    }
+
+    /**
+     * @param thingTypeUID thing type UID
+     * @param thingUID
+     * @throws IllegalArgumentException
+     */
+    public ThingImpl(ThingTypeUID thingTypeUID, ThingUID thingUID) throws IllegalArgumentException {
+        this.uid = thingUID;
+        this.thingTypeUID = thingTypeUID;
+        this.channels = new ArrayList<>(0);
+    }
+
+    @Override
+    public String getLabel() {
+        return label;
+    }
+
+    @Override
+    public void setLabel(String label) {
+        this.label = label;
     }
 
     @Override
@@ -169,6 +199,10 @@ public class ThingImpl implements Thing {
         return this.thingTypeUID;
     }
 
+    public void setThingTypeUID(ThingTypeUID thingTypeUID) {
+        this.thingTypeUID = thingTypeUID;
+    }
+
     public void setLinkedItem(GroupItem groupItem) {
         this.linkedItem = groupItem;
     }
@@ -204,6 +238,11 @@ public class ThingImpl implements Thing {
     }
 
     @Override
+    public void setProperties(Map<String, String> properties) {
+        this.properties = new HashMap<>(properties);
+    }
+
+    @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
@@ -213,18 +252,23 @@ public class ThingImpl implements Thing {
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj)
+        if (this == obj) {
             return true;
-        if (obj == null)
+        }
+        if (obj == null) {
             return false;
-        if (getClass() != obj.getClass())
+        }
+        if (getClass() != obj.getClass()) {
             return false;
+        }
         ThingImpl other = (ThingImpl) obj;
         if (uid == null) {
-            if (other.uid != null)
+            if (other.uid != null) {
                 return false;
-        } else if (!uid.equals(other.uid))
+            }
+        } else if (!uid.equals(other.uid)) {
             return false;
+        }
         return true;
     }
 

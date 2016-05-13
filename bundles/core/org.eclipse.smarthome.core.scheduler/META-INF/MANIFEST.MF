@@ -12,7 +12,6 @@ Bundle-ClassPath: .,
  lib/quartz-2.2.1.jar,
  lib/quartz-jobs-2.2.1.jar
 Import-Package: org.osgi.framework,
- org.osgi.service.component,
  org.quartz,
  org.quartz.commonj,
  org.quartz.core,
@@ -48,7 +47,6 @@ Import-Package: org.osgi.framework,
  org.quartz.xml,
  org.slf4j
 Bundle-Activator: org.eclipse.smarthome.core.scheduler.internal.SchedulerActivator
-Bundle-ActivationPolicy: lazy
 Export-Package: org.quartz,
  org.quartz.commonj,
  org.quartz.core,

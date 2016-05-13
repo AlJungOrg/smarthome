@@ -48,10 +48,14 @@ public class RuntimeRule extends Rule {
         super(ruleTemplateUID, configurations);
     }
 
-    public RuntimeRule(String ruleUID, RuleTemplate template, Map<String, ?> configuration) {
-        super(ruleUID, getRuntimeTriggersCopy(template.getTriggers()),
-                getRuntimeConditionsCopy(template.getConditions()), getRuntimeActionsCopy(template.getActions()),
-                template.getConfigurationDescription(), configuration, template.getVisibility());
+    public RuntimeRule(Rule rule, RuleTemplate template) {
+        super(rule.getUID(), getRuntimeTriggersCopy(template.getTriggers()),
+                getRuntimeConditionsCopy(template.getConditions()), getRuntimeActionsCopy(template.getActions()), null,
+                null, template.getVisibility());
+        validateConfiguration(template.getConfigurationDescription(), rule.getConfiguration());
+        setName(rule.getName());
+        setTags(template.getTags());
+        setDescription(template.getDescription());
     }
 
     /**
@@ -98,10 +102,6 @@ public class RuntimeRule extends Rule {
         return moduleMap;
     }
 
-    protected void setScopeIdentifier(String scopeId) {
-        this.scopeId = scopeId;
-    }
-
     /**
      * @see java.lang.Object#equals(java.lang.Object)
      */
@@ -130,7 +130,8 @@ public class RuntimeRule extends Rule {
      *
      * @param configurations
      */
-    private void validateConfiguration0(Map<String, Object> configurations) {
+    private void validateConfiguration0(List<ConfigDescriptionParameter> configDescriptions,
+            Map<String, Object> configurations) {
         if (configurations == null || configurations.isEmpty()) {
             if (isOptionalConfig(configDescriptions)) {
                 return;
@@ -217,17 +218,18 @@ public class RuntimeRule extends Rule {
             case BOOLEAN:
                 return configValue instanceof Boolean;
             case INTEGER:
-                return configValue instanceof BigDecimal || configValue instanceof Integer;
+                return configValue instanceof BigDecimal || configValue instanceof Integer
+                        || configValue instanceof Double && ((Double) configValue).intValue() == (double) configValue;
             case DECIMAL:
                 return configValue instanceof BigDecimal || configValue instanceof Double;
         }
         return false;
     }
 
-    void validateConfiguration() {
-        Map<String, ?> ruleConfiguration = getConfiguration();
+    private void validateConfiguration(List<ConfigDescriptionParameter> configDescriptions,
+            Map<String, ?> ruleConfiguration) {
         if (ruleConfiguration != null) {
-            validateConfiguration0(new HashMap<String, Object>(ruleConfiguration));
+            validateConfiguration0(configDescriptions, new HashMap<String, Object>(ruleConfiguration));
             handleModuleConfigReferences(getTriggers(), ruleConfiguration);
             handleModuleConfigReferences(getConditions(), ruleConfiguration);
             handleModuleConfigReferences(getActions(), ruleConfiguration);
@@ -237,21 +239,7 @@ public class RuntimeRule extends Rule {
     private void handleModuleConfigReferences(List<? extends Module> modules, Map<String, ?> ruleConfiguration) {
         if (modules != null) {
             for (Module module : modules) {
-                Map<String, Object> moduleConfiguration = module.getConfiguration();
-                if (moduleConfiguration != null) {
-                    for (Map.Entry<String, ?> entry : moduleConfiguration.entrySet()) {
-                        String configName = entry.getKey();
-                        Object configValue = entry.getValue();
-                        if (configValue instanceof String) {
-                            String configValueStr = (String) configValue;
-                            if (configValueStr.charAt(0) == REFERENCE_SYMBOL) {
-                                String referredRuleConfigName = configValueStr.substring(1);
-                                Object referredRuleConfigValue = ruleConfiguration.get(referredRuleConfigName);
-                                moduleConfiguration.put(configName, referredRuleConfigValue);
-                            }
-                        }
-                    }
-                }
+                ReferenceResolverUtil.updateModuleConfiguration(module, ruleConfiguration);
             }
         }
     }

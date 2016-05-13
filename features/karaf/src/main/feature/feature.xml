@@ -3,14 +3,9 @@
 
   <feature name="esh-base" description="ESH" version="${project.version}">
     <details>ESH base bundles</details>
-
-    <feature>esh-tp-base</feature>
-
-    <feature dependency="true">esh-tp-commons</feature>
-
-    <feature dependency="true">esh-tp-xtext</feature>
-    <requirement>esh.tp;filter:="(&amp;(feature=xtext)(version&gt;=2.6.2)(!(version&gt;=2.6.3)))"</requirement>
-
+    <feature dependency="true">esh-tp</feature>
+    <requirement>esh.tp;filter:="(&amp;(feature=xtext)(version&gt;=2.9.2)(!(version&gt;=2.9.3)))"</requirement>
+    <requirement>esh.tp;filter:="(feature=jax-rs)"</requirement>
     <bundle>mvn:org.eclipse.smarthome.config/org.eclipse.smarthome.config.core/${project.version}</bundle>
     <bundle>mvn:org.eclipse.smarthome.config/org.eclipse.smarthome.config.discovery/${project.version}</bundle>
     <bundle>mvn:org.eclipse.smarthome.config/org.eclipse.smarthome.config.dispatch/${project.version}</bundle>
@@ -26,12 +21,13 @@
     <bundle>mvn:org.eclipse.smarthome.core/org.eclipse.smarthome.core.transform/${project.version}</bundle>
     <bundle>mvn:org.eclipse.smarthome.io/org.eclipse.smarthome.io.console/${project.version}</bundle>
     <bundle>mvn:org.eclipse.smarthome.io/org.eclipse.smarthome.io.monitor/${project.version}</bundle>
-    <bundle>mvn:org.eclipse.smarthome.io/org.eclipse.smarthome.io.multimedia/${project.version}</bundle>
+    <bundle>mvn:org.eclipse.smarthome.io/org.eclipse.smarthome.io.voice/${project.version}</bundle>
+    <bundle>mvn:org.eclipse.smarthome.io/org.eclipse.smarthome.io.audio/${project.version}</bundle>
     <bundle>mvn:org.eclipse.smarthome.io/org.eclipse.smarthome.io.net/${project.version}</bundle>
     <bundle>mvn:org.eclipse.smarthome.io/org.eclipse.smarthome.io.rest/${project.version}</bundle>
     <bundle>mvn:org.eclipse.smarthome.io/org.eclipse.smarthome.io.rest.core/${project.version}</bundle>
     <bundle>mvn:org.eclipse.smarthome.io/org.eclipse.smarthome.io.rest.sse/${project.version}</bundle>
-    <bundle>mvn:org.eclipse.smarthome.model/org.eclipse.smarthome.model.core/${project.version}</bundle>
+    <bundle start-level="85">mvn:org.eclipse.smarthome.model/org.eclipse.smarthome.model.core/${project.version}</bundle>
   </feature>
 
   <!-- optional ESH bundles -->
@@ -98,10 +94,22 @@
     <bundle>mvn:org.eclipse.smarthome.automation/org.eclipse.smarthome.automation.rest/${project.version}</bundle>
   </feature>
 
+  <feature name="esh-binding-digitalstrom" version="${project.version}">
+    <feature>esh-base</feature>
+    <feature>esh-io-transport-mdns</feature>
+    <bundle>mvn:org.eclipse.smarthome.binding/org.eclipse.smarthome.binding.digitalstrom/${project.version}</bundle>
+  </feature>
+
   <feature name="esh-binding-hue" version="${project.version}">
     <feature>esh-base</feature>
     <feature>esh-io-transport-upnp</feature>
     <bundle>mvn:org.eclipse.smarthome.binding/org.eclipse.smarthome.binding.hue/${project.version}</bundle>
+  </feature>
+
+  <feature name="esh-binding-fsinternetradio" version="${project.version}">
+    <feature>esh-base</feature>
+    <feature>esh-io-transport-upnp</feature>
+    <bundle>mvn:org.eclipse.smarthome.binding/org.eclipse.smarthome.binding.fsinternetradio/${project.version}</bundle>
   </feature>
 
   <feature name="esh-binding-lifx" version="${project.version}">
@@ -122,6 +130,7 @@
 
   <feature name="esh-binding-wemo" version="${project.version}">
     <feature>esh-base</feature>
+    <feature>esh-io-transport-upnp</feature>
     <bundle>mvn:org.eclipse.smarthome.binding/org.eclipse.smarthome.binding.wemo/${project.version}</bundle>
   </feature>
 
@@ -144,21 +153,18 @@
 
   <feature name="esh-io-transport-mdns" version="${project.version}">
     <feature>esh-base</feature>
-    <feature dependency="true">esh-tp-jmdns</feature>
     <requirement>esh.tp;filter:="(feature=jmdns)"</requirement>
     <bundle>mvn:org.eclipse.smarthome.io/org.eclipse.smarthome.io.transport.mdns/${project.version}</bundle>
   </feature>
 
   <feature name="esh-io-transport-mqtt" version="${project.version}">
     <feature>esh-base</feature>
-    <feature dependency="true">esh-tp-paho</feature>
     <requirement>esh.tp;filter:="(feature=paho)"</requirement>
     <bundle>mvn:org.eclipse.smarthome.io/org.eclipse.smarthome.io.transport.mqtt/${project.version}</bundle>
   </feature>
 
   <feature name="esh-io-transport-upnp" version="${project.version}">
     <feature>esh-base</feature>
-    <feature dependency="true">esh-tp-jupnp</feature>
     <requirement>esh.tp;filter:="(feature=jupnp)"</requirement>
     <bundle>mvn:org.eclipse.smarthome.io/org.eclipse.smarthome.io.transport.upnp/${project.version}</bundle>
   </feature>
@@ -253,6 +259,9 @@
   <feature name="esh-transform-jsonpath" description="JSONPath Transformation" version="${project.version}">
     <feature>esh-base</feature>
     <bundle>mvn:org.eclipse.smarthome.transform/org.eclipse.smarthome.transform.jsonpath/${project.version}</bundle>
+    <bundle dependency="true">mvn:com.jayway.jsonpath/json-path/2.0.0</bundle>
+    <bundle dependency="true">mvn:net.minidev/asm/1.0.2</bundle>
+    <bundle dependency="true">mvn:net.minidev/json-smart/2.1.1</bundle>
   </feature>
 
   <feature name="esh-transform-map" description="Map Transformation" version="${project.version}">
@@ -313,6 +322,11 @@
     <feature>esh-base</feature>
     <feature>esh-ui-icon</feature>
     <bundle>mvn:org.eclipse.smarthome.extension.ui.iconset/org.eclipse.smarthome.ui.iconset.classic/${project.version}</bundle>
+  </feature>
+
+  <feature name="esh-voice-mactts" description="MacOS Text-to-Speech" version="${project.version}">
+    <feature>esh-base</feature>
+    <bundle>mvn:org.eclipse.smarthome.voice/org.eclipse.smarthome.voice.mactts/${project.version}</bundle>
   </feature>
 
 </features>

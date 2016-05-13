@@ -39,7 +39,6 @@ public class Rule {
     protected List<Trigger> triggers;
     protected List<Condition> conditions;
     protected List<Action> actions;
-    protected String scopeId;
     protected Map<String, ?> configuration;
     protected List<ConfigDescriptionParameter> configDescriptions;
     protected String templateUID;
@@ -94,6 +93,26 @@ public class Rule {
             List<Action> actions, List<ConfigDescriptionParameter> configDescriptions, //
             Map<String, ?> configurations) {
         this(uid, triggers, conditions, actions, configDescriptions, configurations, Visibility.VISIBLE);
+    }
+
+    /**
+     * Utility constructor which creates a rule without rule's uid and default {@link Visibility} =
+     * {@link Visibility#VISIBLE}.
+     * The uid of the rule will be set by the rule engine.
+     *
+     * @param triggers
+     * @param conditions
+     * @param actions
+     * @param configDescriptions
+     * @param configurations are values of the configuration parameters that are needed for configuring the rule,
+     *            represented as pairs key-value, where the key is the name of the configuration parameter and the value
+     *            is its value.
+     */
+    public Rule(List<Trigger> triggers, //
+            List<Condition> conditions, //
+            List<Action> actions, List<ConfigDescriptionParameter> configDescriptions, //
+            Map<String, ?> configurations) {
+        this(null, triggers, conditions, actions, configDescriptions, configurations, Visibility.VISIBLE);
     }
 
     /**
@@ -366,18 +385,6 @@ public class Rule {
         return result != null ? result : Collections.<T> emptyList();
     }
 
-    /**
-     * This method is used to get the identity scope of this Rule. The identity
-     * defines a scope where the rule belongs to. It is set automatically by the
-     * RuleEngine and is based on identity of rule creator.<br>
-     * For example the identity can be application name or user name of creator.
-     *
-     * @return Rule's identity.
-     */
-    public String getScopeIdentifier() {
-        return scopeId;
-    }
-
     @Override
     public int hashCode() {
         final int prime = 31;
@@ -389,23 +396,30 @@ public class Rule {
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj)
+        if (this == obj) {
             return true;
-        if (obj == null)
+        }
+        if (obj == null) {
             return false;
-        if (getClass() != obj.getClass())
+        }
+        if (getClass() != obj.getClass()) {
             return false;
+        }
         Rule other = (Rule) obj;
         if (templateUID == null) {
-            if (other.templateUID != null)
+            if (other.templateUID != null) {
                 return false;
-        } else if (!templateUID.equals(other.templateUID))
+            }
+        } else if (!templateUID.equals(other.templateUID)) {
             return false;
+        }
         if (uid == null) {
-            if (other.uid != null)
+            if (other.uid != null) {
                 return false;
-        } else if (!uid.equals(other.uid))
+            }
+        } else if (!uid.equals(other.uid)) {
             return false;
+        }
         return true;
     }
 

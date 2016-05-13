@@ -64,7 +64,8 @@ public class RuleResourceBundleImporter extends AbstractResourceBundleProvider<R
      * This constructor is responsible for initializing the path to resources and tracking the managing service of the
      * {@link Rule}s.
      *
-     * @param context is the {@code BundleContext}, used for creating a tracker for {@link Parser} services.
+     * @param context
+     *            is the {@code BundleContext}, used for creating a tracker for {@link Parser} services.
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public RuleResourceBundleImporter(BundleContext context) {
@@ -156,22 +157,30 @@ public class RuleResourceBundleImporter extends AbstractResourceBundleProvider<R
      * This method provides functionality for processing the bundles with rule resources.
      * <p>
      * Checks for availability of the needed {@link Parser} and for availability of the rules managing service. If one
-     * of them is not available - the bundle is added into {@link #waitingProviders} and the execution of the method
-     * ends.
+     * of
+     * them is not available - the bundle is added into {@link #waitingProviders} and the execution of the method ends.
      * <p>
      * Continues with loading the rules. If a rule already exists, it is updated, otherwise it is added.
      * <p>
      * The loading can fail because of {@link IOException}.
      *
-     * @param bundle it is a {@link Bundle} which has to be processed, because it provides resources for automation
-     *            rules.
+     * @param bundle
+     *            it is a {@link Bundle} which has to be processed, because it provides resources for automation rules.
      */
     @Override
     protected void processAutomationProvider(Bundle bundle) {
         logger.debug("Parse rules from bundle '{}' ", bundle.getSymbolicName());
-        Enumeration<URL> urlEnum = bundle.findEntries(path, null, false);
-        if (urlEnum == null)
+        Enumeration<URL> urlEnum = null;
+        try {
+            urlEnum = bundle.findEntries(path, null, false);
+        } catch (IllegalStateException e) {
+            logger.debug("Can't read from resource of bundle with ID " + bundle.getBundleId()
+                    + ". The bundle is uninstalled.", e);
+            processAutomationProviderUninstalled(bundle);
+        }
+        if (urlEnum == null) {
             return;
+        }
         Vendor vendor = new Vendor(bundle.getSymbolicName(), bundle.getVersion().toString());
         while (urlEnum.hasMoreElements()) {
             URL url = urlEnum.nextElement();
@@ -180,20 +189,34 @@ public class RuleResourceBundleImporter extends AbstractResourceBundleProvider<R
             synchronized (waitingProviders) {
                 List<URL> urlList = waitingProviders.get(bundle);
                 if (parser != null) {
-                    if (urlList != null && urlList.remove(url) && urlList.isEmpty())
+                    if (urlList != null && urlList.remove(url) && urlList.isEmpty()) {
                         waitingProviders.remove(bundle);
-                    try {
-                        importData(vendor, parser, new InputStreamReader(url.openStream()));
-                    } catch (IOException e) {
-                        logger.error("Can't read from resource of bundle with ID " + bundle.getBundleId() + ". URL is "
-                                + url, e);
                     }
                 } else if (parser == null) {
-                    if (urlList == null)
+                    if (urlList == null) {
                         urlList = new ArrayList<URL>();
+                    }
                     urlList.add(url);
                     waitingProviders.put(bundle, urlList);
                 }
+            }
+            if (parser != null) {
+                // this must be outde of synch block
+                InputStreamReader reader = null;
+                try {
+                    importData(vendor, parser, reader = new InputStreamReader(url.openStream()));
+                } catch (IOException e) {
+                    logger.error("Can't read from resource of bundle with ID " + bundle.getBundleId(), e);
+                    processAutomationProviderUninstalled(bundle);
+                } finally {
+                    if (reader != null) {
+                        try {
+                            reader.close();
+                        } catch (IOException ignore) {
+                        }
+                    }
+                }
+
             }
         }
     }
@@ -211,8 +234,9 @@ public class RuleResourceBundleImporter extends AbstractResourceBundleProvider<R
                 Rule rule = i.next();
                 if (rule != null) {
                     try {
-                        if (rule.getUID() == null)
+                        if (rule.getUID() == null) {
                             rule = setUID(vendor, rule);
+                        }
                         ruleRegistry.add(rule);
                     } catch (IllegalArgumentException e) {
                         logger.debug("Not importing rule '{}' since a rule with this id already exists", rule.getUID());
@@ -234,8 +258,10 @@ public class RuleResourceBundleImporter extends AbstractResourceBundleProvider<R
     /**
      * This method gives UIDs on the rules that don't have one.
      *
-     * @param vendor is the bundle providing the rules.
-     * @param rule is the provided rule.
+     * @param vendor
+     *            is the bundle providing the rules.
+     * @param rule
+     *            is the provided rule.
      */
     private Rule setUID(Vendor vendor, Rule rule) {
         String uid = vendor.getVendorID() + vendor.count();
