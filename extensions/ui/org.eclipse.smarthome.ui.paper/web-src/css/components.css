@@ -558,6 +558,10 @@ md-progress-circular.md-default-theme .md-inner .md-left .md-half-circle
 	min-height: 80px;
 }
 
+.parameter>div md-select-value>span:first-child, .parameter>div md-select-value .md-text>span:first-child{
+    max-width: 100%;
+}
+
 .parameter md-input-container {
 	padding-bottom: 5px;
 }
@@ -593,6 +597,10 @@ md-progress-circular.md-default-theme .md-inner .md-left .md-half-circle
 
 .channels>div>div>.channel {
 	margin-left: 20px;
+}
+
+.channels {
+	margin-top: 5px;
 }
 
 .showmore {
@@ -707,4 +715,42 @@ textarea.scriptArea {
 
 md-input-container .md-errors-spacer {
 	min-height: 0px;
+}
+
+.controlSelect .md-select-value :first-child {
+	flex: auto;
+}
+
+.no-margin {
+	margin: 0px;
+}
+
+.itemChannel {
+	padding: 15px;
+	padding-bottom: 0px;
+}
+
+.italic {
+	font-style:italic;
+}
+
+.item-edit {
+	margin-top: 20px;
+}
+
+.itemIcon-text {
+	display: none;
+}
+
+.itemIcon+.itemIcon-text {
+	display: block;
+}
+
+.thing-properties {
+	margin-left: -5px;
+	padding-left: 5px;
+}
+
+.thing-properties+table {
+	width: 0%;
 }

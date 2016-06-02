@@ -81,7 +81,7 @@
 				</div>
 			</div>
 		</div>
-		<div ng-if="shouldRenderSlider(item)" layout="row" layout-align="start center" class="number-control-widget">
+		<div layout="row" layout-align="start center" class="number-control-widget">
 			<span flex="15" class="text-left" ng-if="getMinText(item)">{{getMinText(item)}}</span>
 			<md-slider class="md-default-theme" flex="70" min="{{item.stateDescription.minimum}}" max="{{item.stateDescription.maximum}}" step="{{item.stateDescription.step}}" ng-model="item.state" md-discrete="true" ng-if="getMinText(item) && getMaxText(item)" ng-change="sendCommand(item.state)" aria-label={{item.label}}></md-slider>
 			<span flex="15" class="text-right" ng-if="getMaxText(item)">{{getMaxText(item)}}</span>
@@ -225,7 +225,7 @@
 		<div layout="row" layout-align="start center" ng-show="isOptionList(item)">
 			<div layout="row" layout-align="end center" flex="100">
 				<div class="container options">
-					<md-select ng-model="item.state" ng-change="optionListChanged()" ng-disabled="isReadOnly(item)" aria-label={{item.label}}> <md-option ng-value="option.value" ng-repeat="option in item.stateDescription.options"> {{option.label}} ({{option.value}}) </md-option> </md-select>
+					<md-select class="controlSelect" ng-model="item.state" ng-change="optionListChanged()" ng-disabled="isReadOnly(item)" aria-label={{item.label}}> <md-option ng-value="option.value" ng-repeat="option in item.stateDescription.options"> {{option.label}} ({{option.value}}) </md-option> </md-select>
 				</div>
 			</div>
 		</div>

@@ -34,10 +34,7 @@ angular.module('PaperUI.services.rest', [ 'PaperUI.constants' ]).config(function
             params : {
                 itemName : '@itemName'
             },
-            url : restConfig.restPath + '/items/:itemName',
-            headers : {
-                'Content-Type' : 'text/plain'
-            }
+            url : restConfig.restPath + '/items/:itemName'
         },
         updateState : {
             method : 'PUT',
@@ -90,7 +87,12 @@ angular.module('PaperUI.services.rest', [ 'PaperUI.constants' ]).config(function
                 tag : '@tag'
             },
             url : restConfig.restPath + '/items/:itemName/tags/:tag'
-        }
+        },
+        getNonRecursiveAll : {
+            method : 'GET',
+            isArray : true,
+            url : restConfig.restPath + '/items?recursive=false'
+        },
     });
 }).factory('bindingService', function($resource, restConfig) {
     return $resource(restConfig.restPath + '/bindings', {}, {
@@ -275,66 +277,6 @@ angular.module('PaperUI.services.rest', [ 'PaperUI.constants' ]).config(function
                 channelId : '@channelId'
             },
             url : restConfig.restPath + '/things/:thingUID/channels/:channelId/link',
-        }
-    });
-}).factory('thingSetupService', function($resource, restConfig) {
-    return $resource(restConfig.restPath + '/setup/things', {}, {
-        add : {
-            method : 'POST',
-            headers : {
-                'Content-Type' : 'application/json'
-            }
-        },
-        update : {
-            method : 'PUT',
-            headers : {
-                'Content-Type' : 'application/json'
-            }
-        },
-        getAll : {
-            method : 'GET',
-            isArray : true
-        },
-        remove : {
-            method : 'DELETE',
-            params : {
-                thingUID : '@thingUID'
-            },
-            url : restConfig.restPath + '/setup/things/:thingUID'
-        },
-        enableChannel : {
-            method : 'PUT',
-            params : {
-                channelUID : '@channelUID'
-            },
-            url : restConfig.restPath + '/setup/things/channels/:channelUID'
-        },
-        disableChannel : {
-            method : 'DELETE',
-            params : {
-                channelUID : '@channelUID'
-            },
-            url : restConfig.restPath + '/setup/things/channels/:channelUID'
-        },
-        setLabel : {
-            method : 'PUT',
-            params : {
-                thingUID : '@thingUID'
-            },
-            headers : {
-                'Content-Type' : 'text/plain'
-            },
-            url : restConfig.restPath + '/setup/labels/:thingUID'
-        },
-        setGroups : {
-            method : 'PUT',
-            params : {
-                thingUID : '@thingUID'
-            },
-            headers : {
-                'Content-Type' : 'application/json'
-            },
-            url : restConfig.restPath + '/setup/things/:thingUID/groups'
         }
     });
 }).factory('serviceConfigService', function($resource, restConfig) {

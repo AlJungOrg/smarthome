@@ -22,7 +22,7 @@ angular.module('PaperUI.controllers.setup', []).controller('SetupPageController'
         }
     };
     getThingTypes();
-}).controller('InboxController', function($scope, $timeout, $mdDialog, $q, inboxService, discoveryResultRepository, thingTypeRepository, thingSetupService, toastService) {
+}).controller('InboxController', function($scope, $timeout, $mdDialog, $q, inboxService, discoveryResultRepository, thingTypeRepository, thingService, toastService) {
     $scope.setHeaderText('Shows a list of found things in your home.')
 
     $scope.showScanDialog = function(event) {
@@ -36,7 +36,7 @@ angular.module('PaperUI.controllers.setup', []).controller('SetupPageController'
     $scope.refresh = function() {
         discoveryResultRepository.getAll(true);
     };
-}).controller('InboxEntryController', function($scope, $mdDialog, $q, inboxService, discoveryResultRepository, thingTypeRepository, thingSetupService, toastService, thingRepository) {
+}).controller('InboxEntryController', function($scope, $mdDialog, $q, inboxService, discoveryResultRepository, thingTypeRepository, thingService, toastService, thingRepository) {
     $scope.approve = function(thingUID, thingTypeUID, event) {
         $mdDialog.show({
             controller : 'ApproveInboxEntryDialogController',
@@ -157,7 +157,7 @@ angular.module('PaperUI.controllers.setup', []).controller('SetupPageController'
             groupNames : selectedGroupNames
         });
     }
-}).controller('ManualSetupChooseController', function($scope, bindingRepository, thingTypeRepository, thingSetupService) {
+}).controller('ManualSetupChooseController', function($scope, bindingRepository, thingTypeRepository, thingService) {
     $scope.setSubtitle([ 'Manual Setup' ]);
     $scope.setHeaderText('Choose a thing, which should be aded manually to your Smart Home.')
 
@@ -169,7 +169,7 @@ angular.module('PaperUI.controllers.setup', []).controller('SetupPageController'
     bindingRepository.getAll(function(data) {
     });
 
-}).controller('ManualSetupConfigureController', function($scope, $routeParams, $mdDialog, toastService, bindingRepository, thingTypeRepository, thingSetupService, thingRepository, configService) {
+}).controller('ManualSetupConfigureController', function($scope, $routeParams, $mdDialog, toastService, bindingRepository, thingTypeRepository, thingService, thingRepository, configService, linkService) {
 
     var thingTypeUID = $routeParams.thingTypeUID;
 
@@ -196,14 +196,21 @@ angular.module('PaperUI.controllers.setup', []).controller('SetupPageController'
     $scope.thingID = null;
 
     $scope.addThing = function(thing) {
-        thing.UID = thingTypeUID + ':' + thing.ID;
-        thingSetupService.add({
-            'enableChannels' : !$scope.advancedMode
-        }, thing, function() {
+        thing.thingTypeUID = thingTypeUID;
+        thing.UID = thing.thingTypeUID + ":" + thing.ID;
+        thingService.add(thing, function() {
             toastService.showDefaultToast('Thing added.', 'Show Thing', 'configuration/things/view/' + thing.UID);
             $scope.navigateTo('setup/search/' + $scope.thingType.UID.split(':')[0]);
         });
     };
+
+    function linkChannel(channelUID) {
+        var itemName = channelUID.replace(/:/g, "_");
+        linkService.link({
+            itemName : itemName,
+            channelUID : channelUID
+        });
+    }
 
     $scope.needsBridge = false;
     $scope.bridges = [];
@@ -250,12 +257,18 @@ angular.module('PaperUI.controllers.setup', []).controller('SetupPageController'
     $scope.filter = function(discoveryResult) {
         return $scope.showIgnored || discoveryResult.flag === 'NEW';
     }
-}).controller('SetupWizardBindingsController', function($scope, bindingRepository) {
+}).controller('SetupWizardBindingsController', function($scope, bindingRepository, discoveryService) {
     $scope.setSubtitle([ 'Choose Binding' ]);
     $scope.setHeaderText('Choose a Binding for which you want to add new things.');
     bindingRepository.getAll();
     $scope.selectBinding = function(bindingId) {
-        $scope.navigateTo('setup/search/' + bindingId);
+        discoveryService.getAll(function(supportedBindings) {
+            if (supportedBindings.indexOf(bindingId) >= 0) {
+                $scope.navigateTo('setup/search/' + bindingId);
+            } else {
+                $scope.navigateTo('setup/thing-types/' + bindingId);
+            }
+        });
     }
 }).controller('SetupWizardSearchBindingController', function($scope, discoveryResultRepository, discoveryService, thingTypeRepository, bindingRepository) {
     $scope.showIgnored = false;
@@ -274,8 +287,6 @@ angular.module('PaperUI.controllers.setup', []).controller('SetupPageController'
         if (supportedBindings.indexOf($scope.bindingId) >= 0) {
             $scope.discoverySupported = true;
             $scope.scan($scope.bindingId);
-        } else {
-            $scope.discoverySupported = false;
         }
     });
 

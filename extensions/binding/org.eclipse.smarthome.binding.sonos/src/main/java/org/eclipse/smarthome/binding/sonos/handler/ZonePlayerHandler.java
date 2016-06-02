@@ -12,6 +12,7 @@ import static org.eclipse.smarthome.binding.sonos.SonosBindingConstants.*;
 import static org.eclipse.smarthome.binding.sonos.config.ZonePlayerConfiguration.UDN;
 
 import java.math.BigDecimal;
+import java.net.URL;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -131,6 +132,7 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
                 updateLed();
                 updateMediaInfo();
                 updatePlayerState();
+                updateSleepTimerDuration();
             } catch (Exception e) {
                 logger.debug("Exception during poll : {}", e);
             }
@@ -169,6 +171,11 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
     @Override
     public void initialize() {
 
+        if (migrateThingType()) {
+            // we change the type, so we might need a different handler -> let's finish
+            return;
+        }
+
         Configuration configuration = getConfig();
 
         if (configuration.get("udn") != null) {
@@ -179,8 +186,6 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
         } else {
             logger.warn("Cannot initalize the zoneplayer. UDN not set.");
         }
-
-        handleThingTypeRecreation();
     }
 
     @Override
@@ -293,6 +298,9 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
                 if (command instanceof RewindFastforwardType) {
                     // Rewind and Fast Forward are currently not implemented by the binding
                 }
+                break;
+            case SLEEPTIMER:
+                setSleepTimer(command);
                 break;
             default:
                 break;
@@ -505,6 +513,22 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
                 }
                 case "CurrentURI": {
                     updateCurrentURIFormatted(value);
+                    break;
+                }
+
+                case "SleepTimerGeneration": {
+                    if (value.equals("0")) {
+                        updateState(SLEEPTIMER, new DecimalType(0));
+                    }
+                    break;
+                }
+
+                case "RemainingSleepTimerDuration": {
+                    updateState(SLEEPTIMER,
+                            (stateMap.get("RemainingSleepTimerDuration") != null)
+                                    ? new DecimalType(
+                                            sleepStrTimeToSeconds(stateMap.get("RemainingSleepTimerDuration")))
+                                    : UnDefType.UNDEF);
                     break;
                 }
             }
@@ -758,8 +782,8 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
                     this.onValueReceived("StationID", stationID, "AVTransport");
 
                     String url = opmlUrl;
-                    StringUtils.replace(url, "%id", stationID);
-                    StringUtils.replace(url, "%serial", getMACAddress());
+                    url = StringUtils.replace(url, "%id", stationID);
+                    url = StringUtils.replace(url, "%serial", getMACAddress());
 
                     String response = HttpUtil.executeUrl("GET", url, SOCKET_TIMEOUT);
 
@@ -1002,12 +1026,12 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
 
     /**
      * Handles value searching in a SONOS result map (called by {@link #getEntries(String, String)})
-     * 
+     *
      * @param resultInput - the map to be examined for the requestedKey
      * @param requestedKey - the key to be sought in the resultInput map
      * @param entriesType - the 'type' argument of {@link #getEntries(String, String)} method used for logging
      * @param entriesFilter - the 'filter' argument of {@link #getEntries(String, String)} method used for logging
-     * 
+     *
      * @return 0 as long or the value corresponding to the requiredKey if found
      */
     private Long getResultEntry(Map<String, String> resultInput, String requestedKey, String entriesType,
@@ -1218,11 +1242,11 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
     /**
      * Set the VOLUME command specific to the current grouping according to the Sonos behaviour.
      * AdHoc groups handles the volume specifically for each player.
-     * Bonded groups delegate the volume to the coordinator which applies the same level to all group members. 
+     * Bonded groups delegate the volume to the coordinator which applies the same level to all group members.
      */
     public void setVolumeForGroup(Command command) {
         if (isAdHocGroup() || isStandalonePlayer()) {
-            setVolume(command);  
+            setVolume(command);
         } else {
             getCoordinatorHandler().setVolume(command);
         }
@@ -1231,7 +1255,7 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
     /**
      * Checks if the player receiving the command is part of a group that
      * consists of randomly added players or contains bonded players
-     * 
+     *
      * @return boolean
      */
     private boolean isAdHocGroup() {
@@ -1253,7 +1277,7 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
 
     /**
      * Checks if the player receiving the command is a standalone player
-     * 
+     *
      * @return boolean
      */
     private boolean isStandalonePlayer() {
@@ -1263,7 +1287,7 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
     /**
      * Returns the current zone group
      * (of which the player receiving the command is part)
-     * 
+     *
      * @return {@link SonosZoneGroup}
      */
     private SonosZoneGroup getCurrentZoneGroup() {
@@ -1284,7 +1308,7 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
     /**
      * Sets the volume level for a notification sound
      * (initializes {@link #notificationSoundVolume})
-     * 
+     *
      * @param command
      */
     public void setNotificationSoundVolume(Command command) {
@@ -1458,7 +1482,7 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
     /**
      * Returns a list of all zone group members this particular player is member of
      * Or empty list if the players is not assigned to any group
-     * 
+     *
      * @return a list of Strings containing the UDNs of other group members
      */
     protected List<String> getZoneGroupMembers() {
@@ -1480,7 +1504,7 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
     /**
      * Returns a list of other zone group members this particular player is member of
      * Or empty list if the players is not assigned to any group
-     * 
+     *
      * @return a list of Strings containing the UDNs of other group members
      */
     protected List<String> getOtherZoneGroupMembers() {
@@ -1811,7 +1835,7 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
 
     /**
      * Play a given notification sound
-     * 
+     *
      * @param url in the format of //host/folder/filename.mp3
      */
     public void playNotificationSoundURI(Command notificationURL) {
@@ -1849,7 +1873,7 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
      * Does a chain of predefined actions when a Notification sound is played by
      * {@link ZonePlayerHandler#playNotificationSoundURI(Command)} in case
      * radio streaming is currently loaded
-     * 
+     *
      * @param currentStreamURI - the currently loaded stream's URI
      * @param notificationURL - the notification url in the format of //host/folder/filename.mp3
      * @param coordinator - {@link ZonePlayerHandler} coordinator for the SONOS device(s)
@@ -1872,7 +1896,7 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
      * Does a chain of predefined actions when a Notification sound is played by
      * {@link ZonePlayerHandler#playNotificationSoundURI(Command)} in case
      * shared queue is currently loaded
-     * 
+     *
      * @param notificationURL - the notification url in the format of //host/folder/filename.mp3
      * @param coordinator - {@link ZonePlayerHandler} coordinator for the SONOS device(s)
      */
@@ -1890,7 +1914,7 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
 
     /**
      * Handle the execution of the notification sound by sequentially executing the required steps.
-     * 
+     *
      * @param notificationURL - the notification url in the format of //host/folder/filename.mp3
      * @param coordinator - {@link ZonePlayerHandler} coordinator for the SONOS device(s)
      */
@@ -1898,7 +1922,7 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
         String originalVolume = coordinator.getVolume();
         coordinator.stop();
         applyNotificationSoundVolume();
-        int notificationPosition = coordinator.getQueue().size()+1;
+        int notificationPosition = coordinator.getQueue().size() + 1;
         coordinator.setCurrentURI("x-rincon-queue:" + getUDN() + "#0", "");
         coordinator.addURIToQueue(notificationURL.toString(), "", notificationPosition, false);
         coordinator.setPositionTrack(notificationPosition);
@@ -1924,7 +1948,7 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
      * Does a chain of predefined actions when a Notification sound is played by
      * {@link ZonePlayerHandler#playNotificationSoundURI(Command)} in case
      * empty queue is currently loaded
-     * 
+     *
      * @param notificationURL - the notification url in the format of //host/folder/filename.mp3
      * @param coordinator - {@link ZonePlayerHandler} coordinator for the SONOS device(s)
      */
@@ -1940,7 +1964,7 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
     /**
      * Applies the volume level set for {@link #notificationSoundVolume}
      * by {@link ZonePlayerHandler#setNotificationSoundVolume(Command)} (if not null)
-     * 
+     *
      * @param coordinator - {@link ZonePlayerHandler} coordinator for the SONOS device(s)
      */
     private void applyNotificationSoundVolume() {
@@ -1985,7 +2009,7 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
     /**
      * Removes a range of tracks from the queue.
      * (<x,y> will remove y songs started by the song number x)
-     * 
+     *
      * @param command - must be in the format <startIndex, numberOfSongs>
      */
     public void removeRangeOfTracksFromQueue(Command command) {
@@ -2248,28 +2272,88 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
     }
 
     private String getModelNameFromDescriptor() {
-        String sonosModelDescription = SonosXMLParser.parseModelDescription(service.getDescriptorURL(this));
-        return SonosXMLParser.extractModelName(sonosModelDescription);
+        URL descriptor = service.getDescriptorURL(this);
+        if (descriptor != null) {
+            String sonosModelDescription = SonosXMLParser.parseModelDescription(service.getDescriptorURL(this));
+            return SonosXMLParser.extractModelName(sonosModelDescription);
+        } else {
+            return null;
+        }
     }
 
-    private void handleThingTypeRecreation() {
+    private boolean migrateThingType() {
         if (getThing().getThingTypeUID().equals(ZONEPLAYER_THING_TYPE_UID)) {
             String modelName = getModelNameFromDescriptor();
             if (isSupportedModel(modelName)) {
                 updateSonosThingType(modelName);
+                return true;
             }
         }
+        return false;
     }
 
     private boolean isSupportedModel(String modelName) {
         for (ThingTypeUID thingTypeUID : SUPPORTED_KNOWN_THING_TYPES_UIDS) {
-            if (thingTypeUID.getId().equalsIgnoreCase(modelName))
+            if (thingTypeUID.getId().equalsIgnoreCase(modelName)) {
                 return true;
+            }
         }
         return false;
     }
 
     private void updateSonosThingType(String newThingTypeID) {
         changeThingType(new ThingTypeUID(SonosBindingConstants.BINDING_ID, newThingTypeID), getConfig());
+    }
+
+    /*
+     * Set the sleeptimer duration
+     * Use String command of format "HH:MM:SS" to set the timer to the desired duration
+     * Use empty String "" to switch the sleep timer off
+     */
+    public void setSleepTimer(Command command) {
+        if (command != null) {
+            if (command instanceof DecimalType) {
+
+                Map<String, String> inputs = new HashMap<String, String>();
+                inputs.put("InstanceID", "0");
+                inputs.put("NewSleepTimerDuration", sleepSecondsToTimeStr(Integer.parseInt(command.toString())));
+
+                Map<String, String> result = this.service.invokeAction(this, "AVTransport", "ConfigureSleepTimer",
+                        inputs);
+
+            }
+        }
+    }
+
+    protected void updateSleepTimerDuration() {
+        Map<String, String> result = service.invokeAction(this, "AVTransport", "GetRemainingSleepTimerDuration", null);
+        for (String variable : result.keySet()) {
+            this.onValueReceived(variable, result.get(variable), "DeviceProperties");
+        }
+    }
+
+    private String sleepSecondsToTimeStr(long sleepSeconds) {
+        if (sleepSeconds == 0) {
+            return "";
+        } else if (sleepSeconds < 68400) {
+            long hours = TimeUnit.SECONDS.toHours(sleepSeconds);
+            sleepSeconds -= TimeUnit.HOURS.toSeconds(hours);
+            long minutes = TimeUnit.SECONDS.toMinutes(sleepSeconds);
+            sleepSeconds -= TimeUnit.MINUTES.toSeconds(minutes);
+            long seconds = TimeUnit.SECONDS.toSeconds(sleepSeconds);
+            return String.format("%02d:%02d:%02d", hours, minutes, seconds);
+        } else {
+            logger.error("Sonos SleepTimer: Invalid sleep time set. sleep time must be >=0 and < 68400s (24h)");
+            return "ERR";
+        }
+
+    }
+
+    private long sleepStrTimeToSeconds(String sleepTime) {
+        String[] units = sleepTime.split(":");
+        int hours = Integer.parseInt(units[0]);
+        int minutes = Integer.parseInt(units[1]);
+        int seconds = Integer.parseInt(units[2]);
+        return 3600 * hours + 60 * minutes + seconds;
     }
 }
