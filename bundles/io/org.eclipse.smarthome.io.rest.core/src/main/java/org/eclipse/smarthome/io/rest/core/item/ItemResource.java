@@ -480,7 +480,7 @@ public class ItemResource implements RESTResource {
             if (!Strings.isNullOrEmpty(item.groupType)) {
                 baseItem = createItem(item.groupType, itemname);
             }
-            newItem = new GroupItem(itemname, null, GroupFunctionFactory.create(item.groupFunction));
+            newItem = new GroupItem(itemname, baseItem, GroupFunctionFactory.create(item.groupFunction));
         } else {
             String itemType = item.type.substring(0, item.type.length() - 4);
             newItem = createItem(itemType, itemname);

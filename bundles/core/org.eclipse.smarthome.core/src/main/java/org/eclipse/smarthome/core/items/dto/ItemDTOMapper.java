@@ -10,6 +10,7 @@ package org.eclipse.smarthome.core.items.dto;
 import java.util.Set;
 
 import org.eclipse.smarthome.core.items.GenericItem;
+import org.eclipse.smarthome.core.items.GroupFunction;
 import org.eclipse.smarthome.core.items.GroupItem;
 import org.eclipse.smarthome.core.items.Item;
 import org.eclipse.smarthome.core.items.ItemFactory;
@@ -77,6 +78,7 @@ public class ItemDTOMapper {
         if (item instanceof GroupItem) {
             GroupItem groupItem = (GroupItem) item;
             GroupItemDTO groupItemDTO = (GroupItemDTO) itemDTO;
+            groupItemDTO.groupFunction = getGroupFunctionString(groupItem.getGroupFunction());
             if (groupItem.getBaseItem() != null) {
                 groupItemDTO.groupType = groupItem.getBaseItem().getType();
             }
@@ -87,6 +89,13 @@ public class ItemDTOMapper {
         itemDTO.tags = item.getTags();
         itemDTO.category = item.getCategory();
         itemDTO.groupNames = item.getGroupNames();
+    }
+
+    private static String getGroupFunctionString(GroupFunction groupFunction) {
+        if (groupFunction != null && groupFunction.toString().length() > 0) {
+            return groupFunction.toString();
+        }
+        return null;
     }
 
 }

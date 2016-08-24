@@ -20,6 +20,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.eclipse.smarthome.core.common.registry.AbstractManagedProvider;
 import org.eclipse.smarthome.core.items.ManagedItemProvider.PersistedItem;
+import org.eclipse.smarthome.core.library.GroupFunctionFactory;
 import org.eclipse.smarthome.core.storage.StorageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,6 +52,8 @@ public class ManagedItemProvider extends AbstractManagedProvider<Item, String, P
         public String label;
 
         public String category;
+
+        public String groupFunction;
 
     }
 
@@ -177,12 +180,12 @@ public class ManagedItemProvider extends AbstractManagedProvider<Item, String, P
         ActiveItem item = null;
 
         if (persistedItem.itemType.equals(ITEM_TYPE_GROUP)) {
+            GroupFunction groupFunction = GroupFunctionFactory.create(persistedItem.groupFunction);
+            GenericItem baseItem = null;
             if (persistedItem.baseItemType != null) {
-                GenericItem baseItem = createItem(persistedItem.baseItemType, itemName);
-                item = new GroupItem(itemName, baseItem);
-            } else {
-                item = new GroupItem(itemName);
+                baseItem = createItem(persistedItem.baseItemType, itemName);
             }
+            item = new GroupItem(itemName, baseItem, groupFunction);
         } else {
             item = createItem(persistedItem.itemType, itemName);
         }
@@ -232,6 +235,7 @@ public class ManagedItemProvider extends AbstractManagedProvider<Item, String, P
             }
             persistedItem.itemType = ITEM_TYPE_GROUP;
             persistedItem.baseItemType = baseItemType;
+            persistedItem.groupFunction = ((GroupItem) item).getGroupFunction().toString();
         } else {
             String itemType = toItemFactoryName(item);
             persistedItem.itemType = itemType;
