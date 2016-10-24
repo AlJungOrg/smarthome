@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<thing:thing-descriptions bindingId="hue"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:thing="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0"
+    xsi:schemaLocation="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0 http://eclipse.org/smarthome/schemas/thing-description-1.0.0.xsd">
+
+    <thing-type id="PAR_16_50_RGBW___LIGHTIFY">
+        <supported-bridge-type-refs>
+            <bridge-type-ref id="bridge" />
+        </supported-bridge-type-refs>
+
+        <label>OSRAM Lightify PAR16 50 RGBW (GU10 socket)</label>
+        <description>This is a OSRAM Lightify PAR16 50 Light as RGBW lamp</description>
+
+        <channels>
+            <channel id="color" typeId="color" />
+            <channel id="color_temperature" typeId="color_temperature" />
+            <channel id="alert" typeId="alert" />
+            <channel id="effect" typeId="effect" />
+        </channels>
+
+        <properties>
+            <property name="vendor">OSRAM</property>
+            <property name="modelId">PAR_16_50_RGBW___LIGHTIFY</property>
+        </properties>
+
+        <config-description>
+            <parameter name="lightId" type="text">
+                <label>Light ID</label>
+                <description>The light identifier identifies one certain hue light.</description>
+                <required>true</required>
+            </parameter>
+        </config-description>
+    </thing-type>
+</thing:thing-descriptions>
