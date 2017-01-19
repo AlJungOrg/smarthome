@@ -47,7 +47,11 @@ public class HueBindingConstants {
     public final static ThingTypeUID THING_TYPE_PAR16_50_TW = new ThingTypeUID(BINDING_ID, "PAR16_50_TW");
     public final static ThingTypeUID THING_TYPE_PAR16_50_RGBW = new ThingTypeUID(BINDING_ID, "PAR_16_50_RGBW___LIGHTIFY");
     public final static ThingTypeUID THING_TYPE_CLASSIC_B40_TW = new ThingTypeUID(BINDING_ID, "Classic_B40_TW___LIGHTIFY");
-
+    public final static ThingTypeUID THING_TYPE_CLASSIC_A60_TW = new ThingTypeUID(BINDING_ID, "Classic_A60_TW");
+    public final static ThingTypeUID THING_TYPE_FLS_H3 = new ThingTypeUID(BINDING_ID, "FLS_H3");
+    public final static ThingTypeUID THING_TYPE_LIGHTIFY_OUTDOOR_FLEX_RGBW = new ThingTypeUID(BINDING_ID, "LIGHTIFY_Outdoor_Flex_RGBW");
+    public final static ThingTypeUID THING_TYPE_LIGHTIFY_GARDENPOLE_RGBW_LIGHTIFY = new ThingTypeUID(BINDING_ID, "Gardenpole_RGBW_Lightify");
+    public final static ThingTypeUID THING_TYPE_FLS_PP3 = new ThingTypeUID(BINDING_ID, "FLS_PP3");   
     public final static ThingTypeUID THING_TYPE_FLEX_RGBW = new ThingTypeUID(BINDING_ID, "Flex_RGBW");
 
     // List all channels
