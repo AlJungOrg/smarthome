@@ -106,7 +106,7 @@ public class HueLightDiscoveryService extends AbstractDiscoveryService implement
 
             thingDiscovered(discoveryResult);
         } else {
-            logger.debug("discovered unsupported light of type '{}' with id {}", light.getModelID(), light.getId());
+            logger.warn("discovered unsupported light of type '{}' with id {}", light.getModelID(), light.getId());
         }
     }
 
