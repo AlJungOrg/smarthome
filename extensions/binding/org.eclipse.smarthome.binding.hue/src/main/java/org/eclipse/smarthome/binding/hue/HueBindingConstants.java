@@ -29,6 +29,7 @@ public class HueBindingConstants {
     public final static ThingTypeUID THING_TYPE_LCT007 = new ThingTypeUID(BINDING_ID, "LCT007");
     public final static ThingTypeUID THING_TYPE_LCT010 = new ThingTypeUID(BINDING_ID, "LCT010");
     public final static ThingTypeUID THING_TYPE_LCT011 = new ThingTypeUID(BINDING_ID, "LCT011");
+    public final static ThingTypeUID THING_TYPE_LCT012 = new ThingTypeUID(BINDING_ID, "LCT012");
     public final static ThingTypeUID THING_TYPE_LCT014 = new ThingTypeUID(BINDING_ID, "LCT014");
     public final static ThingTypeUID THING_TYPE_LLC001 = new ThingTypeUID(BINDING_ID, "LLC001");
     public final static ThingTypeUID THING_TYPE_LLC006 = new ThingTypeUID(BINDING_ID, "LLC006");
@@ -48,6 +49,7 @@ public class HueBindingConstants {
     public final static ThingTypeUID THING_TYPE_LWL001 = new ThingTypeUID(BINDING_ID, "LWL001");
     public final static ThingTypeUID THING_TYPE_LTW001 = new ThingTypeUID(BINDING_ID, "LTW001");
     public final static ThingTypeUID THING_TYPE_LTW004 = new ThingTypeUID(BINDING_ID, "LTW004");
+    public final static ThingTypeUID THING_TYPE_LTW012 = new ThingTypeUID(BINDING_ID, "LTW012");
     public final static ThingTypeUID THING_TYPE_LTW013 = new ThingTypeUID(BINDING_ID, "LTW013");
     public final static ThingTypeUID THING_TYPE_LTW014 = new ThingTypeUID(BINDING_ID, "LTW014");
     public final static ThingTypeUID THING_TYPE_CLASSIC_A60_RGBW = new ThingTypeUID(BINDING_ID, "Classic_A60_RGBW");
