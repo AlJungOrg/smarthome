@@ -46,7 +46,7 @@ import nl.q42.jue.StateUpdate;
  * @author Oliver Libutzki
  * @author Kai Kreuzer - stabilized code
  * @author Andre Fuechsel - implemented switch off when brightness == 0
- * @author Thomas Höfer - added thing properties
+ * @author Thomas Höfer - added thin@ properties
  * @author Jochen Hiller - fixed status updates for reachable=true/false
  * @author Markus Mazurczak - added code for command handling of OSRAM PAR16 50
  *         bulbs
@@ -168,11 +168,11 @@ public class HueLightHandler extends BaseThingHandler implements LightStatusList
             case CHANNEL_COLOR:
                 if (command instanceof HSBType) {
                     HSBType hsbCommand = (HSBType) command;
-                    //if (hsbCommand.getBrightness().intValue() == 0) {
-                    //    lightState = LightStateConverter.toOnOffLightState(OnOffType.OFF);
-                    //} else {
+                    if (hsbCommand.getBrightness().intValue() == 0) {
+                        lightState = LightStateConverter.toOnOffLightState(OnOffType.OFF);
+                    } else {
                         lightState = LightStateConverter.toColorLightState(hsbCommand);
-                    //}
+                    }
                 } else if (command instanceof PercentType) {
                     lightState = LightStateConverter.toBrightnessLightState((PercentType) command);
                 } else if (command instanceof OnOffType) {
