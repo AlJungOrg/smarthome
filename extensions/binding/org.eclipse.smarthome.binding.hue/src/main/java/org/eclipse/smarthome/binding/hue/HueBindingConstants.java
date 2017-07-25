@@ -31,6 +31,10 @@ public class HueBindingConstants {
     public final static ThingTypeUID THING_TYPE_LCT011 = new ThingTypeUID(BINDING_ID, "LCT011");
     public final static ThingTypeUID THING_TYPE_LCT012 = new ThingTypeUID(BINDING_ID, "LCT012");
     public final static ThingTypeUID THING_TYPE_LCT014 = new ThingTypeUID(BINDING_ID, "LCT014");
+    public final static ThingTypeUID THING_TYPE_LTC001 = new ThingTypeUID(BINDING_ID, "LTC001");
+    public final static ThingTypeUID THING_TYPE_LTC002 = new ThingTypeUID(BINDING_ID, "LTC002");
+    public final static ThingTypeUID THING_TYPE_LTC003 = new ThingTypeUID(BINDING_ID, "LTC003");
+    public final static ThingTypeUID THING_TYPE_LTC004 = new ThingTypeUID(BINDING_ID, "LTC004");
     public final static ThingTypeUID THING_TYPE_LLC001 = new ThingTypeUID(BINDING_ID, "LLC001");
     public final static ThingTypeUID THING_TYPE_LLC006 = new ThingTypeUID(BINDING_ID, "LLC006");
     public final static ThingTypeUID THING_TYPE_LLC007 = new ThingTypeUID(BINDING_ID, "LLC007");
@@ -64,7 +68,12 @@ public class HueBindingConstants {
     public final static ThingTypeUID THING_TYPE_LIGHTIFY_GARDENPOLE_RGBW_LIGHTIFY = new ThingTypeUID(BINDING_ID, "Gardenpole_RGBW_Lightify");
     public final static ThingTypeUID THING_TYPE_FLS_PP3 = new ThingTypeUID(BINDING_ID, "FLS_PP3");   
     public final static ThingTypeUID THING_TYPE_FLEX_RGBW = new ThingTypeUID(BINDING_ID, "Flex_RGBW");
-
+    //Paul Neuhaus Things
+    public final static ThingTypeUID THING_TYPE_PN_NLG_CCT = new ThingTypeUID(BINDING_ID, "NLG-CCT light");
+    public final static ThingTypeUID THING_TYPE_PN_NLG_RGBW = new ThingTypeUID(BINDING_ID, "NLG-RGBW light");
+    public final static ThingTypeUID THING_TYPE_PN_JZD60_J4W150 = new ThingTypeUID(BINDING_ID, "JZD60-J4W150");
+    public final static ThingTypeUID THING_TYPE_PN_JZD60_J4R150 = new ThingTypeUID(BINDING_ID, "JZD60-J4R150");
+    
     // List all channels
     public static final String CHANNEL_COLORTEMPERATURE = "color_temperature";
     public static final String CHANNEL_COLOR = "color";
