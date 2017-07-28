@@ -69,10 +69,10 @@ public class HueBindingConstants {
     public final static ThingTypeUID THING_TYPE_FLS_PP3 = new ThingTypeUID(BINDING_ID, "FLS_PP3");   
     public final static ThingTypeUID THING_TYPE_FLEX_RGBW = new ThingTypeUID(BINDING_ID, "Flex_RGBW");
     //Paul Neuhaus Things
-    public final static ThingTypeUID THING_TYPE_PN_NLG_CCT = new ThingTypeUID(BINDING_ID, "NLG-CCT light");
-    public final static ThingTypeUID THING_TYPE_PN_NLG_RGBW = new ThingTypeUID(BINDING_ID, "NLG-RGBW light");
-    public final static ThingTypeUID THING_TYPE_PN_JZD60_J4W150 = new ThingTypeUID(BINDING_ID, "JZD60-J4W150");
-    public final static ThingTypeUID THING_TYPE_PN_JZD60_J4R150 = new ThingTypeUID(BINDING_ID, "JZD60-J4R150");
+    public final static ThingTypeUID THING_TYPE_PN_NLG_CCT = new ThingTypeUID(BINDING_ID, "NLG_CCT");
+    public final static ThingTypeUID THING_TYPE_PN_NLG_RGBW = new ThingTypeUID(BINDING_ID, "NLG_RGBW");
+    public final static ThingTypeUID THING_TYPE_PN_JZD60_J4W150 = new ThingTypeUID(BINDING_ID, "JZD60_J4W150");
+    public final static ThingTypeUID THING_TYPE_PN_JZD60_J4R150 = new ThingTypeUID(BINDING_ID, "JZD60_J4R150");
     
     // List all channels
     public static final String CHANNEL_COLORTEMPERATURE = "color_temperature";

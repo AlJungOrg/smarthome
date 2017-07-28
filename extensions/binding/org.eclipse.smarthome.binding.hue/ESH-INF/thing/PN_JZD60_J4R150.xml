@@ -4,8 +4,7 @@
     xmlns:thing="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0"
     xsi:schemaLocation="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0 http://eclipse.org/smarthome/schemas/thing-description-1.0.0.xsd">
 
-    <!-- Standard Hue Color Bulb with E27 socket (see http://www.developers.meethue.com/documentation/supported-lights) -->
-    <thing-type id="JZD60-J4R150">
+    <thing-type id="JZD60_J4R150">
         <supported-bridge-type-refs>
             <bridge-type-ref id="bridge" />
         </supported-bridge-type-refs>

@@ -5,7 +5,7 @@
     xsi:schemaLocation="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0 http://eclipse.org/smarthome/schemas/thing-description-1.0.0.xsd">
 
     <!-- Hue ambiance ceiling (see http://www.developers.meethue.com/documentation/supported-lights) -->
-    <thing-type id="NLG-CCT_light">
+    <thing-type id="NLG_CCT">
         <supported-bridge-type-refs>
             <bridge-type-ref id="bridge" />
         </supported-bridge-type-refs>
