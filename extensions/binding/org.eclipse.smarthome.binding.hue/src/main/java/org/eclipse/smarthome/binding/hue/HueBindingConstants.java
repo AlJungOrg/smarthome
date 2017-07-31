@@ -73,6 +73,7 @@ public class HueBindingConstants {
     public final static ThingTypeUID THING_TYPE_PN_NLG_RGBW = new ThingTypeUID(BINDING_ID, "NLG_RGBW_light_");
     public final static ThingTypeUID THING_TYPE_PN_JZD60_J4W150 = new ThingTypeUID(BINDING_ID, "JZD60_J4W150");
     public final static ThingTypeUID THING_TYPE_PN_JZD60_J4R150 = new ThingTypeUID(BINDING_ID, "JZD60_J4R150");
+    public final static ThingTypeUID THING_TYPE_PN_JZ_RGBW_Z01 = new ThingTypeUID(BINDING_ID, "JZ_RGBW_Z01");
     
     // List all channels
     public static final String CHANNEL_COLORTEMPERATURE = "color_temperature";
