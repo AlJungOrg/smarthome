@@ -282,6 +282,17 @@ public class ItemRegistryImpl extends AbstractRegistry<Item, String>implements I
                 // the group might not yet be registered, let's ignore this
             }
         }
+        // removes old state listeners that store the initial arithmetic operation on server start
+        for (Item groupItem : getItems("knxcom_function_*")) {
+			if (groupItem instanceof GroupItem) {
+				List<String> groupNames = ((GroupItem) groupItem).getGroupNames();
+				for (String groupName : groupNames) {
+					if (groupName.equals(item.getName())) {
+						((GenericItem) groupItem).removeStateChangeListener((GroupItem) item);
+					}
+				}
+			}
+        }
     }
 
     @Override
