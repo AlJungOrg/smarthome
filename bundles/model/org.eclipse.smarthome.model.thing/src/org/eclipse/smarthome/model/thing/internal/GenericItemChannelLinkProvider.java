@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -8,6 +8,7 @@
 package org.eclipse.smarthome.model.thing.internal;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -17,9 +18,6 @@ import org.eclipse.smarthome.core.common.registry.AbstractProvider;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.link.ItemChannelLink;
 import org.eclipse.smarthome.core.thing.link.ItemChannelLinkProvider;
-import org.eclipse.smarthome.model.core.EventType;
-import org.eclipse.smarthome.model.core.ModelRepository;
-import org.eclipse.smarthome.model.core.ModelRepositoryChangeListener;
 import org.eclipse.smarthome.model.item.BindingConfigParseException;
 import org.eclipse.smarthome.model.item.BindingConfigReader;
 
@@ -33,8 +31,8 @@ import com.google.common.collect.Lists;
  * @author Alex Tugarev - Added parsing of multiple Channel UIDs
  *
  */
-public class GenericItemChannelLinkProvider extends AbstractProvider<ItemChannelLink> implements BindingConfigReader,
-        ItemChannelLinkProvider, ModelRepositoryChangeListener {
+public class GenericItemChannelLinkProvider extends AbstractProvider<ItemChannelLink>
+        implements BindingConfigReader, ItemChannelLinkProvider {
 
     /** caches binding configurations. maps itemNames to {@link BindingConfig}s */
     protected Map<String, Set<ItemChannelLink>> itemChannelLinkMap = new ConcurrentHashMap<>();
@@ -44,9 +42,6 @@ public class GenericItemChannelLinkProvider extends AbstractProvider<ItemChannel
      * structure: context -> Set of Item names
      */
     protected Map<String, Set<String>> contextMap = new ConcurrentHashMap<>();
-
-    @SuppressWarnings("unused")
-    private ModelRepository modelRepository = null;
 
     private Set<String> previousItemNames;
 
@@ -89,10 +84,10 @@ public class GenericItemChannelLinkProvider extends AbstractProvider<ItemChannel
             contextMap.put(context, itemNames);
         }
         itemNames.add(itemName);
-        if(previousItemNames != null ) {
+        if (previousItemNames != null) {
             previousItemNames.remove(itemName);
         }
-        
+
         Set<ItemChannelLink> links = itemChannelLinkMap.get(itemName);
         if (links == null) {
             itemChannelLinkMap.put(itemName, links = new HashSet<>());
@@ -107,7 +102,11 @@ public class GenericItemChannelLinkProvider extends AbstractProvider<ItemChannel
 
     @Override
     public void startConfigurationUpdate(String context) {
-        previousItemNames = contextMap.get(context);
+        if (previousItemNames != null) {
+            logger.warn("There already is an update transaction for generic item channel links. Continuing anyway.");
+        }
+        Set<String> previous = contextMap.get(context);
+        previousItemNames = previous != null ? new HashSet<>(previous) : Collections.emptySet();
     }
 
     @Override
@@ -122,7 +121,10 @@ public class GenericItemChannelLinkProvider extends AbstractProvider<ItemChannel
                     }
                 }
             }
-            contextMap.remove(context);
+            if (contextMap.get(context) != null) {
+                contextMap.get(context).removeAll(previousItemNames);
+            }
+            previousItemNames = null;
         }
     }
 
@@ -131,31 +133,4 @@ public class GenericItemChannelLinkProvider extends AbstractProvider<ItemChannel
         return Lists.newLinkedList(Iterables.concat(itemChannelLinkMap.values()));
     }
 
-    public void setModelRepository(ModelRepository modelRepository) {
-        this.modelRepository = modelRepository;
-        modelRepository.addModelRepositoryChangeListener(this);
-    }
-
-    public void unsetModelRepository(ModelRepository modelRepository) {
-        modelRepository.removeModelRepositoryChangeListener(this);
-        this.modelRepository = null;
-    }
-
-    @Override
-    public void modelChanged(String modelName, EventType type) {
-        if (modelName.endsWith("items")) {
-            switch (type) {
-                case ADDED:
-                    startConfigurationUpdate(modelName);
-                    break;
-                case MODIFIED:
-                    startConfigurationUpdate(modelName);
-                    break;
-                case REMOVED:
-                    startConfigurationUpdate(modelName);
-                    stopConfigurationUpdate(modelName);
-                    break;
-            }
-        }
-    }
 }

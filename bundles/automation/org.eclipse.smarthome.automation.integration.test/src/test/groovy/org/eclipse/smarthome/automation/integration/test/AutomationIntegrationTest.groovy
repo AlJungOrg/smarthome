@@ -16,11 +16,11 @@ import static org.junit.matchers.JUnitMatchers.*
 
 import org.eclipse.smarthome.automation.Action
 import org.eclipse.smarthome.automation.Condition
+import org.eclipse.smarthome.automation.ManagedRuleProvider
 import org.eclipse.smarthome.automation.Rule
 import org.eclipse.smarthome.automation.RuleProvider
 import org.eclipse.smarthome.automation.RuleRegistry
 import org.eclipse.smarthome.automation.RuleStatus
-import org.eclipse.smarthome.automation.RuleStatusInfo
 import org.eclipse.smarthome.automation.Trigger
 import org.eclipse.smarthome.automation.Visibility
 import org.eclipse.smarthome.automation.events.RuleAddedEvent
@@ -29,16 +29,16 @@ import org.eclipse.smarthome.automation.events.RuleStatusInfoEvent
 import org.eclipse.smarthome.automation.events.RuleUpdatedEvent
 import org.eclipse.smarthome.automation.module.core.handler.GenericEventTriggerHandler
 import org.eclipse.smarthome.automation.template.RuleTemplate
+import org.eclipse.smarthome.automation.template.RuleTemplateProvider
 import org.eclipse.smarthome.automation.template.Template
-import org.eclipse.smarthome.automation.template.TemplateProvider
 import org.eclipse.smarthome.automation.template.TemplateRegistry
 import org.eclipse.smarthome.automation.type.ActionType
 import org.eclipse.smarthome.automation.type.ModuleTypeProvider
 import org.eclipse.smarthome.automation.type.ModuleTypeRegistry
 import org.eclipse.smarthome.automation.type.TriggerType
 import org.eclipse.smarthome.config.core.ConfigDescriptionParameter
-import org.eclipse.smarthome.config.core.ConfigDescriptionParameter.Type
-import org.eclipse.smarthome.core.common.registry.ManagedProvider
+import org.eclipse.smarthome.config.core.Configuration
+import org.eclipse.smarthome.core.common.registry.ProviderChangeListener
 import org.eclipse.smarthome.core.events.Event
 import org.eclipse.smarthome.core.events.EventPublisher
 import org.eclipse.smarthome.core.events.EventSubscriber
@@ -74,9 +74,9 @@ class AutomationIntegrationTest extends OSGiTest{
     def EventPublisher eventPublisher
     def ItemRegistry itemRegistry
     def RuleRegistry ruleRegistry
+    def ManagedRuleProvider managedRuleProvider
     def ModuleTypeRegistry moduleTypeRegistry
     def TemplateRegistry templateRegistry
-    def ManagedProvider<Rule, String> ruleManagedProvider
 
     @Before
     void before() {
@@ -120,9 +120,9 @@ class AutomationIntegrationTest extends OSGiTest{
         eventPublisher = getService(EventPublisher)
         itemRegistry = getService(ItemRegistry)
         ruleRegistry = getService(RuleRegistry)
+        managedRuleProvider = getService(ManagedRuleProvider)
         moduleTypeRegistry = getService(ModuleTypeRegistry)
         templateRegistry = getService(TemplateRegistry)
-        ruleManagedProvider = getService(RuleProvider)
         waitForAssert ({
             assertThat eventPublisher, is(notNullValue())
             assertThat storageService, is(notNullValue())
@@ -130,7 +130,7 @@ class AutomationIntegrationTest extends OSGiTest{
             assertThat ruleRegistry, is(notNullValue())
             assertThat moduleTypeRegistry, is(notNullValue())
             assertThat templateRegistry, is(notNullValue())
-            assertThat ruleManagedProvider, is(notNullValue())
+            assertThat managedRuleProvider, is(notNullValue())
         }, 9000)
         logger.info('@Before.finish')
     }
@@ -150,7 +150,7 @@ class AutomationIntegrationTest extends OSGiTest{
         def ruleEvent = null
 
         def ruleEventHandler = [
-            receive: {  Event e ->
+            receive: { Event e ->
                 logger.info("RuleEvent: " + e.topic)
                 ruleEvent = e
             },
@@ -170,11 +170,11 @@ class AutomationIntegrationTest extends OSGiTest{
             assertThat ruleEvent, is(notNullValue())
             assertThat ruleEvent, is(instanceOf(RuleAddedEvent))
             def ruleAddedEvent = ruleEvent as RuleAddedEvent
-            assertThat ruleAddedEvent.getRule().UID, is(rule.UID)
+            assertThat ruleAddedEvent.getRule().uid, is(rule.UID)
         })
         def Rule ruleAdded = ruleRegistry.get(rule.UID)
         assertThat ruleAdded, is(notNullValue())
-        assertThat ruleRegistry.getStatus(rule.UID).getStatus(), is(RuleStatus.IDLE)
+        assertThat ruleRegistry.getStatusInfo(rule.UID).getStatus(), is(RuleStatus.IDLE)
 
 
         //UPDATE
@@ -185,8 +185,8 @@ class AutomationIntegrationTest extends OSGiTest{
             assertThat ruleEvent, is(notNullValue())
             assertThat ruleEvent, is(instanceOf(RuleUpdatedEvent))
             def ruEvent = ruleEvent as RuleUpdatedEvent
-            assertThat ruEvent.getRule().UID, is(rule.UID)
-            assertThat ruEvent.getOldRule().UID, is(rule.UID)
+            assertThat ruEvent.getRule().uid, is(rule.UID)
+            assertThat ruEvent.getOldRule().uid, is(rule.UID)
             assertThat ruEvent.getRule().description, is("TestDescription")
             assertThat ruEvent.getOldRule().description, is(nullValue())
         })
@@ -200,7 +200,7 @@ class AutomationIntegrationTest extends OSGiTest{
             assertThat ruleEvent, is(notNullValue())
             assertThat ruleEvent, is(instanceOf(RuleRemovedEvent))
             def reEvent = ruleEvent as RuleRemovedEvent
-            assertThat reEvent.getRule().UID, is(removed.UID)
+            assertThat reEvent.getRule().uid, is(removed.UID)
         })
         assertThat removed, is(notNullValue())
         assertThat removed, is(ruleAdded)
@@ -210,18 +210,22 @@ class AutomationIntegrationTest extends OSGiTest{
     @Test
     public void 'assert that a rule with connections is executed' () {
         logger.info('assert that a rule with connections is executed')
-        def triggerConfig = [eventSource:"myMotionItem3", eventTopic:"smarthome/*", eventTypes:"ItemStateEvent"]
-        def condition1Config = [topic:"smarthome/*"]
-        def actionConfig = [itemName:"myLampItem3", command:"ON"]
-        def triggers = [new Trigger("ItemStateChangeTrigger", "GenericEventTrigger", triggerConfig)]
+        def triggerConfig = new Configuration([eventSource:"myMotionItem3", eventTopic:"smarthome/*", eventTypes:"ItemStateEvent"])
+        def condition1Config = new Configuration([topic:"smarthome/*"])
+        def actionConfig = new Configuration([itemName:"myLampItem3", command:"ON"])
+        def triggers = [new Trigger("ItemStateChangeTrigger", "core.GenericEventTrigger", triggerConfig)]
 
-        def inputs = [topic: "ItemStateChangeTrigger.topic"]
+        def inputs = [topic: "ItemStateChangeTrigger.topic", event:"ItemStateChangeTrigger.event"]
 
         //def conditionInputs=[topicConnection] as Set
-        def conditions = [new Condition("EventCondition_2", "EventCondition", condition1Config, inputs)]
-        def actions = [new Action("ItemPostCommandAction2", "ItemPostCommandAction", actionConfig, null)]
+        def conditions = [new Condition("EventCondition_2", "core.GenericEventCondition", condition1Config, inputs)]
+        def actions = [new Action("ItemPostCommandAction2", "core.ItemCommandAction", actionConfig, null)]
 
-        def rule = new Rule("myRule21_ConnectionTest",triggers, conditions, actions, null, null)
+        def rule = new Rule("myRule21_ConnectionTest")
+        rule.triggers = triggers
+        rule.conditions = conditions
+        rule.actions = actions
+
         rule.name="RuleByJAVA_API"+new Random().nextInt()
 
         ruleRegistry.add(rule)
@@ -252,50 +256,54 @@ class AutomationIntegrationTest extends OSGiTest{
             }, is(notNullValue())
         }, 9000, 200)
         waitForAssert({
-            assertThat ruleRegistry.getStatus(rule.UID).getStatus(), is(not(RuleStatus.RUNNING))
+            assertThat ruleRegistry.getStatusInfo(rule.UID).getStatus(), is(not(RuleStatus.RUNNING))
         })
     }
     @Test
-    public void 'assert that a rule with non existing moduleTypeHandler is added to the ruleRegistry in state NOT_INITIALIZED' () {
-        logger.info('assert that a rule with non existing moduleTypeHandler is added to the ruleRegistry in state NOT_INITIALIZED')
-        def triggerConfig = [eventSource:"myMotionItem", eventTopic:"smarthome/*", eventTypes:"ItemStateEvent"]
-        def condition1Config = [topic:"smarthome/*"]
-        def actionConfig = [itemName:"myLampItem3", command:"ON"]
+    public void 'assert that a rule with non existing moduleTypeHandler is added to the ruleRegistry in state UNINITIALIZED' () {
+        logger.info('assert that a rule with non existing moduleTypeHandler is added to the ruleRegistry in state UNINITIALIZED')
+        def triggerConfig = new Configuration([eventSource:"myMotionItem", eventTopic:"smarthome/*", eventTypes:"ItemStateEvent"])
+        def condition1Config = new Configuration([topic:"smarthome/*"])
+        def actionConfig = new Configuration([itemName:"myLampItem3", command:"ON"])
         def triggers = [new Trigger("ItemStateChangeTrigger", "GenericEventTriggerWhichDoesNotExist", triggerConfig)]
-        def inputs = [topic: "ItemStateChangeTrigger.topic"]
+        def inputs = [topic: "ItemStateChangeTrigger.topic", event:"ItemStateChangeTrigger.event"]
 
         //def conditionInputs=[topicConnection] as Set
-        def conditions = [new Condition("EventCondition_2", "EventCondition", condition1Config, inputs)]
-        def actions = [new Action("ItemPostCommandAction2", "ItemPostCommandAction", actionConfig, null)]
+        def conditions = [new Condition("EventCondition_2", "core.GenericEventCondition", condition1Config, inputs)]
+        def actions = [new Action("ItemPostCommandAction2", "core.ItemCommandAction", actionConfig, null)]
 
-        def rule = new Rule("myRule21_UNINITIALIZED",triggers, conditions, actions, null, null)
+        def rule = new Rule("myRule21_UNINITIALIZED")
+        rule.triggers = triggers
+        rule.conditions = conditions
+        rule.actions = actions
+
         rule.name="RuleByJAVA_API"+new Random().nextInt()
 
         ruleRegistry.add(rule)
 
-        assertThat ruleRegistry.getStatus(rule.UID).getStatus(), is(RuleStatus.NOT_INITIALIZED)
+        assertThat ruleRegistry.getStatusInfo(rule.UID).getStatus(), is(RuleStatus.UNINITIALIZED)
     }
 
     @Test
-    public void 'assert that a rule switches from IDLE to NOT_INITIALIZED if a moduleHanlder disappears and back to IDLE if it appears again' (){
-        logger.info('assert that a rule switches from IDLE to NOT_INITIALIZED if a moduleHanlder disappears and back to IDLE if it appears again')
+    public void 'assert that a rule switches from IDLE to UNINITIALIZED if a moduleHanlder disappears and back to IDLE if it appears again' (){
+        logger.info('assert that a rule switches from IDLE to UNINITIALIZED if a moduleHanlder disappears and back to IDLE if it appears again')
         def Rule rule = createSimpleRule()
         ruleRegistry.add(rule)
-        assertThat ruleRegistry.getStatus(rule.UID).getStatus(), is(RuleStatus.IDLE)
+        assertThat ruleRegistry.getStatusInfo(rule.UID).getStatus(), is(RuleStatus.IDLE)
 
         def moduleBundle = FrameworkUtil.getBundle(GenericEventTriggerHandler)
         moduleBundle.stop()
         waitForAssert({
-            logger.info("RuleStatus: {}", ruleRegistry.getStatus(rule.UID).getStatus())
-            assertThat ruleRegistry.getStatus(rule.UID).getStatus(), is(RuleStatus.NOT_INITIALIZED)
+            logger.info("RuleStatus: {}", ruleRegistry.getStatusInfo(rule.UID).getStatus())
+            assertThat ruleRegistry.getStatusInfo(rule.UID).getStatus(), is(RuleStatus.UNINITIALIZED)
         },3000,100)
 
 
         moduleBundle.start()
         ruleRegistry.setEnabled(rule.UID,true)
         waitForAssert({
-            logger.info("RuleStatus: {}", ruleRegistry.getStatus(rule.UID))
-            assertThat ruleRegistry.getStatus(rule.UID).getStatus(), is(RuleStatus.IDLE)
+            logger.info("RuleStatus: {}", ruleRegistry.getStatusInfo(rule.UID))
+            assertThat ruleRegistry.getStatusInfo(rule.UID).getStatus(), is(RuleStatus.IDLE)
         },3000,100)
     }
 
@@ -330,16 +338,17 @@ class AutomationIntegrationTest extends OSGiTest{
 
     @Test
     public void 'assert that a rule based on a composite modules is initialized and executed correctly' () {
-        def triggerConfig = [itemName:"myMotionItem3"]
-        def condition1Config = [itemName:"myMotionItem3", state:"ON"]
+        def triggerConfig = new Configuration([itemName:"myMotionItem3"])
+        def condition1Config = new Configuration([itemName:"myMotionItem3", state:"ON"])
         def eventInputs = [event:"ItemStateChangeTrigger3.event"]
-        def condition2Config = [operator:"=", itemName:"myPresenceItem3", state:"ON"]
-        def actionConfig = [itemName:"myLampItem3", command:"ON"]
-        def triggers = [new Trigger("ItemStateChangeTrigger3", "ItemStateChangeTrigger", triggerConfig)]
-        def conditions = [new Condition("ItemStateCondition5", "ItemStateEventCondition", condition1Config, eventInputs), new Condition("ItemStateCondition6", "ItemStateCondition", condition2Config, null)]
-        def actions = [new Action("ItemPostCommandAction3", "ItemPostCommandAction", actionConfig, null)]
+        def condition2Config = new Configuration([operator:"=", itemName:"myPresenceItem3", state:"ON"])
+        def actionConfig = new Configuration([itemName:"myLampItem3", command:"ON"])
+        def triggers = [new Trigger("ItemStateChangeTrigger3", "core.ItemStateChangeTrigger", triggerConfig)]
+        def actions = [new Action("ItemPostCommandAction3", "core.ItemCommandAction", actionConfig, null)]
 
-        def rule = new Rule("myRule21"+new Random().nextInt()+ "_COMPOSITE", triggers, conditions, actions, null, null)
+        def rule = new Rule("myRule21"+new Random().nextInt()+ "_COMPOSITE")
+        rule.triggers = triggers
+        rule.actions = actions
         rule.name="RuleByJAVA_API_WIthCompositeTrigger"
 
         logger.info("Rule created: "+rule.getUID())
@@ -349,7 +358,7 @@ class AutomationIntegrationTest extends OSGiTest{
 
         //TEST RULE
         waitForAssert({
-            assertThat ruleRegistry.getStatus(rule.uid).getStatus(), is(RuleStatus.IDLE)
+            assertThat ruleRegistry.getStatusInfo(rule.uid).getStatus(), is(RuleStatus.IDLE)
         })
 
         def EventPublisher eventPublisher = getService(EventPublisher)
@@ -387,18 +396,72 @@ class AutomationIntegrationTest extends OSGiTest{
         assertThat myLampItem3.state, is(OnOffType.ON)
     }
 
+
+    @Test
+    public void 'assert that ruleNow method executes actions of the rule' () {
+        def triggerConfig = new Configuration([eventTopic:"runNowEventTopic/*"])
+        def actionConfig = new Configuration([itemName:"myLampItem3", command:"TOGGLE"])
+        def actionConfig2 = new Configuration([itemName:"myLampItem3", command:"ON"])
+        def actionConfig3 = new Configuration([itemName:"myLampItem3", command:"OFFF"])
+        def triggers = [new Trigger("GenericEventTriggerId", "core.GenericEventTrigger", triggerConfig)]
+        def actions = [new Action("ItemPostCommandActionId", "core.ItemCommandAction", actionConfig, null), new Action("ItemPostCommandActionId2", "core.ItemCommandAction", actionConfig2, null), new Action("ItemPostCommandActionId3", "core.ItemCommandAction", actionConfig3, null)]
+
+        def rule = new Rule("runNowRule"+new Random().nextInt())
+        rule.triggers = triggers
+        rule.actions = actions
+        logger.info("Rule created: "+rule.getUID())
+
+        ruleRegistry.add(rule)
+
+        //TEST RULE
+        waitForAssert({
+            assertThat ruleRegistry.getStatusInfo(rule.getUID()).getStatus(), is(RuleStatus.IDLE)
+        }, 3000, 100)
+
+        def myLampItem3 = itemRegistry.getItem("myLampItem3")
+        Event itemEvent = null
+
+        def itemEventHandler = [
+            receive: {  Event e ->
+                logger.info("Event: " + e.topic)
+                if (e.topic.contains("myLampItem3")){
+                    itemEvent=e
+                }
+            },
+
+            getSubscribedEventTypes: {
+                Sets.newHashSet(ItemUpdatedEvent.TYPE, ItemStateEvent.TYPE)
+            },
+
+            getEventFilter:{ null }
+
+        ] as EventSubscriber
+
+        registerService(itemEventHandler)
+        myLampItem3.state = OnOffType.OFF
+        logger.info("myLampItem3 State: " + myLampItem3.state)
+        waitForAssert ({ assertThat myLampItem3.state, is(OnOffType.OFF)} , 3000, 100)
+
+        ruleRegistry.runNow(rule.getUID());
+        waitForAssert ({ assertThat itemEvent, is(notNullValue())} , 3000, 100)
+        logger.info("myLampItem3 State: " + myLampItem3.state)
+        waitForAssert ({ assertThat myLampItem3.state, is(OnOffType.ON)} , 3000, 100)
+
+        ruleRegistry.remove(rule.getUID())
+    }
+
+
     @Test
     public void 'test chain of composite Modules' () {
-        def triggerConfig = [itemName:"myMotionItem4"]
-        def condition1Config = [itemName:"myMotionItem4"]
+        def triggerConfig = new Configuration([itemName:"myMotionItem4"])
         def eventInputs = [event:"ItemStateChangeTrigger4.event"]
-        def condition2Config = [operator:"=", itemName:"myPresenceItem4", state:"ON"]
-        def actionConfig = [itemName:"myLampItem4", command:"ON"]
-        def triggers = [new Trigger("ItemStateChangeTrigger4", "ItemStateChangeTrigger", triggerConfig)]
-        def conditions = [new Condition("ItemStateCondition7", "ItemStateEvent_ON_Condition", condition1Config, eventInputs), new Condition("ItemStateCondition8", "ItemStateCondition", condition2Config, null)]
-        def actions = [new Action("ItemPostCommandAction4", "ItemPostCommandAction", actionConfig, null)]
+        def actionConfig = new Configuration([itemName:"myLampItem4", command:"ON"])
+        def triggers = [new Trigger("ItemStateChangeTrigger4", "core.ItemStateChangeTrigger", triggerConfig)]
+        def actions = [new Action("ItemPostCommandAction4", "core.ItemCommandAction", actionConfig, null)]
 
-        def rule = new Rule("myRule21"+new Random().nextInt()+ "_COMPOSITE", triggers, conditions, actions, null, null)
+        def rule = new Rule("myRule21"+new Random().nextInt()+ "_COMPOSITE")
+        rule.triggers = triggers
+        rule.actions = actions
         rule.name="RuleByJAVA_API_ChainedComposite"
 
         logger.info("Rule created: "+rule.getUID())
@@ -408,7 +471,7 @@ class AutomationIntegrationTest extends OSGiTest{
 
         //TEST RULE
         waitForAssert({
-            assertThat ruleRegistry.getStatus(rule.uid).getStatus(), is(RuleStatus.IDLE)
+            assertThat ruleRegistry.getStatusInfo(rule.uid).getStatus(), is(RuleStatus.IDLE)
         })
 
         def EventPublisher eventPublisher = getService(EventPublisher)
@@ -439,7 +502,7 @@ class AutomationIntegrationTest extends OSGiTest{
         registerService(itemEventHandler)
         //causing the event to trigger the rule
         myMotionItem.send(OnOffType.ON)
-        waitForAssert ({ assertThat itemEvent, is(notNullValue())} , 3000, 100)
+        waitForAssert ({ assertThat itemEvent, is(notNullValue())} , 5000, 100)
         assertThat itemEvent.topic, is(equalTo("smarthome/items/myLampItem4/state"))
         assertThat (((ItemStateEvent)itemEvent).itemState, is(OnOffType.ON))
         def myLampItem4 = itemRegistry.getItem("myLampItem4")
@@ -452,15 +515,15 @@ class AutomationIntegrationTest extends OSGiTest{
     public void 'assert a rule added by api is executed as expected'() {
         logger.info('assert a rule added by api is executed as expected')
         //Creation of RULE
-        def triggerConfig = [eventSource:"myMotionItem2", eventTopic:"smarthome/*", eventTypes:"ItemStateEvent"]
-        def condition1Config = [operator:"=", itemName:"myPresenceItem2", state:"ON"]
-        def condition2Config = [itemName:"myMotionItem2"]
-        def actionConfig = [itemName:"myLampItem2", command:"ON"]
-        def triggers = [new Trigger("ItemStateChangeTrigger2", "GenericEventTrigger", triggerConfig)]
-        def conditions = [new Condition("ItemStateCondition3", "ItemStateCondition", condition1Config, null), new Condition("ItemStateCondition4", "ItemStateEvent_ON_Condition", condition2Config, [event:"ItemStateChangeTrigger2.event"])]
-        def actions = [new Action("ItemPostCommandAction2", "ItemPostCommandAction", actionConfig, null)]
+        def triggerConfig = new Configuration([eventSource:"myMotionItem2", eventTopic:"smarthome/*", eventTypes:"ItemStateEvent"])
+        def actionConfig = new Configuration([itemName:"myLampItem2", command:"ON"])
+        def triggers = [new Trigger("ItemStateChangeTrigger2", "core.GenericEventTrigger", triggerConfig)]
+        def actions = [new Action("ItemPostCommandAction2", "core.ItemCommandAction", actionConfig, null)]
 
-        def rule = new Rule("myRule21",triggers, conditions, actions, null, null)
+        def rule = new Rule("myRule21")
+        rule.triggers = triggers
+        rule.actions = actions
+
         rule.name="RuleByJAVA_API"
         def tags = ["myRule21"] as Set
         rule.tags = tags
@@ -469,53 +532,7 @@ class AutomationIntegrationTest extends OSGiTest{
 
         ruleRegistry.add(rule)
         ruleRegistry.setEnabled(rule.UID, true)
-
-        //WAIT until Rule modules types are parsed and the rule becomes IDLE
-        waitForAssert({
-            assertThat ruleRegistry.getAll().isEmpty(), is(false)
-            def rule2 = ruleRegistry.getAll().find{it.tags!=null && it.tags.contains("myRule21")} as Rule
-            assertThat rule2, is(notNullValue())
-            def ruleStatus2 = ruleRegistry.getStatus(rule2.uid) as RuleStatusInfo
-            assertThat ruleStatus2.getStatus(), is(RuleStatus.IDLE)
-        }, 10000, 200)
-
-
-        //TEST RULE
-
-        def EventPublisher eventPublisher = getService(EventPublisher)
-        def ItemRegistry itemRegistry = getService(ItemRegistry)
-        SwitchItem myMotionItem = itemRegistry.getItem("myMotionItem2")
-        Command commandObj = TypeParser.parseCommand(myMotionItem.getAcceptedCommandTypes(), "ON")
-        eventPublisher.post(ItemEventFactory.createCommandEvent("myPresenceItem2", commandObj))
-
-        Event itemEvent = null
-
-        def itemEventHandler = [
-            receive: {  Event e ->
-                logger.info("Event: " + e.topic)
-                if (e.topic.contains("myLampItem2")){
-                    itemEvent=e
-                }
-            },
-
-            getSubscribedEventTypes: {
-                Sets.newHashSet(ItemUpdatedEvent.TYPE, ItemStateEvent.TYPE)
-            },
-
-            getEventFilter:{ null }
-
-        ] as EventSubscriber
-
-        registerService(itemEventHandler)
-        commandObj = TypeParser.parseCommand(itemRegistry.getItem("myMotionItem2").getAcceptedCommandTypes(),"ON")
-        eventPublisher.post(ItemEventFactory.createCommandEvent("myMotionItem2", commandObj))
-        waitForAssert ({ assertThat itemEvent, is(notNullValue())} , 3000, 100)
-        assertThat itemEvent.topic, is(equalTo("smarthome/items/myLampItem2/state"))
-        assertThat (((ItemStateEvent)itemEvent).itemState, is(OnOffType.ON))
-        def myLampItem2 = itemRegistry.getItem("myLampItem2")
-        assertThat myLampItem2, is(notNullValue())
-        logger.info("myLampItem2 State: " + myLampItem2.state)
-        assertThat myLampItem2.state, is(OnOffType.ON)
+        ruleRegistry.remove(rule.UID)
     }
 
     @Test
@@ -536,9 +553,9 @@ class AutomationIntegrationTest extends OSGiTest{
 
         def rule2 = createSimpleRule()
         assertThat ruleRegistry.getAll().find{it.UID==rule2.UID}, is(nullValue())
-        ruleManagedProvider.add(rule2)
+        managedRuleProvider.add(rule2)
         assertThat ruleRegistry.getAll().find{it.UID==rule2.UID}, is(notNullValue())
-        ruleManagedProvider.remove(rule2.UID)
+        managedRuleProvider.remove(rule2.UID)
         assertThat ruleRegistry.getAll().find{it.UID==rule2.UID}, is(nullValue())
     }
 
@@ -555,7 +572,9 @@ class AutomationIntegrationTest extends OSGiTest{
         assertThat template.tags, is(notNullValue())
         assertThat template.tags.size(), is(not(0))
         def configs = [onItem:"templ_MotionItem", ifState: "ON", updateItem:"templ_LampItem", updateCommand:"ON"]
-        def templateRule = new Rule("templateRuleUID", "SimpleTestTemplate", configs)
+        def templateRule = new Rule("templateRuleUID")
+        templateRule.templateUID = "SimpleTestTemplate"
+        templateRule.configuration = configs
         ruleRegistry.add(templateRule)
         assertThat ruleRegistry.getAll().find{it.UID==templateRule.UID}, is(notNullValue())
 
@@ -583,13 +602,17 @@ class AutomationIntegrationTest extends OSGiTest{
         })
         assertThat template.tags, is(notNullValue())
         assertThat template.tags.size(), is(not(0))
-        def configs = [onItem:"xtempl_MotionItem", ifState: ".*ON.*", updateItem:"xtempl_LampItem", updateCommand:"ON"]
-        def templateRule = new Rule("xtemplateRuleUID", "TestTemplateWithCompositeModules", configs)
+
+        def configs = new Configuration([onItem:"xtempl_MotionItem", ifState: ".*ON.*", updateItem:"xtempl_LampItem", updateCommand:"ON"])
+        def templateRule = new Rule("xtemplateRuleUID")
+        templateRule.templateUID = "TestTemplateWithCompositeModules"
+        templateRule.configuration = configs
+
         ruleRegistry.add(templateRule)
         assertThat ruleRegistry.getAll().find{it.UID==templateRule.UID}, is(notNullValue())
         waitForAssert {
             assertThat ruleRegistry.get(templateRule.UID), is(notNullValue())
-            assertThat ruleRegistry.getStatus(templateRule.UID).status, is(RuleStatus.IDLE)
+            assertThat ruleRegistry.getStatus(templateRule.UID), is(RuleStatus.IDLE)
         }
 
         //bring the rule to execution:
@@ -599,7 +622,7 @@ class AutomationIntegrationTest extends OSGiTest{
         waitForAssert({
             def lamp = itemRegistry.getItem("xtempl_LampItem") as SwitchItem
             assertThat lamp.state, is(OnOffType.ON)
-        })
+        }, 3000, 50)
 
     }
 
@@ -613,8 +636,7 @@ class AutomationIntegrationTest extends OSGiTest{
         def templateTriggers = []
         def templateConditions = []
         def templateActions = []
-        def templateConfigDescriptionParameters = [new ConfigDescriptionParameter("param", Type.TEXT)]
-
+        def templateConfigDescriptionParameters = [new ConfigDescriptionParameter("param", ConfigDescriptionParameter.Type.TEXT)]
         def template = new RuleTemplate(templateUID, "Test template Label", "Test template description", tags, templateTriggers, templateConditions,
                 templateActions, templateConfigDescriptionParameters, Visibility.VISIBLE)
 
@@ -631,11 +653,15 @@ class AutomationIntegrationTest extends OSGiTest{
                     return null
                 }
             },
-
             getTemplates:{Locale locale->
                 return [template]
+            },
+            getAll:{ return [template]},
+            addProviderChangeListener:{ ProviderChangeListener listener ->
+            },
+            removeProviderChangeListener:{ ProviderChangeListener listener ->
             }
-        ] as TemplateProvider
+        ] as RuleTemplateProvider
 
         def moduleTypeProvider=[
             getModuleType:{String UID, Locale locale->
@@ -649,21 +675,25 @@ class AutomationIntegrationTest extends OSGiTest{
             },
             getModuleTypes:{Locale locale ->
                 return [triggerType, actionType]
+            },
+            getAll:{ return [triggerType, actionType]},
+            addProviderChangeListener:{ ProviderChangeListener listener ->
+            },
+            removeProviderChangeListener:{ ProviderChangeListener listener ->
             }
         ] as ModuleTypeProvider
 
         registerService(templateProvider)
         assertThat templateRegistry.get(templateUID), is(notNullValue())
+        unregisterService(templateProvider)
+        assertThat templateRegistry.get(templateUID), is(nullValue())
+
         registerService(moduleTypeProvider)
         assertThat moduleTypeRegistry.get(actionTypeUID), is(notNullValue())
         assertThat moduleTypeRegistry.get(triggerTypeUID), is(notNullValue())
-
-        unregisterService(templateProvider)
-        assertThat templateRegistry.get(templateUID), is(nullValue())
         unregisterService(moduleTypeProvider)
         assertThat moduleTypeRegistry.get(actionTypeUID), is(nullValue())
         assertThat moduleTypeRegistry.get(triggerTypeUID), is(nullValue())
-
     }
 
     /**
@@ -672,16 +702,15 @@ class AutomationIntegrationTest extends OSGiTest{
     private Rule createSimpleRule(){
         logger.info("createSimpleRule")
         def rand = new Random().nextInt()
-        def triggerConfig = [eventSource:"myMotionItem2", eventTopic:"smarthome/*", eventTypes:"ItemStateEvent"]
-        def condition1Config = [operator:"=", itemName:"myPresenceItem2", state:"ON"]
-        def condition2Config = [itemName:"myMotionItem2"]
-        def actionConfig = [itemName:"myLampItem2", command:"ON"]
+        def triggerConfig = new Configuration([eventSource:"myMotionItem2", eventTopic:"smarthome/*", eventTypes:"ItemStateEvent"])
+        def actionConfig = new Configuration([itemName:"myLampItem2", command:"ON"])
         def triggerUID = "ItemStateChangeTrigger_"+rand
-        def triggers = [new Trigger(triggerUID, "GenericEventTrigger", triggerConfig)]
-        def conditions = [new Condition("ItemStateCondition_"+rand, "ItemStateCondition", condition1Config, null), new Condition("ItemStateCondition1_"+rand, "ItemStateEvent_ON_Condition", condition2Config, [event:triggerUID+".event"])]
-        def actions = [new Action("ItemPostCommandAction_"+rand, "ItemPostCommandAction", actionConfig, null)]
+        def triggers = [new Trigger(triggerUID, "core.GenericEventTrigger", triggerConfig)]
+        def actions = [new Action("ItemPostCommandAction_"+rand, "core.ItemCommandAction", actionConfig, null)]
 
-        def rule = new Rule("myRule_"+rand,triggers, conditions, actions, null, null)
+        def rule = new Rule("myRule_"+rand)
+        rule.triggers = triggers
+        rule.actions = actions
         rule.name="RuleByJAVA_API_"+rand
 
         logger.info("Rule created: "+rule.getUID())
@@ -694,16 +723,20 @@ class AutomationIntegrationTest extends OSGiTest{
         def random = new Random().nextInt(100000)
         logger.info('assert a rule with generic condition works')
         //Creation of RULE
-        def triggerConfig = [eventSource:"myMotionItem5", eventTopic:"smarthome/*", eventTypes:"ItemStateEvent"]
-        def condition1Config = [operator:"matches", right:".*ON.*", inputproperty:"payload"]
-        def condition2Config = [operator:"=", right:"myMotionItem5", inputproperty:"itemName"]
-        def actionConfig = [itemName:"myLampItem5", command:"ON"]
+        def triggerConfig = new Configuration([eventSource:"myMotionItem5", eventTopic:"smarthome/*", eventTypes:"ItemStateEvent"])
+        def condition1Config = new Configuration([operator:"matches", right:".*ON.*", inputproperty:"payload"])
+        def condition2Config = new Configuration([operator:"=", right:"myMotionItem5", inputproperty:"itemName"])
+        def actionConfig = new Configuration([itemName:"myLampItem5", command:"ON"])
         def triggerId = "ItemStateChangeTrigger"+random
-        def triggers = [new Trigger(triggerId, "GenericEventTrigger", triggerConfig)]
-        def conditions = [new Condition("ItemStateCondition"+random, "GenericCompareCondition", condition1Config, [input:triggerId+".event"]), new Condition("ItemStateCondition"+(random+1), "GenericCompareCondition", condition2Config, [input:triggerId+".event"])]
-        def actions = [new Action("ItemPostCommandAction"+random, "ItemPostCommandAction", actionConfig, null)]
+        def triggers = [new Trigger(triggerId, "core.GenericEventTrigger", triggerConfig)]
+        def conditions = [new Condition("ItemStateCondition"+random, "core.GenericCompareCondition", condition1Config, [input:triggerId+".event"]), new Condition("ItemStateCondition"+(random+1), "core.GenericCompareCondition", condition2Config, [input:triggerId+".event"])]
+        def actions = [new Action("ItemPostCommandAction"+random, "core.ItemCommandAction", actionConfig, null)]
 
-        def rule = new Rule("myRule_"+random,triggers, conditions, actions, null, null)
+        def rule = new Rule("myRule_"+random)
+        rule.triggers = triggers
+        rule.conditions = conditions
+        rule.actions = actions
+
         rule.name="RuleByJAVA_API"+random
         def tags = ["myRule_"+random] as Set
         rule.tags = tags
@@ -718,7 +751,7 @@ class AutomationIntegrationTest extends OSGiTest{
             assertThat ruleRegistry.getAll().isEmpty(), is(false)
             def rule2 = ruleRegistry.get(rule.UID)
             assertThat rule2, is(notNullValue())
-            def ruleStatus2 = ruleRegistry.getStatus(rule2.uid).status as RuleStatus
+            def ruleStatus2 = ruleRegistry.getStatusInfo(rule2.uid).status as RuleStatus
             assertThat ruleStatus2, is(RuleStatus.IDLE)
         }, 10000, 200)
 

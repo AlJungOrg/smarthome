@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -18,6 +18,7 @@ import java.util.Map;
  *
  * @author Tim Buckley - Initial Contribution
  * @author Karel Goderis - Enhancement for the V2 LIFX Firmware and LAN Protocol Specification
+ * @author Wouter Born - Support LIFX 2016 product line-up and infrared functionality
  */
 public class PacketFactory {
 
@@ -38,27 +39,29 @@ public class PacketFactory {
 
         register(AcknowledgementResponse.class);
         register(EchoRequestResponse.class);
+        register(GetColorZonesRequest.class);
         register(GetEchoRequest.class);
         register(GetGroupRequest.class);
         register(GetHostFirmwareRequest.class);
         register(GetHostInfoRequest.class);
         register(GetInfoRequest.class);
         register(GetLabelRequest.class);
+        register(GetLightInfraredRequest.class);
         register(GetLightPowerRequest.class);
         register(GetLocationRequest.class);
-        register(GetMeshFirmwareRequest.class);
         register(GetPowerRequest.class);
         register(GetRequest.class);
         register(GetServiceRequest.class);
         register(GetTagLabelsRequest.class);
         register(GetTagsRequest.class);
-        register(GetTagsRequest.class);
         register(GetVersionRequest.class);
         register(GetWifiFirmwareRequest.class);
         register(GetWifiInfoRequest.class);
         register(SetColorRequest.class);
+        register(SetColorZonesRequest.class);
         register(SetDimAbsoluteRequest.class);
         register(SetLabelRequest.class);
+        register(SetLightInfraredRequest.class);
         register(SetLightPowerRequest.class);
         register(SetPowerRequest.class);
         register(SetTagsRequest.class);
@@ -67,15 +70,17 @@ public class PacketFactory {
         register(StateHostInfoResponse.class);
         register(StateInfoResponse.class);
         register(StateLabelResponse.class);
+        register(StateLightInfraredResponse.class);
         register(StateLightPowerResponse.class);
         register(StateLocationResponse.class);
-        register(StateMeshFirmwareResponse.class);
+        register(StateMultiZoneResponse.class);
         register(StatePowerResponse.class);
         register(StateResponse.class);
         register(StateServiceResponse.class);
         register(StateVersionResponse.class);
         register(StateWifiFirmwareResponse.class);
         register(StateWifiInfoResponse.class);
+        register(StateZoneResponse.class);
         register(TagLabelsResponse.class);
         register(TagsResponse.class);
     }

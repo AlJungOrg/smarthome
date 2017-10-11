@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -18,19 +18,16 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.emf.common.util.EList;
 import org.eclipse.smarthome.core.common.registry.AbstractProvider;
-import org.eclipse.smarthome.core.common.registry.ProviderChangeListener;
 import org.eclipse.smarthome.core.items.GenericItem;
 import org.eclipse.smarthome.core.items.GroupFunction;
 import org.eclipse.smarthome.core.items.GroupItem;
 import org.eclipse.smarthome.core.items.Item;
 import org.eclipse.smarthome.core.items.ItemFactory;
 import org.eclipse.smarthome.core.items.ItemProvider;
-import org.eclipse.smarthome.core.items.ItemsChangeListener;
-import org.eclipse.smarthome.core.library.types.ArithmeticGroupFunction;
-import org.eclipse.smarthome.core.types.State;
+import org.eclipse.smarthome.core.items.dto.GroupFunctionDTO;
+import org.eclipse.smarthome.core.items.dto.ItemDTOMapper;
 import org.eclipse.smarthome.core.types.StateDescription;
 import org.eclipse.smarthome.core.types.StateDescriptionProvider;
-import org.eclipse.smarthome.core.types.TypeParser;
 import org.eclipse.smarthome.model.core.EventType;
 import org.eclipse.smarthome.model.core.ModelRepository;
 import org.eclipse.smarthome.model.core.ModelRepositoryChangeListener;
@@ -42,6 +39,7 @@ import org.eclipse.smarthome.model.items.ModelGroupFunction;
 import org.eclipse.smarthome.model.items.ModelGroupItem;
 import org.eclipse.smarthome.model.items.ModelItem;
 import org.eclipse.smarthome.model.items.ModelNormalItem;
+import org.osgi.framework.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,11 +59,29 @@ public class GenericItemProvider extends AbstractProvider<Item>
 
     private ModelRepository modelRepository = null;
 
+    private Map<String, Collection<Item>> itemsMap = new ConcurrentHashMap<>();
+
     private Collection<ItemFactory> itemFactorys = new ArrayList<ItemFactory>();
 
     private Map<String, StateDescription> stateDescriptions = new ConcurrentHashMap<>();
 
+    private Integer rank;
+
     public GenericItemProvider() {
+    }
+
+    protected void activate(Map<String, Object> properties) {
+        Object serviceRanking = properties.get(Constants.SERVICE_RANKING);
+        if (serviceRanking instanceof Integer) {
+            rank = (Integer) serviceRanking;
+        } else {
+            rank = 0;
+        }
+    }
+
+    @Override
+    public Integer getRank() {
+        return rank;
     }
 
     public void setModelRepository(ModelRepository modelRepository) {
@@ -113,9 +129,6 @@ public class GenericItemProvider extends AbstractProvider<Item>
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Collection<Item> getAll() {
         List<Item> items = new ArrayList<Item>();
@@ -147,7 +160,7 @@ public class GenericItemProvider extends AbstractProvider<Item>
         return items;
     }
 
-    private void processBindingConfigsFromModel(String modelName) {
+    private void processBindingConfigsFromModel(String modelName, EventType type) {
         logger.debug("Processing binding configs for items from model '{}'", modelName);
 
         if (modelRepository != null) {
@@ -162,10 +175,12 @@ public class GenericItemProvider extends AbstractProvider<Item>
             }
 
             // create items and read new binding configuration
-            for (ModelItem modelItem : model.getItems()) {
-                Item item = createItemFromModelItem(modelItem);
-                if (item != null) {
-                    internalDispatchBindings(modelName, item, modelItem.getBindings());
+            if (!EventType.REMOVED.equals(type)) {
+                for (ModelItem modelItem : model.getItems()) {
+                    Item item = createItemFromModelItem(modelItem);
+                    if (item != null) {
+                        internalDispatchBindings(modelName, item, modelItem.getBindings());
+                    }
                 }
             }
 
@@ -183,12 +198,9 @@ public class GenericItemProvider extends AbstractProvider<Item>
             String baseItemType = modelGroupItem.getType();
             GenericItem baseItem = createItemOfType(baseItemType, modelGroupItem.getName());
             if (baseItem != null) {
+                // if the user did not specify a function the first value of the enum in xtext (EQUAL) will be used
                 ModelGroupFunction function = modelGroupItem.getFunction();
-                if (function == null) {
-                    item = new GroupItem(modelGroupItem.getName(), baseItem);
-                } else {
-                    item = applyGroupFunction(baseItem, modelGroupItem, function);
-                }
+                item = applyGroupFunction(baseItem, modelGroupItem, function);
             } else {
                 item = new GroupItem(modelGroupItem.getName());
             }
@@ -222,76 +234,11 @@ public class GenericItemProvider extends AbstractProvider<Item>
 
     private GroupItem applyGroupFunction(GenericItem baseItem, ModelGroupItem modelGroupItem,
             ModelGroupFunction function) {
-        List<State> args = new ArrayList<State>();
-        for (String arg : modelGroupItem.getArgs()) {
-            State state = TypeParser.parseState(baseItem.getAcceptedDataTypes(), arg);
-            if (state == null) {
-                logger.warn("State '{}' is not valid for group item '{}' with base type '{}'",
-                        new Object[] { arg, modelGroupItem.getName(), modelGroupItem.getType() });
-                args.clear();
-                break;
-            } else {
-                args.add(state);
-            }
-        }
+        GroupFunctionDTO dto = new GroupFunctionDTO();
+        dto.name = function.getName();
+        dto.params = modelGroupItem.getArgs().toArray(new String[modelGroupItem.getArgs().size()]);
 
-        GroupFunction groupFunction = null;
-        switch (function) {
-            case AND:
-                if (args.size() == 2) {
-                    groupFunction = new ArithmeticGroupFunction.And(args.get(0), args.get(1));
-                    break;
-                } else {
-                    logger.error("Group function 'AND' requires two arguments. Using Equality instead.");
-                }
-            case OR:
-                if (args.size() == 2) {
-                    groupFunction = new ArithmeticGroupFunction.Or(args.get(0), args.get(1));
-                    break;
-                } else {
-                    logger.error("Group function 'OR' requires two arguments. Using Equality instead.");
-                }
-            case NAND:
-                if (args.size() == 2) {
-                    groupFunction = new ArithmeticGroupFunction.NAnd(args.get(0), args.get(1));
-                    break;
-                } else {
-                    logger.error("Group function 'NOT AND' requires two arguments. Using Equality instead.");
-                }
-                break;
-            case NOR:
-                if (args.size() == 2) {
-                    groupFunction = new ArithmeticGroupFunction.NOr(args.get(0), args.get(1));
-                    break;
-                } else {
-                    logger.error("Group function 'NOT OR' requires two arguments. Using Equality instead.");
-                }
-            case COUNT:
-                if (args.size() == 1) {
-                    groupFunction = new ArithmeticGroupFunction.Count(args.get(0));
-                    break;
-                } else {
-                    logger.error("Group function 'COUNT' requires one argument. Using Equality instead.");
-                }
-            case AVG:
-                groupFunction = new ArithmeticGroupFunction.Avg();
-                break;
-            case SUM:
-                groupFunction = new ArithmeticGroupFunction.Sum();
-                break;
-            case MIN:
-                groupFunction = new ArithmeticGroupFunction.Min();
-                break;
-            case MAX:
-                groupFunction = new ArithmeticGroupFunction.Max();
-                break;
-            default:
-                logger.error("Unknown group function '" + function.getName() + "'. Using Equality instead.");
-        }
-
-        if (groupFunction == null) {
-            groupFunction = new GroupFunction.Equality();
-        }
+        GroupFunction groupFunction = ItemDTOMapper.mapFunction(baseItem, dto);
 
         return new GroupItem(modelGroupItem.getName(), baseItem, groupFunction);
     }
@@ -391,40 +338,57 @@ public class GenericItemProvider extends AbstractProvider<Item>
         }
     }
 
-    /**
-     * {@inheritDoc}
-     * <p>
-     * Dispatches all binding configs and fires all {@link ItemsChangeListener}s if {@code modelName} ends with "items".
-     */
     @Override
     public void modelChanged(String modelName, EventType type) {
         if (modelName.endsWith("items")) {
             switch (type) {
                 case ADDED:
-                    processBindingConfigsFromModel(modelName);
-                    for (ProviderChangeListener<Item> listener : listeners) {
-                        if (listener instanceof ItemsChangeListener) {
-                            ((ItemsChangeListener) listener).allItemsChanged(this, null);
-                        }
+                    Collection<Item> allNewItems = getItemsFromModel(modelName);
+                    itemsMap.put(modelName, allNewItems);
+                    for (Item item : allNewItems) {
+                        notifyListenersAboutAddedElement(item);
                     }
+                    processBindingConfigsFromModel(modelName, type);
                     break;
                 case MODIFIED:
-                    // TODO implement "diff & merge" for items in modified resources
-                    processBindingConfigsFromModel(modelName);
-                    for (ProviderChangeListener<Item> listener : listeners) {
-                        if (listener instanceof ItemsChangeListener) {
-                            ((ItemsChangeListener) listener).allItemsChanged(this, null);
+                    Map<String, Item> oldItems = toItemMap(itemsMap.get(modelName));
+                    Map<String, Item> newItems = toItemMap(getAll());
+                    itemsMap.put(modelName, newItems.values());
+                    for (Item newItem : newItems.values()) {
+                        if (oldItems.containsKey(newItem.getName())) {
+                            Item oldItem = oldItems.get(newItem.getName());
+                            if (!oldItem.equals(newItem)) {
+                                notifyListenersAboutUpdatedElement(oldItem, newItem);
+                            }
+                        } else {
+                            notifyListenersAboutAddedElement(newItem);
+                        }
+                    }
+                    processBindingConfigsFromModel(modelName, type);
+                    for (Item oldItem : oldItems.values()) {
+                        if (!newItems.containsKey(oldItem.getName())) {
+                            notifyListenersAboutRemovedElement(oldItem);
                         }
                     }
                     break;
                 case REMOVED:
+                    processBindingConfigsFromModel(modelName, type);
                     Collection<Item> itemsFromModel = getItemsFromModel(modelName);
+                    itemsMap.remove(modelName);
                     for (Item item : itemsFromModel) {
                         notifyListenersAboutRemovedElement(item);
                     }
                     break;
             }
         }
+    }
+
+    private Map<String, Item> toItemMap(Collection<Item> items) {
+        Map<String, Item> ret = new HashMap<>();
+        for (Item item : items) {
+            ret.put(item.getName(), item);
+        }
+        return ret;
     }
 
     /**

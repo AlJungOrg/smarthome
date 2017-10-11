@@ -2,12 +2,14 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Eclipse SmartHome IO REST Core Tests
 Bundle-SymbolicName: org.eclipse.smarthome.io.rest.core.test;singleton:=true
-Bundle-Version: 0.8.0.qualifier
-Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Bundle-Version: 0.9.0.b5
+Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Bundle-Vendor: Eclipse.org/SmartHome
 Fragment-Host: org.eclipse.smarthome.io.rest.core
-Import-Package: groovy.lang,
+Import-Package: com.jayway.jsonpath,
+ groovy.lang,
  javax.ws.rs.core;version="1.1.1",
+ org.apache.commons.io,
  org.codehaus.groovy.reflection,
  org.codehaus.groovy.runtime,
  org.codehaus.groovy.runtime.callsite,
@@ -24,14 +26,16 @@ Import-Package: groovy.lang,
  org.eclipse.smarthome.core.thing.binding.builder,
  org.eclipse.smarthome.core.thing.events,
  org.eclipse.smarthome.core.thing.link,
- org.eclipse.smarthome.core.thing.setup,
  org.eclipse.smarthome.core.thing.type,
  org.eclipse.smarthome.core.thing.util,
  org.eclipse.smarthome.core.types,
  org.eclipse.smarthome.io.console,
  org.eclipse.smarthome.io.rest,
  org.eclipse.smarthome.test,
+ org.eclipse.smarthome.test.java,
  org.eclipse.smarthome.test.storage,
  org.hamcrest;core=split,
  org.junit;version="4.0.0",
+ org.mockito,
  org.slf4j
+Require-Bundle: org.junit,org.mockito,org.hamcrest

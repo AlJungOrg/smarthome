@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -9,7 +9,7 @@ package org.eclipse.smarthome.core.thing.i18n;
 
 import java.util.Locale;
 
-import org.eclipse.smarthome.core.i18n.I18nProvider;
+import org.eclipse.smarthome.core.i18n.TranslationProvider;
 import org.eclipse.smarthome.core.i18n.I18nUtil;
 import org.eclipse.smarthome.core.thing.ThingTypeUID;
 import org.eclipse.smarthome.core.thing.type.ChannelGroupTypeUID;
@@ -17,7 +17,7 @@ import org.eclipse.smarthome.core.thing.type.ChannelTypeUID;
 import org.osgi.framework.Bundle;
 
 /**
- * {@link ThingTypeI18nUtil} uses the {@link I18nProvider} to resolve
+ * {@link ThingTypeI18nUtil} uses the {@link TranslationProvider} to resolve
  * the localized texts. It automatically infers the key if the default text is
  * not a constant.
  *
@@ -25,9 +25,9 @@ import org.osgi.framework.Bundle;
  */
 public class ThingTypeI18nUtil {
 
-    private I18nProvider i18nProvider;
+    private TranslationProvider i18nProvider;
 
-    public ThingTypeI18nUtil(I18nProvider i18nProvider) {
+    public ThingTypeI18nUtil(TranslationProvider i18nProvider) {
         this.i18nProvider = i18nProvider;
     }
 

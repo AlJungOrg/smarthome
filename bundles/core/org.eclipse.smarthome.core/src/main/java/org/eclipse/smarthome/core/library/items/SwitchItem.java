@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -13,13 +13,13 @@ import java.util.List;
 
 import org.eclipse.smarthome.core.items.GenericItem;
 import org.eclipse.smarthome.core.library.CoreItemFactory;
-import org.eclipse.smarthome.core.library.types.DecimalType;
 import org.eclipse.smarthome.core.library.types.OnOffType;
-import org.eclipse.smarthome.core.library.types.PercentType;
 import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.core.types.RefreshType;
 import org.eclipse.smarthome.core.types.State;
 import org.eclipse.smarthome.core.types.UnDefType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A SwitchItem represents a normal switch that can be ON or OFF.
@@ -29,6 +29,8 @@ import org.eclipse.smarthome.core.types.UnDefType;
  *
  */
 public class SwitchItem extends GenericItem {
+
+    private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private static List<Class<? extends State>> acceptedDataTypes = new ArrayList<Class<? extends State>>();
     private static List<Class<? extends Command>> acceptedCommandTypes = new ArrayList<Class<? extends Command>>();
@@ -45,7 +47,7 @@ public class SwitchItem extends GenericItem {
         super(CoreItemFactory.SWITCH, name);
     }
 
-    /* package */SwitchItem(String type, String name) {
+    /* package */ SwitchItem(String type, String name) {
         super(type, name);
     }
 
@@ -64,13 +66,13 @@ public class SwitchItem extends GenericItem {
     }
 
     @Override
-    public State getStateAs(Class<? extends State> typeClass) {
-        if (typeClass == DecimalType.class) {
-            return state == OnOffType.ON ? new DecimalType(1) : DecimalType.ZERO;
-        } else if (typeClass == PercentType.class) {
-            return state == OnOffType.ON ? PercentType.HUNDRED : PercentType.ZERO;
+    public void setState(State state) {
+        if (isAcceptedState(acceptedDataTypes, state)) {
+            super.setState(state);
         } else {
-            return super.getStateAs(typeClass);
+            logger.error("Tried to set invalid state {} on item {} of type {}, ignoring it", state, getName(),
+                    getClass().getSimpleName());
         }
     }
+
 }

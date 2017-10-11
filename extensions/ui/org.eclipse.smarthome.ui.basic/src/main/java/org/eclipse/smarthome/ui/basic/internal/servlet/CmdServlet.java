@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -69,9 +69,6 @@ public class CmdServlet extends BaseServlet {
         httpService.unregister(WEBAPP_ALIAS + "/" + SERVLET_NAME);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void service(ServletRequest req, ServletResponse res) throws ServletException, IOException {
         for (Object key : req.getParameterMap().keySet()) {

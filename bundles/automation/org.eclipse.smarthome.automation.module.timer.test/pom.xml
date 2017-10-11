@@ -9,7 +9,7 @@
   <parent>
     <groupId>org.eclipse.smarthome.bundles</groupId>
     <artifactId>automation</artifactId>
-    <version>0.8.0-SNAPSHOT</version>
+    <version>0.9.0.b5</version>
   </parent>
 
   <properties>
@@ -25,11 +25,6 @@
         <version>${tycho-version}</version>
         <configuration>
           <dependencies>
-            <dependency>
-              <type>eclipse-plugin</type>
-              <artifactId>org.eclipse.smarthome.core.scheduler</artifactId>
-              <version>0.0.0</version>
-            </dependency>
             <dependency>
               <type>eclipse-plugin</type>
               <artifactId>org.eclipse.smarthome.automation.api</artifactId>

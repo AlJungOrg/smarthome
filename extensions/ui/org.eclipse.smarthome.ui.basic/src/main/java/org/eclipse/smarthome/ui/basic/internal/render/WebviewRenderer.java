@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -23,17 +23,11 @@ import org.eclipse.smarthome.ui.basic.render.WidgetRenderer;
  */
 public class WebviewRenderer extends AbstractWidgetRenderer {
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public boolean canRender(Widget w) {
         return w instanceof Webview;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public EList<Widget> renderWidget(Widget w, StringBuilder sb) throws RenderException {
         Webview webview = (Webview) w;
@@ -44,6 +38,7 @@ public class WebviewRenderer extends AbstractWidgetRenderer {
             height = 1;
         }
 
+        snippet = preprocessSnippet(snippet, webview);
         snippet = StringUtils.replace(snippet, "%url%", webview.getUrl());
         snippet = StringUtils.replace(snippet, "%height%", Integer.toString(height * 36));
 

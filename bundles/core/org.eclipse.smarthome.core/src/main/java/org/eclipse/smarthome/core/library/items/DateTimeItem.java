@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -18,6 +18,8 @@ import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.core.types.RefreshType;
 import org.eclipse.smarthome.core.types.State;
 import org.eclipse.smarthome.core.types.UnDefType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A DateTimeItem stores a timestamp including a valid time zone.
@@ -27,6 +29,8 @@ import org.eclipse.smarthome.core.types.UnDefType;
  *
  */
 public class DateTimeItem extends GenericItem {
+
+    private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private static List<Class<? extends State>> acceptedDataTypes = new ArrayList<Class<? extends State>>();
     private static List<Class<? extends Command>> acceptedCommandTypes = new ArrayList<Class<? extends Command>>();
@@ -57,4 +61,13 @@ public class DateTimeItem extends GenericItem {
         internalSend(command);
     }
 
+    @Override
+    public void setState(State state) {
+        if (isAcceptedState(acceptedDataTypes, state)) {
+            super.setState(state);
+        } else {
+            logger.error("Tried to set invalid state {} on item {} of type {}, ignoring it", state, getName(),
+                    getClass().getSimpleName());
+        }
+    }
 }

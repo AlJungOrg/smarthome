@@ -24,6 +24,7 @@ import java.util.Map;
 import org.eclipse.smarthome.automation.Condition;
 import org.eclipse.smarthome.automation.handler.BaseModuleHandler;
 import org.eclipse.smarthome.automation.handler.ConditionHandler;
+import org.eclipse.smarthome.config.core.Configuration;
 
 /**
  * Condition Handler Sample Implementation.
@@ -32,7 +33,7 @@ import org.eclipse.smarthome.automation.handler.ConditionHandler;
  * @author Kai Kreuzer - refactored and simplified customized module handling
  *
  */
-public class SampleConditionHandler extends BaseModuleHandler<Condition>implements ConditionHandler {
+public class SampleConditionHandler extends BaseModuleHandler<Condition> implements ConditionHandler {
     public static final String OPERATOR_LESS = "<";
     public static final String OPERATOR_GREATER = ">";
     public static final String OPERATOR_EQUAL = "=";
@@ -56,12 +57,12 @@ public class SampleConditionHandler extends BaseModuleHandler<Condition>implemen
     }
 
     @Override
-    public boolean isSatisfied(Map<String, ?> inputs) {
+    public boolean isSatisfied(Map<String, Object> inputs) {
         String conditionInput = (String) inputs.get(CONDITION_INPUT_NAME);
         if (conditionInput == null) {
             conditionInput = "";
         }
-        Map<String, Object> config = module.getConfiguration();
+        Configuration config = module.getConfiguration();
         String operator = (String) config.get(PROPERTY_OPERATOR);
         String constraint = (String) config.get(PROPERTY_CONSTRAINT);
         boolean evaluation = false;

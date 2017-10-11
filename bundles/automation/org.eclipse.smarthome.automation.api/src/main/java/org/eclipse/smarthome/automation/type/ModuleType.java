@@ -114,20 +114,22 @@ public abstract class ModuleType {
     }
 
     /**
-     * This method is used for getting the Set of {@link ConfigDescriptionParameter}s defined by this {@link ModuleType}
-     * .<br/>
+     * This method is used for getting the Set of {@link ConfigDescriptionParameter}s defined by this
+     * {@link ModuleType}.
      *
      * @return a {@link Set} of meta-information configuration descriptions.
      */
-    public List<ConfigDescriptionParameter> getConfigurationDescription() {
+    public List<ConfigDescriptionParameter> getConfigurationDescriptions() {
         return configDescriptions != null ? configDescriptions : Collections.<ConfigDescriptionParameter> emptyList();
     }
 
     /**
      * {@link ModuleType}s can have
+     * <ul>
      * <li><code>tags</code> which are non-hierarchical keywords or terms for describing
      * them. The tags are used to filter the ModuleTypes. This method is used for getting the tags assign to this
-     * {@link ModuleType}.
+     * {@link ModuleType}.</li>
+     * </ul>
      *
      * @return {@link #tags} assign to this {@link ModuleType}
      */

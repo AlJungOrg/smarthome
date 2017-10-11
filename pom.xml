@@ -9,7 +9,7 @@
 
   <groupId>org.eclipse.smarthome</groupId>
   <artifactId>smarthome</artifactId>
-  <version>0.8.0-SNAPSHOT</version>
+  <version>0.9.0.b5</version>
 
   <name>Eclipse SmartHome</name>
 
@@ -41,14 +41,16 @@
   <description>This is the Eclipse SmartHome project</description>
 
   <properties>
-    <tycho-version>0.23.1</tycho-version>
+    <esh.java.version>1.8</esh.java.version>
+    <maven.compiler.source>${esh.java.version}</maven.compiler.source>
+    <maven.compiler.target>${esh.java.version}</maven.compiler.target>
+    <maven.compiler.compilerVersion>${esh.java.version}</maven.compiler.compilerVersion>
+    <tycho-version>1.0.0</tycho-version>
     <tycho-groupid>org.eclipse.tycho</tycho-groupid>
     <xtext-version>2.9.2</xtext-version>
     <karaf.version>4.0.3</karaf.version>
+    <ds-annotations.version>1.2.8</ds-annotations.version>
     <build.helper.maven.plugin.version>1.8</build.helper.maven.plugin.version>
-    <maven.compiler.version>3.1</maven.compiler.version>
-    <groovy.eclipse.compiler.version>2.8.0-01</groovy.eclipse.compiler.version>
-    <groovy.eclipse.batch.version>2.1.5-03</groovy.eclipse.batch.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
@@ -133,13 +135,6 @@
         </configuration>
       </plugin>
       <plugin>
-        <groupId>org.eclipse.xtend</groupId>
-        <artifactId>xtend-maven-plugin</artifactId>
-        <configuration>
-          <javaSourceVersion>1.7</javaSourceVersion>
-        </configuration>
-      </plugin>
-      <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
       </plugin>
@@ -155,10 +150,14 @@
           <artifactId>tycho-compiler-plugin</artifactId>
           <version>${tycho-version}</version>
           <configuration>
-            <encoding>UTF-8</encoding>
-            <source>1.7</source>
-            <target>1.7</target>
-          </configuration>
+            <extraClasspathElements>
+              <extraClasspathElement>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>org.apache.felix.scr.ds-annotations</artifactId>
+                <version>${ds-annotations.version}</version>
+              </extraClasspathElement>
+            </extraClasspathElements>
+          </configuration>          
         </plugin>
         <plugin>
           <groupId>${tycho-groupid}</groupId>
@@ -186,6 +185,16 @@
           <version>${tycho-version}</version>
           <configuration>
             <failIfNoTests>false</failIfNoTests>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.felix</groupId>
+          <artifactId>maven-scr-plugin</artifactId>
+          <version>1.24.0</version>
+          <configuration>
+            <supportedProjectTypes>
+              <supportedProjectType>eclipse-plugin</supportedProjectType>
+            </supportedProjectTypes>
           </configuration>
         </plugin>
         <plugin>
@@ -234,7 +243,7 @@
         </plugin>
         <plugin>
           <artifactId>maven-compiler-plugin</artifactId>
-          <version>${maven.compiler.version}</version>
+          <version>3.6.1</version>
           <configuration>
             <compilerId>groovy-eclipse-compiler</compilerId>
           </configuration>
@@ -249,19 +258,19 @@
             <dependency>
               <groupId>org.codehaus.groovy</groupId>
               <artifactId>groovy-eclipse-compiler</artifactId>
-              <version>${groovy.eclipse.compiler.version}</version>
+              <version>2.9.2-01</version>
             </dependency>
             <dependency>
               <groupId>org.codehaus.groovy</groupId>
               <artifactId>groovy-eclipse-batch</artifactId>
-              <version>${groovy.eclipse.batch.version}</version>
+              <version>2.4.3-01</version>
             </dependency>
           </dependencies>
         </plugin>
         <plugin>
           <groupId>com.mycila</groupId>
           <artifactId>license-maven-plugin</artifactId>
-          <version>2.10</version>
+          <version>3.0</version>
           <configuration>
             <basedir>${basedir}</basedir>
             <header>src/etc/header.txt</header>
@@ -269,21 +278,28 @@
             <failIfMissing>true</failIfMissing>
             <strictCheck>true</strictCheck>
             <aggregate>true</aggregate>
+            <useDefaultMapping>true</useDefaultMapping>
+            <mapping>
+              <xtend>JAVADOC_STYLE</xtend>
+              <mwe2>JAVADOC_STYLE</mwe2>
+            </mapping>
             <includes>
-              <include>**/org/eclipse/smarthome/**/*.java</include>
-              <include>**/org/eclipse/smarthome/**/*.groovy</include>
-              <include>**/feature.xml</include>
-              <include>**/OSGI-INF/*.xml</include>
+              <include>src/**/*.java</include>
+              <include>src/**/*.groovy</include>
+              <include>src/**/*.xtend</include>
+              <include>src/**/*.mwe2</include>
+              <include>bin/**/*.mwe2</include>
+              <include>workflows/**/*.mwe2</include>
+              <include>src/main/feature/feature.xml</include>
+              <include>feature.xml</include>
+              <include>OSGI-INF/*.xml</include>
             </includes>
             <excludes>
-              <exclude>**/org/eclipse/smarthome/protocols/**</exclude>
-              <exclude>target/**</exclude>
-              <exclude>**/pom.xml</exclude>
               <exclude>_*.java</exclude>
             </excludes>
             <useDefaultExcludes>true</useDefaultExcludes>
             <properties>
-              <year>2015</year>
+              <year>2017</year>
             </properties>
             <encoding>UTF-8</encoding>
           </configuration>

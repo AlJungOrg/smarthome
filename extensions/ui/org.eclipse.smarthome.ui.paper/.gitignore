@@ -1,5 +1,8 @@
+npm_cache/
+npm_tmp/
 node/
 node_modules/
 web-src/bower_components/
 web/
 web-src/index.html
+PaperUI-tests.xml

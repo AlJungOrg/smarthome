@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -103,10 +103,11 @@ public class PageRenderer extends AbstractWidgetRenderer {
         // put a single frame around all children widgets, if there are no explicit frames
         if (!children.isEmpty()) {
             EObject firstChild = children.get(0);
-            EObject parent = firstChild.eContainer();
+            EObject parent = itemUIRegistry.getParent((Widget) firstChild);
             if (!(firstChild instanceof Frame || parent instanceof Frame || parent instanceof Sitemap
                     || parent instanceof org.eclipse.smarthome.model.sitemap.List)) {
                 String frameSnippet = getSnippet("frame");
+                frameSnippet = StringUtils.replace(frameSnippet, "%widget_id%", "");
                 frameSnippet = StringUtils.replace(frameSnippet, "%label%", "");
                 frameSnippet = StringUtils.replace(frameSnippet, "%frame_class%", "mdl-form--no-label");
 
@@ -156,16 +157,8 @@ public class PageRenderer extends AbstractWidgetRenderer {
 
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public EList<Widget> renderWidget(Widget w, StringBuilder sb) throws RenderException {
-        // Check if this widget is visible
-        if (itemUIRegistry.getVisiblity(w) == false) {
-            return null;
-        }
-
         for (WidgetRenderer renderer : widgetRenderers) {
             if (renderer.canRender(w)) {
                 return renderer.renderWidget(w, sb);
@@ -174,17 +167,11 @@ public class PageRenderer extends AbstractWidgetRenderer {
         return null;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public boolean canRender(Widget w) {
         return false;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void setConfig(WebAppConfig config) {
         this.config = config;

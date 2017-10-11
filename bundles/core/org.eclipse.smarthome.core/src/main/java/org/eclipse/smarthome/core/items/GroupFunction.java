@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -20,37 +20,41 @@ import org.eclipse.smarthome.core.types.UnDefType;
  * @author Kai Kreuzer - Initial contribution and API
  *
  */
-abstract public interface GroupFunction {
+public interface GroupFunction {
 
     /**
      * Determines the current state of a group based on a list of items
-     * 
+     *
      * @param items the items to calculate a group state for
      * @return the calculated group state
      */
-    public State calculate(Set<Item> items);
+    State calculate(Set<Item> items);
 
     /**
      * Calculates the group state and returns it as a state of the requested type.
-     * 
+     *
      * @param items the items to calculate a group state for
      * @param stateClass the type in which the state should be returned
      * @return the calculated group state of the requested type or null, if type is not supported
      */
-    public State getStateAs(Set<Item> items, Class<? extends State> stateClass);
+    State getStateAs(Set<Item> items, Class<? extends State> stateClass);
+
+    /**
+     * Returns the parameters of the function as an array.
+     *
+     * @return the parameters of this function
+     */
+    State[] getParameters();
 
     /**
      * This is the default group function that does nothing else than to check if all member items
      * have the same state. If this is the case, this state is returned, otherwise UNDEF is returned.
-     * 
+     *
      * @author Kai Kreuzer - Initial contribution and API
      *
      */
     static class Equality implements GroupFunction {
 
-        /**
-         * @{inheritDoc
-         */
         @Override
         public State calculate(Set<Item> items) {
             if (items.size() > 0) {
@@ -67,9 +71,6 @@ abstract public interface GroupFunction {
             }
         }
 
-        /**
-         * @{inheritDoc
-         */
         @Override
         public State getStateAs(Set<Item> items, Class<? extends State> stateClass) {
             State state = calculate(items);
@@ -79,10 +80,10 @@ abstract public interface GroupFunction {
                 return null;
             }
         }
-        
+
         @Override
-        public String toString() {
-            return "EQUALITY";
+        public State[] getParameters() {
+            return new State[0];
         }
     }
 

@@ -58,6 +58,15 @@ section#main.header-tabs {
 	color: #01324D;
 }
 
+.dimmer-widget p.no-icon-margin-left {
+	margin-left: 45px;
+}
+
+.md-default-theme.left-padded {
+	padding-left: 45px;
+	margin-left: 0px;
+}
+
 .image-widget {
 	/* This is a a utility class for image items so the !important is for the exceptional rule*/
 	height: auto !important;
@@ -74,11 +83,14 @@ section#main.header-tabs {
 	box-shadow: 0px 2px 2px 0 rgba(0, 0, 0, 0.26); */
 	padding: 5px;
 	border-radius: 2px;
-	margin-top: 10px;
+	padding-top: 0px;
 }
 
 .number-control-widget md-slider {
 	margin: 0px;
+}
+.number-control-widget .text-left, .number-control-widget .text-right {
+	margin-top: 10px;
 }
 
 .items .item .icontrol>div>div {
@@ -100,15 +112,14 @@ section#main.header-tabs {
 	{
 	margin-right: 10px;
 	border-radius: 50%;
-	width: 32px;
-	height: 32px;
+	width: 35px;
+	height: 35px;
 	background-color: #4CAF50;
 	color: white;
 	text-align: center;
 	font-size: 16px;
-	line-height: 32px;
 	padding: 10px;
-	display: inline;
+
 }
 
 .items .item md-input-container input {
@@ -195,6 +206,21 @@ section#main.header-tabs {
 /* Things */
 .badge.online {
 	background-color: green;
+}
+
+.badge.grey {
+}
+
+.badge.orange {
+	background-color: orange;
+}
+
+.badge.blue {
+	background-color: blue;
+}
+
+.badge {
+	vertical-align: bottom;
 }
 
 .thing-configure .parameter {

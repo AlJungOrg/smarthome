@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,11 +7,14 @@
  */
 package org.eclipse.smarthome.binding.lifx.internal.protocol;
 
+import org.eclipse.smarthome.core.library.types.OnOffType;
+
 /**
- * Represents bulb power states (on or off).
+ * Represents light power states (on or off).
  *
  * @author Tim Buckley - Initial Contribution
  * @author Karel Goderis - Enhancement for the V2 LIFX Firmware and LAN Protocol Specification
+ * @author Wouter Born - Added OnOffType conversion methods
  */
 public enum PowerState {
 
@@ -34,13 +37,17 @@ public enum PowerState {
     }
 
     public static PowerState fromValue(int value) {
-        for (PowerState p : values()) {
-            if (p.getValue() == value) {
-                return p;
-            }
-        }
+        // a response can have a power level between 0 and 65535 when the light
+        // has just been switched ON or OFF
+        return value == OFF.value ? OFF : ON;
+    }
 
-        return null;
+    public static PowerState fromOnOffType(OnOffType onOff) {
+        return onOff == OnOffType.ON ? ON : OFF;
+    }
+
+    public OnOffType toOnOffType() {
+        return this == ON ? OnOffType.ON : OnOffType.OFF;
     }
 
 }

@@ -9,20 +9,19 @@ package org.eclipse.smarthome.automation;
 
 import java.util.Collections;
 import java.util.Map;
-import java.util.Set;
 
 import org.eclipse.smarthome.automation.type.ActionType;
 import org.eclipse.smarthome.automation.type.Input;
 import org.eclipse.smarthome.automation.type.Output;
 import org.eclipse.smarthome.config.core.ConfigDescriptionParameter;
+import org.eclipse.smarthome.config.core.Configuration;
 
 /**
  * Actions are the part of "THEN" section of the {@link Rule} definition.
  * Elements of this section are expected result of {@link Rule} execution. The
  * Action can have {@link Output} elements. These actions are used to process
  * input data as source data of other Actions. Building elements of actions ( {@link ConfigDescriptionParameter}s,
- * {@link Input}s and {@link Output}s) are
- * defined by {@link ActionType}
+ * {@link Input}s and {@link Output}s) are defined by {@link ActionType}
  *
  * @author Yordan Mihaylov - Initial Contribution
  * @author Ana Dimova - Initial Contribution
@@ -43,17 +42,17 @@ public class Action extends Module {
      * @param configuration map of configuration values.
      * @param inputs set of connections to other modules (triggers and other actions).
      */
-    public Action(String UID, String typeUID, Map<String, ?> configuration, Map<String, String> inputs) {
+    public Action(String UID, String typeUID, Configuration configuration, Map<String, String> inputs) {
         super(UID, typeUID, configuration);
         setInputs(inputs);
     }
 
     /**
      * This method is used to get input connections of the Action. The connections
-     * are links between {@link Input}s of the {@link Module} and {@link Output}s
+     * are links between {@link Input}s of the this {@link Module} and {@link Output}s
      * of other {@link Module}s.
      *
-     * @return a {@link Set} of input {@link Input}s.
+     * @return map that contains the inputs of this action.
      */
     public Map<String, String> getInputs() {
         return inputs != null ? inputs : Collections.<String, String> emptyMap();
@@ -62,7 +61,7 @@ public class Action extends Module {
     /**
      * This method is used to connect {@link Input}s of the action to {@link Output}s of other {@link Module}s.
      *
-     * @param connections a {@link Set} of input {@link Input}s.
+     * @param inputs map that contains the inputs for this action.
      */
     public void setInputs(Map<String, String> inputs) {
         if (inputs != null) {

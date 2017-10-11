@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -14,7 +14,7 @@ import java.util.Locale;
 
 import org.eclipse.smarthome.binding.digitalstrom.DigitalSTROMBindingConstants;
 import org.eclipse.smarthome.binding.digitalstrom.internal.lib.structure.devices.deviceParameters.SensorEnum;
-import org.eclipse.smarthome.core.i18n.I18nProvider;
+import org.eclipse.smarthome.core.i18n.TranslationProvider;
 import org.eclipse.smarthome.core.thing.type.ChannelGroupType;
 import org.eclipse.smarthome.core.thing.type.ChannelGroupTypeUID;
 import org.eclipse.smarthome.core.thing.type.ChannelType;
@@ -51,9 +51,10 @@ public class DsChannelTypeProvider implements ChannelTypeProvider {
             DigitalSTROMBindingConstants.CHANNEL_ID_OUTPUT_CURRENT,
             DigitalSTROMBindingConstants.CHANNEL_ID_ACTIVE_POWER,
             DigitalSTROMBindingConstants.CHANNEL_ID_TOTAL_ACTIVE_POWER,
-            DigitalSTROMBindingConstants.CHANNEL_ID_TOTAL_ELECTRIC_METER);
+            DigitalSTROMBindingConstants.CHANNEL_ID_TOTAL_ELECTRIC_METER,
+            DigitalSTROMBindingConstants.CHANNEL_ID_SHADE_ANGLE);
 
-    private I18nProvider i18n = null;
+    private TranslationProvider i18n = null;
     private Bundle bundle = null;
 
     // item types
@@ -105,11 +106,11 @@ public class DsChannelTypeProvider implements ChannelTypeProvider {
         this.bundle = null;
     }
 
-    protected void setI18nProvider(I18nProvider i18n) {
+    protected void setTranslationProvider(TranslationProvider i18n) {
         this.i18n = i18n;
     };
 
-    protected void unsetI18nProvider(I18nProvider i18n) {
+    protected void unsetTranslationProvider(TranslationProvider i18n) {
         this.i18n = null;
     };
 
@@ -180,7 +181,12 @@ public class DsChannelTypeProvider implements ChannelTypeProvider {
                             getCombinedStageDescription((short) 3, true, locale), null);
                 case DigitalSTROMBindingConstants.CHANNEL_ID_SHADE:
                     return new ChannelType(channelTypeUID, false, SHADE, getText("CHANNEL_SHADE_LABEL", locale),
-                            getText("CHANNEL_SHADE_DESCRIPTION", locale), "Energy",
+                            getText("CHANNEL_SHADE_DESCRIPTION", locale), "Blinds",
+                            Sets.newHashSet(getText("GREY", locale), getText("DS", locale), getText("SHADE", locale)),
+                            null, null);
+                case DigitalSTROMBindingConstants.CHANNEL_ID_SHADE_ANGLE:
+                    return new ChannelType(channelTypeUID, false, DIMMER, getText("CHANNEL_SHADE_ANGLE_LABEL", locale),
+                            getText("CHANNEL_SHADE_ANGLE_DESCRIPTION", locale), "Blinds",
                             Sets.newHashSet(getText("GREY", locale), getText("DS", locale), getText("SHADE", locale)),
                             null, null);
                 case DigitalSTROMBindingConstants.CHANNEL_ID_ACTIVE_POWER:

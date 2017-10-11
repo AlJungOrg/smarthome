@@ -10,12 +10,11 @@ package org.eclipse.smarthome.automation;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.eclipse.smarthome.config.core.ConfigDescriptionParameter;
+import org.eclipse.smarthome.config.core.Configuration;
 
 /**
  * Rule is built from {@link Module}s and consists of three sections:
@@ -39,7 +38,7 @@ public class Rule {
     protected List<Trigger> triggers;
     protected List<Condition> conditions;
     protected List<Action> actions;
-    protected Map<String, ?> configuration;
+    protected Configuration configuration;
     protected List<ConfigDescriptionParameter> configDescriptions;
     protected String templateUID;
     protected String uid;
@@ -48,119 +47,47 @@ public class Rule {
     protected Visibility visibility;
     protected String description;
 
+    /**
+     * Constructor creates an empty rule. The rule has ruleUID set by the rule engine.
+     */
     public Rule() {
     }
 
     /**
-     * This constructor is used to create a rule with specified rule uid.
+     * Constructor creates an empty rule with specified rule uid
      *
-     * @param uid is the unique identifier of the rule provided by its creator.
-     * @param triggers
-     * @param conditions
-     * @param actions
-     * @param configDescriptions
-     * @param configurations are values of the configuration parameters that are needed for configuring the rule,
-     *            represented as pairs key-value, where the key is the name of the configuration parameter and the value
-     *            is its value.
+     * @param uid is the unique identifier of created rule.
      */
-    public Rule(String uid, List<Trigger> triggers, //
-            List<Condition> conditions, //
-            List<Action> actions, List<ConfigDescriptionParameter> configDescriptions, //
-            Map<String, ?> configurations, Visibility visibility) {
-        this.triggers = triggers;
-        this.actions = actions;
-        this.conditions = conditions;
-        this.configDescriptions = configDescriptions;
-        setConfiguration(configurations);
+    public Rule(String uid) {
         this.uid = uid;
-        this.visibility = visibility;
     }
 
     /**
-     * Utility constructor which creates a rule with uid and default {@link Visibility} = {@link Visibility#VISIBLE}.
+     * Utility constructor which creates a rule from modules or template.
      *
-     * @param uid is the unique identifier of the rule provided by its creator.
-     * @param triggers
-     * @param conditions
-     * @param actions
-     * @param configDescriptions
-     * @param configurations are values of the configuration parameters that are needed for configuring the rule,
-     *            represented as pairs key-value, where the key is the name of the configuration parameter and the value
-     *            is its value.
-     */
-    public Rule(String uid, List<Trigger> triggers, //
-            List<Condition> conditions, //
-            List<Action> actions, List<ConfigDescriptionParameter> configDescriptions, //
-            Map<String, ?> configurations) {
-        this(uid, triggers, conditions, actions, configDescriptions, configurations, Visibility.VISIBLE);
-    }
-
-    /**
-     * Utility constructor which creates a rule without rule's uid and default {@link Visibility} =
-     * {@link Visibility#VISIBLE}.
-     * The uid of the rule will be set by the rule engine.
-     *
-     * @param triggers
-     * @param conditions
-     * @param actions
-     * @param configDescriptions
-     * @param configurations are values of the configuration parameters that are needed for configuring the rule,
-     *            represented as pairs key-value, where the key is the name of the configuration parameter and the value
-     *            is its value.
-     */
-    public Rule(List<Trigger> triggers, //
-            List<Condition> conditions, //
-            List<Action> actions, List<ConfigDescriptionParameter> configDescriptions, //
-            Map<String, ?> configurations) {
-        this(null, triggers, conditions, actions, configDescriptions, configurations, Visibility.VISIBLE);
-    }
-
-    /**
-     * This constructor is used to create a rule from template when the does not have defined uid in template.
-     *
-     * @param ruleTemplateUID is the unique identifier of the template, used for creation of the rule.
-     * @param are values of the configuration parameters that are needed for configuring the rule, represented as pairs
-     *            key-value, where the key is the name of the configuration parameter and the value is its value.
-     */
-    public Rule(String ruleTemplateUID, Map<String, ?> configurations) {
-        this(null, ruleTemplateUID, configurations);
-    }
-
-    /**
-     * This constructor is used to create a rule from template.
-     *
-     * @param uid is the unique identifier of the rule provided by its creator.
-     * @param ruleTemplateUID is the unique identifier of the template, used for creation of the rule.
-     * @param configurations are values of the configuration parameters that are needed for configuring the rule,
-     *            represented as pairs key-value, where the key is the name of the configuration parameter and the value
-     *            is its value.
-     */
-    public Rule(String uid, String ruleTemplateUID, Map<String, ?> configurations) {
-        this.uid = uid;
-        this.templateUID = ruleTemplateUID;
-        setConfiguration(configurations);
-    }
-
-    /**
-     * This constructor is used to create a rule from template.
-     *
-     * @param uid is the unique identifier of the rule provided by its creator.
-     * @param triggers
-     * @param conditions
-     * @param actions
-     * @param configDescriptions
-     * @param configurations are values of the configuration parameters that are needed for configuring the rule,
-     *            represented as pairs key-value, where the key is the name of the configuration parameter and the value
-     *            is its value.
-     * @param templateUID the unique identifier of the RuleTemplate
+     * @param uid is the unique identifier of the rule.
+     * @param triggers trigger modules
+     * @param conditions condition modules
+     * @param actions action modules
+     * @param configurations are values of rule template. It is available when the rule is created from template and the
+     *            template is not resolved.
+     * @param templateUID the unique identifier of RuleTemplate. It is available when the rule is created from template
+     *            and the template is not resolved.
      * @param visibility visibility of rule
      */
     public Rule(String uid, List<Trigger> triggers, //
             List<Condition> conditions, //
-            List<Action> actions, List<ConfigDescriptionParameter> configDescriptions, //
-            Map<String, ?> configurations, String templateUID, Visibility visibility) {
-        this(uid, triggers, conditions, actions, configDescriptions, configurations, visibility);
-        this.templateUID = templateUID;
+            List<Action> actions, //
+            List<ConfigDescriptionParameter> configDescriptions, //
+            Configuration configurations, String templateUID, Visibility visibility) {
+        this.uid = uid;
+        setTriggers(triggers);
+        setConditions(conditions);
+        setActions(actions);
+        setConfigurationDescriptions(configDescriptions);
+        setConfiguration(configurations);
+        setTemplateUID(templateUID);
+        setVisibility(visibility);
     }
 
     /**
@@ -181,6 +108,10 @@ public class Rule {
      */
     public String getTemplateUID() {
         return templateUID;
+    }
+
+    public void setTemplateUID(String templateUID) {
+        this.templateUID = templateUID;
     }
 
     /**
@@ -205,27 +136,30 @@ public class Rule {
 
     /**
      * Rules can have
+     * <ul>
      * <li><code>tags</code> - non-hierarchical keywords or terms for describing them. This method is
-     * used for getting the tags assign to this Rule. The tags are used to filter the rules.
+     * used for getting the tags assign to this Rule. The tags are used to filter the rules.</li>
+     * </ul>
      *
-     * @return a list of tags
+     * @return a {@link Set} of tags
      */
     public Set<String> getTags() {
-        return tags;
+        return tags = tags != null ? tags : Collections.<String> emptySet();
     }
 
     /**
      * Rules can have
+     * <ul>
      * <li><code>tags</code> - non-hierarchical keywords or terms for describing them. This method is
      * used for setting the tags to this rule. This property can be changed only when the Rule is not in active state.
-     * The tags are used to filter the rules.
+     * The tags are used to filter the rules.</li>
+     * </ul>
      *
      * @param ruleTags list of tags assign to this Rule.
-     * @throws IllegalStateException IllegalStateException when the rule is in
-     *             active state.
+     * @throws IllegalStateException when the rule is in active state.
      */
     public void setTags(Set<String> ruleTags) throws IllegalStateException {
-        tags = ruleTags;
+        tags = ruleTags != null ? ruleTags : Collections.<String> emptySet();
     }
 
     /**
@@ -262,18 +196,8 @@ public class Rule {
         return visibility;
     }
 
-    /**
-     * This method is used for getting the Set with {@link ConfigDescriptionParameter}s defining meta info for
-     * configuration
-     * properties of the Rule.<br/>
-     *
-     * @return a {@link Set} of {@link ConfigDescriptionParameter}s.
-     */
-    public List<ConfigDescriptionParameter> getConfigurationDescriptions() {
-        if (configDescriptions == null) {
-            configDescriptions = new ArrayList<ConfigDescriptionParameter>(3);
-        }
-        return configDescriptions;
+    public void setVisibility(Visibility visibility) {
+        this.visibility = visibility;
     }
 
     /**
@@ -283,9 +207,9 @@ public class Rule {
      *
      * @return current configuration values
      */
-    public Map<String, ?> getConfiguration() {
+    public Configuration getConfiguration() {
         if (configuration == null) {
-            configuration = new HashMap<String, Object>(3);
+            configuration = new Configuration();
         }
         return configuration;
     }
@@ -297,10 +221,26 @@ public class Rule {
      *
      * @param ruleConfiguration new configuration values.
      */
-    public void setConfiguration(Map<String, ?> ruleConfiguration) {
-        if (ruleConfiguration != null) {
-            configuration = ruleConfiguration;
+    public void setConfiguration(Configuration ruleConfiguration) {
+        this.configuration = ruleConfiguration;
+    }
+
+    /**
+     * This method is used for getting the {@link List} with {@link ConfigDescriptionParameter}s
+     * defining meta info for configuration properties of the Rule.
+     *
+     * @return a {@link Set} of {@link ConfigDescriptionParameter}s.
+     */
+    public List<ConfigDescriptionParameter> getConfigurationDescriptions() {
+        if (configDescriptions == null) {
+            configDescriptions = new ArrayList<ConfigDescriptionParameter>(3);
         }
+        return configDescriptions;
+    }
+
+    public void setConfigurationDescriptions(List<ConfigDescriptionParameter> configDescriptions) {
+        this.configDescriptions = (configDescriptions == null) ? new ArrayList<ConfigDescriptionParameter>(3)
+                : configDescriptions;
     }
 
     public List<Condition> getConditions() {
@@ -310,6 +250,10 @@ public class Rule {
         return conditions;
     }
 
+    public void setConditions(List<Condition> conditions) {
+        this.conditions = (conditions == null) ? new ArrayList<Condition>(3) : conditions;
+    }
+
     public List<Action> getActions() {
         if (actions == null) {
             actions = new ArrayList<Action>(3);
@@ -317,11 +261,19 @@ public class Rule {
         return actions;
     }
 
+    public void setActions(List<Action> actions) {
+        this.actions = (actions == null) ? new ArrayList<Action>(3) : actions;
+    }
+
     public List<Trigger> getTriggers() {
         if (triggers == null) {
             triggers = new ArrayList<Trigger>(3);
         }
         return triggers;
+    }
+
+    public void setTriggers(List<Trigger> triggers) {
+        this.triggers = (triggers == null) ? new ArrayList<Trigger>(3) : triggers;
     }
 
     /**
@@ -360,7 +312,7 @@ public class Rule {
     }
 
     /**
-     * This method is used to return a group of module of this rule
+     * This method is used to return the module of this rule.
      *
      * @param moduleClazz optional parameter defining type looking modules. The
      *            types are {@link Trigger}, {@link Condition} or {@link Action}
@@ -389,7 +341,6 @@ public class Rule {
     public int hashCode() {
         final int prime = 31;
         int result = 1;
-        result = prime * result + ((templateUID == null) ? 0 : templateUID.hashCode());
         result = prime * result + ((uid == null) ? 0 : uid.hashCode());
         return result;
     }
@@ -402,17 +353,10 @@ public class Rule {
         if (obj == null) {
             return false;
         }
-        if (getClass() != obj.getClass()) {
+        if (!(obj instanceof Rule)) {
             return false;
         }
         Rule other = (Rule) obj;
-        if (templateUID == null) {
-            if (other.templateUID != null) {
-                return false;
-            }
-        } else if (!templateUID.equals(other.templateUID)) {
-            return false;
-        }
         if (uid == null) {
             if (other.uid != null) {
                 return false;

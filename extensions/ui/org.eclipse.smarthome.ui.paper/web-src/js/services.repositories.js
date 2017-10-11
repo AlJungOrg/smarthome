@@ -82,11 +82,24 @@ var Repository = function($q, $rootScope, remoteService, dataType, staticData) {
         }
         return null;
     };
+    this.findByIndex = function(condition) {
+        for (var i = 0; i < $rootScope.data[dataType].length; i++) {
+            var element = $rootScope.data[dataType][i];
+            if (condition(element)) {
+                return i;
+            }
+        }
+        return -1;
+    };
     this.add = function(element) {
         $rootScope.data[dataType].push(element);
     };
-    this.remove = function(element) {
-        $rootScope.data[dataType].splice($rootScope.data[dataType].indexOf(element), 1);
+    this.remove = function(element, index) {
+        if (typeof (index) === 'undefined' && $rootScope.data[dataType].indexOf(element) !== -1) {
+            $rootScope.data[dataType].splice($rootScope.data[dataType].indexOf(element), 1);
+        } else if (typeof (index) !== 'undefined' && index !== -1) {
+            $rootScope.data[dataType].splice(index, 1);
+        }
     };
     this.update = function(element) {
         var index = $rootScope.data[dataType].indexOf(element);
@@ -104,11 +117,14 @@ angular.module('PaperUI.services.repositories', []).factory('bindingRepository',
     var repository = new Repository($q, $rootScope, inboxService, 'discoveryResults')
     $rootScope.data.discoveryResults = [];
     eventService.onEvent('smarthome/inbox/*', function(topic, discoveryResult) {
-        if (topic.indexOf("added") > -1) {
+        var index = repository.findByIndex(function(result) {
+            return discoveryResult.thingUID == result.thingUID;
+        });
+        if (topic.indexOf("added") > -1 && index == -1) {
             repository.add(discoveryResult);
         }
-        if (topic.indexOf("removed") > -1) {
-            repository.remove(discoveryResult);
+        if (topic.indexOf("removed") > -1 && index != -1) {
+            repository.remove(discoveryResult, index);
         }
     });
     return repository;
@@ -140,6 +156,32 @@ angular.module('PaperUI.services.repositories', []).factory('bindingRepository',
             repository.add(thing);
         });
     });
+    eventService.onEvent('smarthome/things/*/updated', function(topic, thing) {
+        updateInRepository(topic.split('/')[2], true, function(existingThing) {
+            if (thing.length > 0) {
+                existingThing.label = thing[0].label;
+                existingThing.configuration = existingThing.configuration;
+                var updatedArr = [];
+                if (thing[0].channels) {
+                    angular.forEach(thing[0].channels, function(newChannel) {
+                        var channel = $.grep(existingThing.channels, function(existingChannel) {
+                            return existingChannel.uid == newChannel.uid;
+                        });
+                        if (channel.length == 0) {
+                            channel[0] = newChannel;
+                            channel[0].linkedItems = [];
+
+                        } else {
+                            channel[0].configuration = newChannel.configuration;
+                            channel[0].itemType = newChannel.itemType;
+                        }
+                        updatedArr.push(channel[0]);
+                    });
+                    existingThing.channels = updatedArr;
+                }
+            }
+        });
+    });
     eventService.onEvent('smarthome/things/*/removed', function(topic, thing) {
         updateInRepository(topic.split('/')[2], true, function(existingThing) {
             repository.remove(existingThing);
@@ -150,19 +192,137 @@ angular.module('PaperUI.services.repositories', []).factory('bindingRepository',
             existingThing.item = item
         });
     });
+
+    eventService.onEvent('smarthome/links/*/added', function(topic, link) {
+        var channelItem = link.channelUID.split(':'), thingUID;
+        if (channelItem.length > 2) {
+            thingUID = channelItem[0] + ":" + channelItem[1] + ":" + channelItem[2];
+        }
+        if (thingUID) {
+            updateInRepository(thingUID, true, function(existingThing) {
+                var channel = $.grep(existingThing.channels, function(channel) {
+                    return channel.uid == link.channelUID;
+                });
+                if (channel.length > 0) {
+                    channel[0].linkedItems = channel[0].linkedItems ? channel[0].linkedItems : [];
+                    channel[0].linkedItems.push(link.itemName);
+                }
+            });
+        }
+    });
+
+    eventService.onEvent('smarthome/links/*/removed', function(topic, link) {
+        var channelItem = link.channelUID.split(':'), thingUID;
+        if (channelItem.length > 2) {
+            thingUID = channelItem[0] + ":" + channelItem[1] + ":" + channelItem[2];
+        }
+        if (thingUID) {
+            updateInRepository(thingUID, true, function(existingThing) {
+                var channel = $.grep(existingThing.channels, function(channel) {
+                    return channel.uid == link.channelUID;
+                });
+                if (channel.length > 0) {
+                    channel[0].linkedItems = [];
+                }
+            });
+        }
+    });
+
+    return repository;
+}).factory('itemRepository', function($q, $rootScope, itemService, eventService) {
+    var repository = new Repository($q, $rootScope, itemService, 'items')
+    $rootScope.data.items = [];
     eventService.onEvent('smarthome/items/*/updated', function(topic, itemUpdate) {
-        updateInRepository(itemNameToThingUID(topic.split('/')[2]), true, function(existingThing) {
-            existingThing.item = itemUpdate[0]
+        if (topic.split('/').length > 2) {
+            var index = repository.findByIndex(function(item) {
+                return item.name == topic.split('/')[2]
+            });
+            if (index !== -1) {
+                $rootScope.$apply(function() {
+                    $rootScope.data.items[index] = itemUpdate[0];
+                });
+            }
+        }
+    });
+    eventService.onEvent('smarthome/items/*/added', function(topic, itemAdded) {
+        if (topic.split('/').length > 2) {
+            var index = repository.findByIndex(function(item) {
+                return item.name == itemAdded.name
+            });
+            if (index === -1 && $rootScope.data.items) {
+                $rootScope.$apply(function() {
+                    $rootScope.data.items.push(itemAdded);
+                });
+            }
+        }
+    });
+    eventService.onEvent('smarthome/items/*/removed', function(topic, itemRemoved) {
+        if (topic.split('/').length > 2) {
+            var index = repository.findByIndex(function(item) {
+                return item.name == itemRemoved.name
+            });
+            if (index !== -1) {
+                $rootScope.$apply(function() {
+                    $rootScope.data.items.splice(index, 1);
+                });
+            }
+        }
+    });
+    return repository;
+}).factory('ruleRepository', function($q, $rootScope, ruleService, eventService) {
+    var repository = new Repository($q, $rootScope, ruleService, 'rules', true)
+    $rootScope.data.rules = [];
+
+    eventService.onEvent('smarthome/rules/*/updated', function(topic, ruleUpdate) {
+
+        var existing = repository.find(function(rule) {
+            return rule.uid === ruleUpdate[0].uid;
+        });
+        $rootScope.$apply(function() {
+            if (existing) {
+                existing.name = ruleUpdate[0].name;
+                existing.description = ruleUpdate[0].description;
+                existing.triggers = ruleUpdate[0].triggers;
+                existing.actions = ruleUpdate[0].actions;
+                existing.conditions = ruleUpdate[0].conditions;
+            }
+        });
+    });
+
+    eventService.onEvent('smarthome/rules/*/added', function(topic, rule) {
+        $rootScope.$apply(function() {
+            repository.add(rule);
+        });
+    });
+
+    eventService.onEvent('smarthome/rules/*/removed', function(topic, removedRule) {
+        var existing = repository.find(function(rule) {
+            return rule.uid === removedRule.uid;
+        });
+        $rootScope.$apply(function() {
+            repository.remove(existing);
+        });
+    });
+
+    eventService.onEvent('smarthome/rules/*/state', function(topic, rule) {
+        var existing = repository.find(function(rule) {
+            return rule.uid === topic.split('/')[2];
+        });
+        $rootScope.$apply(function() {
+            existing.status = {};
+            existing.status.status = rule.status;
+            existing.status.statusDetail = rule.statusDetail;
+            if (rule.status.toUpperCase() === "DISABLED") {
+                existing.enabled = false;
+            } else {
+                existing.enabled = true;
+            }
         });
     });
 
     return repository;
-}).factory('itemRepository', function($q, $rootScope, itemService) {
-    var repository = new Repository($q, $rootScope, itemService, 'items')
-    $rootScope.data.items = [];
-    return repository;
-}).factory('ruleRepository', function($q, $rootScope, ruleService) {
-    var repository = new Repository($q, $rootScope, ruleService, 'rules')
-    $rootScope.data.rules = [];
+}).factory('templateRepository', function($q, $rootScope, templateService) {
+    var repository = new Repository($q, $rootScope, templateService, 'templates')
+    $rootScope.data.templates = [];
     return repository;
 });

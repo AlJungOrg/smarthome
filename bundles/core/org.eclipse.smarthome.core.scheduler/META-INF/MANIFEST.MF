@@ -3,11 +3,11 @@ Private-Package: org.eclipse.smarthome.core.scheduler.internal
 Ignore-Package: org.eclipse.smarthome.core.scheduler.internal
 Bundle-Name: Eclipse SmartHome Scheduler Service
 Bundle-Vendor: Eclipse.org/SmartHome
-Bundle-Version: 0.8.0.qualifier
+Bundle-Version: 0.9.0.b5
 Bundle-ManifestVersion: 2
 Bundle-License: http://www.eclipse.org/legal/epl-v10.html
 Bundle-SymbolicName: org.eclipse.smarthome.core.scheduler
-Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Bundle-ClassPath: .,
  lib/quartz-2.2.1.jar,
  lib/quartz-jobs-2.2.1.jar

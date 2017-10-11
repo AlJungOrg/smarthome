@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -26,12 +26,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This is a {@link DiscoveryService} implementation, which can find mDNS services in the network.
- * Support for further devices can be added by implementing and registering a {@link MDNSDiscoveryParticipant}.
+ * This is a {@link DiscoveryService} implementation, which can find mDNS services in the network. Support for further
+ * devices can be added by implementing and registering a {@link MDNSDiscoveryParticipant}.
  *
  * @author Tobias Bräutigam - Initial contribution
  * @author Kai Kreuzer - Improved startup behavior and background discovery
- *
+ * @author Andre Fuechsel - make {@link #startScan()} asynchronous
  */
 public class MDNSDiscoveryService extends AbstractDiscoveryService implements ServiceListener {
     private final Logger logger = LoggerFactory.getLogger(MDNSDiscoveryService.class);
@@ -48,79 +48,67 @@ public class MDNSDiscoveryService extends AbstractDiscoveryService implements Se
         this.mdnsClient = mdnsClient;
         if (isBackgroundDiscoveryEnabled()) {
             for (MDNSDiscoveryParticipant participant : participants) {
-                mdnsClient.getClient().addServiceListener(participant.getServiceType(), this);
+                mdnsClient.addServiceListener(participant.getServiceType(), this);
             }
         }
     }
 
     public void unsetMDNSClient(MDNSClient mdnsClient) {
         for (MDNSDiscoveryParticipant participant : participants) {
-            mdnsClient.getClient().removeServiceListener(participant.getServiceType(), this);
+            mdnsClient.removeServiceListener(participant.getServiceType(), this);
         }
         this.mdnsClient = null;
     }
 
     @Override
     protected void startBackgroundDiscovery() {
-        scheduler.schedule(new Runnable() {
-            @Override
-            public void run() {
-                startScan();
-            }
-        }, 0, TimeUnit.SECONDS);
         for (MDNSDiscoveryParticipant participant : participants) {
-            mdnsClient.getClient().addServiceListener(participant.getServiceType(), this);
+            mdnsClient.addServiceListener(participant.getServiceType(), this);
         }
+        startScan();
     }
 
     @Override
     protected void stopBackgroundDiscovery() {
         for (MDNSDiscoveryParticipant participant : participants) {
-            mdnsClient.getClient().removeServiceListener(participant.getServiceType(), this);
+            mdnsClient.removeServiceListener(participant.getServiceType(), this);
         }
     }
 
     @Override
     protected void startScan() {
-        logger.debug("mDNS discovery service started");
-        for (MDNSDiscoveryParticipant participant : participants) {
-            ServiceInfo[] services = mdnsClient.getClient().list(participant.getServiceType());
-            logger.debug(services.length + " services found for " + participant.getServiceType());
-            for (ServiceInfo service : services) {
-                DiscoveryResult result = participant.createResult(service);
-                if (result != null) {
-                    thingDiscovered(result);
-                }
+        scheduler.schedule(new Runnable() {
+            @Override
+            public void run() {
+                scan();
             }
-        }
+        }, 0, TimeUnit.SECONDS);
     }
 
-    protected void initializeParticipants() {
+    private void scan() {
         for (MDNSDiscoveryParticipant participant : participants) {
-            mdnsClient.getClient().removeServiceListener(participant.getServiceType(), this);
-            ServiceInfo[] services = mdnsClient.getClient().list(participant.getServiceType());
-            logger.debug(services.length + " services found for " + participant.getServiceType());
+            ServiceInfo[] services = mdnsClient.list(participant.getServiceType());
+            logger.debug("{} services found for {}", services.length, participant.getServiceType());
             for (ServiceInfo service : services) {
                 DiscoveryResult result = participant.createResult(service);
                 if (result != null) {
                     thingDiscovered(result);
                 }
             }
-            mdnsClient.getClient().addServiceListener(participant.getServiceType(), this);
         }
     }
 
     protected void addMdnsDiscoveryParticipant(MDNSDiscoveryParticipant participant) {
         this.participants.add(participant);
         if (mdnsClient != null && isBackgroundDiscoveryEnabled()) {
-            mdnsClient.getClient().addServiceListener(participant.getServiceType(), this);
+            mdnsClient.addServiceListener(participant.getServiceType(), this);
         }
     }
 
     protected void removeMdnsDiscoveryParticipant(MDNSDiscoveryParticipant participant) {
         this.participants.remove(participant);
         if (mdnsClient != null) {
-            mdnsClient.getClient().removeServiceListener(participant.getServiceType(), this);
+            mdnsClient.removeServiceListener(participant.getServiceType(), this);
         }
     }
 
@@ -135,16 +123,7 @@ public class MDNSDiscoveryService extends AbstractDiscoveryService implements Se
 
     @Override
     public void serviceAdded(ServiceEvent serviceEvent) {
-        for (MDNSDiscoveryParticipant participant : participants) {
-            try {
-                DiscoveryResult result = participant.createResult(serviceEvent.getInfo());
-                if (result != null) {
-                    thingDiscovered(result);
-                }
-            } catch (Exception e) {
-                logger.error("Participant '{}' threw an exception", participant.getClass().getName(), e);
-            }
-        }
+        considerService(serviceEvent);
     }
 
     @Override
@@ -163,7 +142,21 @@ public class MDNSDiscoveryService extends AbstractDiscoveryService implements Se
 
     @Override
     public void serviceResolved(ServiceEvent serviceEvent) {
-
+        considerService(serviceEvent);
     }
 
+    private void considerService(ServiceEvent serviceEvent) {
+        if (isBackgroundDiscoveryEnabled()) {
+            for (MDNSDiscoveryParticipant participant : participants) {
+                try {
+                    DiscoveryResult result = participant.createResult(serviceEvent.getInfo());
+                    if (result != null) {
+                        thingDiscovered(result);
+                    }
+                } catch (Exception e) {
+                    logger.error("Participant '{}' threw an exception", participant.getClass().getName(), e);
+                }
+            }
+        }
+    }
 }

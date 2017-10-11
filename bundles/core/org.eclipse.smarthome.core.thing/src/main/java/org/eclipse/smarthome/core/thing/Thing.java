@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -15,14 +15,15 @@ import org.eclipse.smarthome.core.items.Item;
 import org.eclipse.smarthome.core.thing.binding.ThingHandler;
 
 /**
- * A {@link Thing} is a representation of a connected part (e.g. physical device
- * or cloud service) from the real world. It contains a list of {@link Channel} s, which can be bound to {@link Item}s.
- * A {@link Thing} might be connected
- * through a {@link Bridge}.
+ * A {@link Thing} is a representation of a connected part (e.g. physical device or cloud service) from the real world.
+ * It contains a list of {@link Channel}s, which can be bound to {@link Item}s.
+ * <p>
+ * A {@link Thing} might be connected through a {@link Bridge}.
+ * <p>
  *
  * @author Dennis Nobel - Initial contribution and API
  * @author Thomas Höfer - Added thing and thing type properties
- * @author Simon Kaufmann - Added label
+ * @author Simon Kaufmann - Added label, location
  * @author Kai Kreuzer - Removed linked items from Thing
  */
 public interface Thing {
@@ -77,6 +78,7 @@ public interface Thing {
 
     /**
      * Gets the status of a thing.
+     * 
      * In order to get all status information (status, status detail and status description)
      * please use {@link Thing#getStatusInfo()}.
      *
@@ -86,6 +88,7 @@ public interface Thing {
 
     /**
      * Gets the status info of a thing.
+     * 
      * The status info consists of the status itself, the status detail and a status description.
      *
      * @return the status info
@@ -176,4 +179,21 @@ public interface Thing {
      * @param properties the properties to set (must not be null)
      */
     void setProperties(Map<String, String> properties);
+
+    /**
+     * Get the physical location of the {@link Thing}.
+     *
+     * @return the location identifier (presumably an item name) or <code>null</code> if no location has been
+     *         configured.
+     */
+    String getLocation();
+
+    /**
+     * Set the physical location of the {@link Thing}.
+     *
+     * @param location the location identifier (preferably an item name) or <code>null</code> if no location has been
+     *            configured.
+     */
+    void setLocation(String location);
+
 }

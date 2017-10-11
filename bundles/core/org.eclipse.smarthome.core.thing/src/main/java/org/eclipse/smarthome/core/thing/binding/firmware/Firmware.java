@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016 Deutsche Telekom AG and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -13,7 +13,10 @@ import java.net.URL;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Collections;
+import java.util.Map;
 
+import org.apache.commons.io.IOUtils;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.firmware.FirmwareProvider;
 import org.eclipse.smarthome.core.thing.firmware.FirmwareRegistry;
@@ -24,22 +27,25 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
-import com.google.common.io.ByteStreams;
 
 /**
+ * <p>
  * The {@link Firmware} is the description of a firmware to be installed on the physical device of a {@link Thing}. A
  * firmware relates always to exactly one {@link ThingType}. By its {@link FirmwareUID} it is ensured that there is only
  * one firmware in a specific version for a thing type available. Firmwares can be easily created by the
  * {@link Firmware.Builder}.
- * </p>
+ * 
+ * <p>
  * Firmwares are made available to the system by {@link FirmwareProvider}s that are tracked by the
  * {@link FirmwareRegistry}. The registry can be used to get a dedicated firmware or to get all available firmwares for
  * a specific {@link ThingType}.
- * </p>
+ * 
+ * <p>
  * The {@link FirmwareUpdateService} is responsible to provide the current {@link FirmwareStatusInfo} of a thing.
  * Furthermore this service is the central instance to start a firmware update process. In order that the firmware of a
  * thing can be updated the hander of the thing has to implement the {@link FirmwareUpdateHandler} interface.
- * </p>
+ * 
+ * <p>
  * The {@link Firmware} implements the {@link Comparable} interface in order to be able to sort firmwares based on their
  * versions. Firmwares are sorted in a descending sequence, i.e. that the latest firmware will be the first
  * element in a sorted result set. The implementation of {@link Firmware#compareTo(Firmware)} splits the firmware
@@ -48,10 +54,18 @@ import com.google.common.io.ByteStreams;
  * <i>1-9_9.9_abc</i>. Consequently <i>2.0-0</i>, <i>2-0_0</i> and <i>2_0.0</i> represent the same firmware version.
  * Furthermore firmware version <i>xyz_1</i> is newer than firmware version <i>abc.2</i> which again is newer than
  * firmware version <i>2-0-1</i>.
+ * 
+ * <p>
+ * A {@link Firmware} consists of various meta information like a version, a vendor or a description. Additionally
+ * {@link FirmwareProvider}s can specify further meta information in form of properties (e.g. a factory reset of the
+ * device is required afterwards) so that {@link FirmwareUpdateHandler}s can handle this information accordingly.
  *
  * @author Thomas Höfer - Initial contribution
  */
 public final class Firmware implements Comparable<Firmware> {
+
+    /** The key for the requires a factory reset property. */
+    public static final String PROPERTY_REQUIRES_FACTORY_RESET = "requiresFactoryReset";
 
     private static final Logger logger = LoggerFactory.getLogger(Firmware.class);
 
@@ -65,6 +79,7 @@ public final class Firmware implements Comparable<Firmware> {
     private final URL onlineChangelog;
     private final transient InputStream inputStream;
     private final String md5Hash;
+    private final Map<String, String> properties;
 
     private transient byte[] bytes;
 
@@ -82,6 +97,8 @@ public final class Firmware implements Comparable<Firmware> {
         this.onlineChangelog = builder.onlineChangelog;
         this.inputStream = builder.inputStream;
         this.md5Hash = builder.md5Hash;
+        this.properties = Collections
+                .unmodifiableMap(builder.properties != null ? builder.properties : Collections.emptyMap());
 
         this.internalVersion = new Version(this.version);
         this.internalPrerequisiteVersion = this.prerequisiteVersion != null ? new Version(this.prerequisiteVersion)
@@ -172,7 +189,7 @@ public final class Firmware implements Comparable<Firmware> {
     /**
      * Returns the MD5 hash value of the firmware.
      *
-     * @return MD5 hash value of the firmware (can be null)
+     * @return the MD5 hash value of the firmware (can be null)
      */
     public String getMd5Hash() {
         return md5Hash;
@@ -196,7 +213,7 @@ public final class Firmware implements Comparable<Firmware> {
                 MessageDigest md = MessageDigest.getInstance("MD5");
 
                 try (DigestInputStream dis = new DigestInputStream(inputStream, md)) {
-                    bytes = ByteStreams.toByteArray(dis);
+                    bytes = IOUtils.toByteArray(dis);
                 } catch (IOException ioEx) {
                     logger.error(String.format("Cannot read firmware with UID %s.", uid), ioEx);
                     return null;
@@ -227,6 +244,15 @@ public final class Firmware implements Comparable<Firmware> {
     }
 
     /**
+     * Returns the immutable properties of the firmware.
+     *
+     * @return the immutable properties of the firmware (not null)
+     */
+    public Map<String, String> getProperties() {
+        return properties;
+    }
+
+    /**
      * Returns true, if this firmware is a successor version of the given firmware version, otherwise false. If the
      * given firmware version is null, then this operation will return false.
      *
@@ -251,7 +277,7 @@ public final class Firmware implements Comparable<Firmware> {
      *
      * @return true, if this firmware is valid prerequisite version of the given firmware version, otherwise false
      */
-    public boolean isPrerequisteVersion(String firmwareVersion) {
+    public boolean isPrerequisiteVersion(String firmwareVersion) {
         if (internalPrerequisiteVersion == null || firmwareVersion == null) {
             return false;
         }
@@ -329,6 +355,7 @@ public final class Firmware implements Comparable<Firmware> {
         private URL onlineChangelog;
         private transient InputStream inputStream;
         private String md5Hash;
+        private Map<String, String> properties;
 
         /**
          * Creates a new builder.
@@ -427,6 +454,18 @@ public final class Firmware implements Comparable<Firmware> {
         }
 
         /**
+         * Adds the properties to the builder.
+         *
+         * @param properties the properties to be added to the builder
+         *
+         * @return the updated builder
+         */
+        public Builder withProperties(Map<String, String> properties) {
+            this.properties = properties;
+            return this;
+        }
+
+        /**
          * Adds the given md5 hash value to the builder.
          *
          * @param md5Hash the md5 hash value to be added to the builder
@@ -462,6 +501,7 @@ public final class Firmware implements Comparable<Firmware> {
         result = prime * result + ((uid == null) ? 0 : uid.hashCode());
         result = prime * result + ((vendor == null) ? 0 : vendor.hashCode());
         result = prime * result + ((version == null) ? 0 : version.hashCode());
+        result = prime * result + ((properties == null) ? 0 : properties.hashCode());
         return result;
     }
 
@@ -540,6 +580,13 @@ public final class Firmware implements Comparable<Firmware> {
         } else if (!version.equals(other.version)) {
             return false;
         }
+        if (properties == null) {
+            if (other.properties != null) {
+                return false;
+            }
+        } else if (!properties.equals(other.properties)) {
+            return false;
+        }
         return true;
     }
 
@@ -547,7 +594,7 @@ public final class Firmware implements Comparable<Firmware> {
     public String toString() {
         return "Firmware [uid=" + uid + ", vendor=" + vendor + ", model=" + model + ", description=" + description
                 + ", version=" + version + ", prerequisiteVersion=" + prerequisiteVersion + ", changelog=" + changelog
-                + ", onlineChangelog=" + onlineChangelog + ", md5Hash=" + md5Hash + "]";
+                + ", onlineChangelog=" + onlineChangelog + ", md5Hash=" + md5Hash + ", properties=" + properties + "]";
     }
 
 }

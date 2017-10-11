@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -17,6 +17,7 @@ import java.util.Set;
 import org.eclipse.smarthome.binding.wemo.WemoBindingConstants;
 import org.eclipse.smarthome.binding.wemo.discovery.WemoLinkDiscoveryService;
 import org.eclipse.smarthome.binding.wemo.handler.WemoBridgeHandler;
+import org.eclipse.smarthome.binding.wemo.handler.WemoCoffeeHandler;
 import org.eclipse.smarthome.binding.wemo.handler.WemoHandler;
 import org.eclipse.smarthome.binding.wemo.handler.WemoLightHandler;
 import org.eclipse.smarthome.binding.wemo.handler.WemoMakerHandler;
@@ -79,6 +80,10 @@ public class WemoHandlerFactory extends BaseThingHandlerFactory {
                 logger.debug("Creating a WemoHandler for thing '{}' with UDN '{}'", thing.getUID(),
                         thing.getConfiguration().get(UDN));
                 return new WemoHandler(thing, upnpIOService);
+            } else if (thingTypeUID.equals(WemoBindingConstants.THING_TYPE_COFFEE)) {
+                logger.debug("Creating a WemoCoffeeHandler for thing '{}' with UDN '{}'", thing.getUID(),
+                        thing.getConfiguration().get(UDN));
+                return new WemoCoffeeHandler(thing, upnpIOService);
             } else if (thingTypeUID.equals(WemoBindingConstants.THING_TYPE_MZ100)) {
                 return new WemoLightHandler(thing, upnpIOService);
             } else {

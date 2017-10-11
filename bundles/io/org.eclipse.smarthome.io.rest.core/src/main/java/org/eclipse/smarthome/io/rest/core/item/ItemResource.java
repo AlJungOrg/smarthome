@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,16 +7,13 @@
  */
 package org.eclipse.smarthome.io.rest.core.item;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.stream.Stream;
 
+import javax.annotation.security.RolesAllowed;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
@@ -37,10 +34,10 @@ import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriInfo;
 
+import org.eclipse.smarthome.core.auth.Role;
 import org.eclipse.smarthome.core.events.EventPublisher;
 import org.eclipse.smarthome.core.items.ActiveItem;
 import org.eclipse.smarthome.core.items.GenericItem;
-import org.eclipse.smarthome.core.items.GroupFunction;
 import org.eclipse.smarthome.core.items.GroupItem;
 import org.eclipse.smarthome.core.items.Item;
 import org.eclipse.smarthome.core.items.ItemFactory;
@@ -48,25 +45,21 @@ import org.eclipse.smarthome.core.items.ItemNotFoundException;
 import org.eclipse.smarthome.core.items.ItemRegistry;
 import org.eclipse.smarthome.core.items.ManagedItemProvider;
 import org.eclipse.smarthome.core.items.dto.GroupItemDTO;
+import org.eclipse.smarthome.core.items.dto.ItemDTOMapper;
 import org.eclipse.smarthome.core.items.events.ItemEventFactory;
-import org.eclipse.smarthome.core.library.GroupFunctionFactory;
 import org.eclipse.smarthome.core.library.items.RollershutterItem;
 import org.eclipse.smarthome.core.library.items.SwitchItem;
-import org.eclipse.smarthome.core.library.types.ArithmeticGroupFunction;
 import org.eclipse.smarthome.core.library.types.OnOffType;
-import org.eclipse.smarthome.core.library.types.OpenClosedType;
 import org.eclipse.smarthome.core.library.types.UpDownType;
 import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.core.types.State;
-import org.eclipse.smarthome.core.types.Type;
 import org.eclipse.smarthome.core.types.TypeParser;
 import org.eclipse.smarthome.io.rest.JSONResponse;
 import org.eclipse.smarthome.io.rest.LocaleUtil;
 import org.eclipse.smarthome.io.rest.RESTResource;
+import org.eclipse.smarthome.io.rest.Stream2JSONInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Strings;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -78,15 +71,12 @@ import io.swagger.annotations.ApiResponses;
  * <p>
  * This class acts as a REST resource for items and provides different methods to interact with them, like retrieving
  * lists of items, sending commands to them or checking a single status.
- * </p>
  *
  * <p>
  * The typical content types are plain text for status values and XML or JSON(P) for more complex data structures
- * </p>
  *
  * <p>
  * This resource is registered with the Jersey servlet.
- * </p>
  *
  * @author Kai Kreuzer - Initial contribution and API
  * @author Dennis Nobel - Added methods for item management
@@ -95,6 +85,7 @@ import io.swagger.annotations.ApiResponses;
  * @author Stefan Bußweiler - Migration to new ESH event concept
  * @author Yordan Zhelev - Added Swagger annotations
  * @author Jörg Plewe - refactoring, error handling
+ * @author Franck Dechavanne - Added DTOs to ApiResponses
  */
 @Path(ItemResource.PATH_ITEMS)
 @Api(value = ItemResource.PATH_ITEMS)
@@ -107,9 +98,6 @@ public class ItemResource implements RESTResource {
 
     @Context
     UriInfo uriInfo;
-
-    @Context
-    UriInfo localUriInfo;
 
     private ItemRegistry itemRegistry;
     private EventPublisher eventPublisher;
@@ -149,9 +137,11 @@ public class ItemResource implements RESTResource {
     }
 
     @GET
+    @RolesAllowed({ Role.USER, Role.ADMIN })
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(value = "Get all available items.", response = EnrichedItemDTO.class, responseContainer = "List")
-    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK") })
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "OK", response = EnrichedItemDTO.class, responseContainer = "List") })
     public Response getItems(@HeaderParam(HttpHeaders.ACCEPT_LANGUAGE) @ApiParam(value = "language") String language,
             @QueryParam("type") @ApiParam(value = "item type filter", required = false) String type,
             @QueryParam("tags") @ApiParam(value = "item tag filter", required = false) String tags,
@@ -159,15 +149,17 @@ public class ItemResource implements RESTResource {
         final Locale locale = LocaleUtil.getLocale(language);
         logger.debug("Received HTTP GET request at '{}'", uriInfo.getPath());
 
-        Object responseObject = getItemBeans(type, tags, recursive, locale);
-        return Response.ok(responseObject).build();
+        Stream<EnrichedItemDTO> itemStream = getItems(type, tags).stream()
+                .map(item -> EnrichedItemDTOMapper.map(item, recursive, uriInfo.getBaseUri(), locale));
+        return Response.ok(new Stream2JSONInputStream(itemStream)).build();
     }
 
     @GET
+    @RolesAllowed({ Role.USER, Role.ADMIN })
     @Path("/{itemname: [a-zA-Z_0-9]*}")
-    @Produces({ MediaType.WILDCARD })
+    @Produces({ MediaType.APPLICATION_JSON })
     @ApiOperation(value = "Gets a single item.", response = EnrichedItemDTO.class)
-    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
+    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK", response = EnrichedItemDTO.class),
             @ApiResponse(code = 404, message = "Item not found") })
     public Response getItemData(@HeaderParam(HttpHeaders.ACCEPT_LANGUAGE) @ApiParam(value = "language") String language,
             @PathParam("itemname") @ApiParam(value = "item name", required = true) String itemname) {
@@ -193,10 +185,11 @@ public class ItemResource implements RESTResource {
      * @return
      */
     @GET
+    @RolesAllowed({ Role.USER, Role.ADMIN })
     @Path("/{itemname: [a-zA-Z_0-9]*}/state")
     @Produces(MediaType.TEXT_PLAIN)
     @ApiOperation(value = "Gets the state of an item.")
-    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
+    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK", response = String.class),
             @ApiResponse(code = 404, message = "Item not found") })
     public Response getPlainItemState(
             @PathParam("itemname") @ApiParam(value = "item name", required = true) String itemname) {
@@ -210,7 +203,7 @@ public class ItemResource implements RESTResource {
 
             // we cannot use JSONResponse.createResponse() bc. MediaType.TEXT_PLAIN
             // return JSONResponse.createResponse(Status.OK, item.getState().toString(), null);
-            return Response.ok(item.getState().toString()).build();
+            return Response.ok(item.getState().toFullString()).build();
         } else {
             logger.info("Received HTTP GET request at '{}' for the unknown item '{}'.", uriInfo.getPath(), itemname);
             return getItemNotFoundResponse(itemname);
@@ -218,10 +211,11 @@ public class ItemResource implements RESTResource {
     }
 
     @PUT
+    @RolesAllowed({ Role.USER, Role.ADMIN })
     @Path("/{itemname: [a-zA-Z_0-9]*}/state")
     @Consumes(MediaType.TEXT_PLAIN)
     @ApiOperation(value = "Updates the state of an item.")
-    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
+    @ApiResponses(value = { @ApiResponse(code = 202, message = "Accepted"),
             @ApiResponse(code = 404, message = "Item not found"),
             @ApiResponse(code = 400, message = "Item state null") })
     public Response putItemState(
@@ -261,6 +255,7 @@ public class ItemResource implements RESTResource {
     }
 
     @POST
+    @RolesAllowed({ Role.USER, Role.ADMIN })
     @Path("/{itemname: [a-zA-Z_0-9]*}")
     @Consumes(MediaType.TEXT_PLAIN)
     @ApiOperation(value = "Sends a command to an item.")
@@ -307,6 +302,7 @@ public class ItemResource implements RESTResource {
     }
 
     @PUT
+    @RolesAllowed({ Role.ADMIN })
     @Path("/{itemName: [a-zA-Z_0-9]*}/members/{memberItemName: [a-zA-Z_0-9]*}")
     @ApiOperation(value = "Adds a new member to a group item.")
     @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
@@ -344,6 +340,7 @@ public class ItemResource implements RESTResource {
     }
 
     @DELETE
+    @RolesAllowed({ Role.ADMIN })
     @Path("/{itemName: [a-zA-Z_0-9]*}/members/{memberItemName: [a-zA-Z_0-9]*}")
     @ApiOperation(value = "Removes an existing member from a group item.")
     @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
@@ -381,6 +378,7 @@ public class ItemResource implements RESTResource {
     }
 
     @DELETE
+    @RolesAllowed({ Role.ADMIN })
     @Path("/{itemname: [a-zA-Z_0-9]*}")
     @ApiOperation(value = "Removes an item from the registry.")
     @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
@@ -396,6 +394,7 @@ public class ItemResource implements RESTResource {
     }
 
     @PUT
+    @RolesAllowed({ Role.ADMIN })
     @Path("/{itemname: [a-zA-Z_0-9]*}/tags/{tag}")
     @ApiOperation(value = "Adds a tag to an item.")
     @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
@@ -422,6 +421,7 @@ public class ItemResource implements RESTResource {
     }
 
     @DELETE
+    @RolesAllowed({ Role.ADMIN })
     @Path("/{itemname: [a-zA-Z_0-9]*}/tags/{tag}")
     @ApiOperation(value = "Removes a tag from an item.")
     @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
@@ -455,10 +455,11 @@ public class ItemResource implements RESTResource {
      * @return
      */
     @PUT
+    @RolesAllowed({ Role.ADMIN })
     @Path("/{itemname: [a-zA-Z_0-9]*}")
     @Consumes(MediaType.APPLICATION_JSON)
     @ApiOperation(value = "Adds a new item to the registry or updates the existing item.")
-    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
+    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK", response = String.class),
             @ApiResponse(code = 201, message = "Item created."), @ApiResponse(code = 400, message = "Item null."),
             @ApiResponse(code = 404, message = "Item not found."),
             @ApiResponse(code = 405, message = "Item not editable.") })
@@ -473,27 +474,13 @@ public class ItemResource implements RESTResource {
             return Response.status(Status.BAD_REQUEST).build();
         }
 
-        GenericItem newItem = null;
-
-        if (item.type != null && item.type.equals("GroupItem")) {
-            GenericItem baseItem = null;
-            if (!Strings.isNullOrEmpty(item.groupType)) {
-                baseItem = createItem(item.groupType, itemname);
-            }
-            newItem = new GroupItem(itemname, baseItem, GroupFunctionFactory.create(item.groupFunction));
-        } else {
-            String itemType = item.type.substring(0, item.type.length() - 4);
-            newItem = createItem(itemType, itemname);
-        }
+        ActiveItem newItem = ItemDTOMapper.map(item, itemFactories);
 
         if (newItem == null) {
             logger.warn("Received HTTP PUT request at '{}' with an invalid item type '{}'.", uriInfo.getPath(),
                     item.type);
             return Response.status(Status.BAD_REQUEST).build();
         }
-
-        // See if an existing item of this name exists.
-        Item existingItem = getItem(itemname);
 
         // Update the label
         newItem.setLabel(item.label);
@@ -508,7 +495,7 @@ public class ItemResource implements RESTResource {
         }
 
         // Save the item
-        if (existingItem == null) {
+        if (getItem(itemname) == null) {
             // item does not yet exist, create it
             managedItemProvider.add(newItem);
             return getItemResponse(Status.CREATED, newItem, locale, null);
@@ -525,25 +512,6 @@ public class ItemResource implements RESTResource {
         }
     }
 
-    /**
-     * helper: Create new item with name and type
-     *
-     * @param itemType type of the item
-     * @param itemname name of the item
-     * @return the newly created item
-     */
-    private GenericItem createItem(String itemType, String itemname) {
-        GenericItem newItem = null;
-        for (ItemFactory itemFactory : itemFactories) {
-            newItem = itemFactory.createItem(itemType, itemname);
-            if (newItem != null) {
-                break;
-            }
-        }
-        return newItem;
-    }
-    
-    
     /**
      * helper: Response to be sent to client if a Thing cannot be found
      *
@@ -576,12 +544,10 @@ public class ItemResource implements RESTResource {
      * @return Item addressed by itemname
      */
     private Item getItem(String itemname) {
-        Item item = itemRegistry.get(itemname);
-        return item;
+        return itemRegistry.get(itemname);
     }
 
-    private List<EnrichedItemDTO> getItemBeans(String type, String tags, boolean recursive, Locale locale) {
-        List<EnrichedItemDTO> beans = new LinkedList<>();
+    private Collection<Item> getItems(String type, String tags) {
         Collection<Item> items;
         if (tags == null) {
             if (type == null) {
@@ -597,11 +563,13 @@ public class ItemResource implements RESTResource {
                 items = itemRegistry.getItemsByTagAndType(type, tagList);
             }
         }
-        if (items != null) {
-            for (Item item : items) {
-                beans.add(EnrichedItemDTOMapper.map(item, recursive, uriInfo.getBaseUri(), locale));
-            }
-        }
-        return beans;
+
+        return items;
+    }
+
+    @Override
+    public boolean isSatisfied() {
+        return itemRegistry != null && managedItemProvider != null && eventPublisher != null
+                && !itemFactories.isEmpty();
     }
 }

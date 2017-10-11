@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -8,6 +8,7 @@
 package org.eclipse.smarthome.core.library.types;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
@@ -42,6 +43,10 @@ public class HSBType extends PercentType implements ComplexType, State, Command 
 
     protected BigDecimal hue;
     protected BigDecimal saturation;
+
+    public HSBType() {
+        this("0,0,0");
+    }
 
     public HSBType(DecimalType h, PercentType s, PercentType b) {
         this.hue = h.toBigDecimal();
@@ -158,6 +163,11 @@ public class HSBType extends PercentType implements ComplexType, State, Command 
 
     @Override
     public String toString() {
+        return toFullString();
+    }
+
+    @Override
+    public String toFullString() {
         return getHue() + "," + getSaturation() + "," + getBrightness();
     }
 
@@ -171,12 +181,15 @@ public class HSBType extends PercentType implements ComplexType, State, Command 
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj)
+        if (this == obj) {
             return true;
-        if (obj == null)
+        }
+        if (obj == null) {
             return false;
-        if (!(obj instanceof HSBType))
+        }
+        if (!(obj instanceof HSBType)) {
             return false;
+        }
         HSBType other = (HSBType) obj;
         if ((getHue() != null && other.getHue() == null) || (getHue() == null && other.getHue() != null)
                 || (getSaturation() != null && other.getSaturation() == null)
@@ -197,11 +210,12 @@ public class HSBType extends PercentType implements ComplexType, State, Command 
         PercentType green = null;
         PercentType blue = null;
 
-        BigDecimal h = hue.divide(new BigDecimal(100), 10, BigDecimal.ROUND_HALF_UP);
-        BigDecimal s = saturation.divide(new BigDecimal(100));
+        BigDecimal h = hue.divide(BigDecimal.valueOf(100), 10, BigDecimal.ROUND_HALF_UP);
+        BigDecimal s = saturation.divide(BigDecimal.valueOf(100));
 
-        int h_int = h.multiply(new BigDecimal(5)).divide(new BigDecimal(3), 10, BigDecimal.ROUND_HALF_UP).intValue();
-        BigDecimal f = h.multiply(new BigDecimal(5)).divide(new BigDecimal(3), 10, BigDecimal.ROUND_HALF_UP)
+        int h_int = h.multiply(BigDecimal.valueOf(5)).divide(BigDecimal.valueOf(3), 10, BigDecimal.ROUND_HALF_UP)
+                .intValue();
+        BigDecimal f = h.multiply(BigDecimal.valueOf(5)).divide(BigDecimal.valueOf(3), 10, BigDecimal.ROUND_HALF_UP)
                 .remainder(BigDecimal.ONE);
         PercentType a = new PercentType(value.multiply(BigDecimal.ONE.subtract(s)));
         PercentType b = new PercentType(value.multiply(BigDecimal.ONE.subtract(s.multiply(f))));
@@ -241,5 +255,19 @@ public class HSBType extends PercentType implements ComplexType, State, Command 
     private int convertPercentToByte(PercentType percent) {
         return percent.value.multiply(BigDecimal.valueOf(255))
                 .divide(BigDecimal.valueOf(100), 2, BigDecimal.ROUND_HALF_UP).intValue();
+    }
+
+    @Override
+    public State as(Class<? extends State> target) {
+        if (target == OnOffType.class) {
+            // if brightness is not completely off, we consider the state to be on
+            return getBrightness().equals(PercentType.ZERO) ? OnOffType.OFF : OnOffType.ON;
+        } else if (target == DecimalType.class) {
+            return new DecimalType(getBrightness().toBigDecimal().divide(BigDecimal.valueOf(100), 8, RoundingMode.UP));
+        } else if (target == PercentType.class) {
+            return new PercentType(getBrightness().toBigDecimal());
+        } else {
+            return defaultConversion(target);
+        }
     }
 }

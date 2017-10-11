@@ -10,6 +10,8 @@ package org.eclipse.smarthome.automation.type;
 import java.util.Collection;
 import java.util.Locale;
 
+import org.eclipse.smarthome.core.common.registry.Provider;
+
 /**
  * This interface has to be implemented by all providers of {@link ModuleType}s.
  * The {@link ModuleTypeRegistry} uses it to get access to available {@link ModuleType}s.
@@ -18,13 +20,7 @@ import java.util.Locale;
  * @author Kai Kreuzer - refactored (managed) provider and registry implementation
  * @author Ana Dimova - add registration property - module.types
  */
-public interface ModuleTypeProvider {
-
-    /**
-     * This constant is used as registration property for Module Types Provider when the provider expects to modify
-     * the provided objects dynamically. Its value is a set of current provided module types UIDs.
-     */
-    public static final String REG_PROPERTY_MODULE_TYPES = "module.types";
+public interface ModuleTypeProvider extends Provider<ModuleType> {
 
     /**
      * This method is used to get localized ModuleType. When the localization is
@@ -33,6 +29,7 @@ public interface ModuleTypeProvider {
      *
      * @param UID unique id of module type.
      * @param locale defines localization of label and description of the {@link ModuleType} or null.
+     * @param <T> the type of the required object.
      * @return localized module type.
      */
     <T extends ModuleType> T getModuleType(String UID, Locale locale);
@@ -43,6 +40,7 @@ public interface ModuleTypeProvider {
      * with default localization is returned.
      *
      * @param locale defines localization of label and description of the {@link ModuleType}s or null.
+     * @param <T> the type of the required object.
      * @return collection of localized {@link ModuleType} provided by this
      *         provider
      */

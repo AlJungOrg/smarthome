@@ -118,6 +118,13 @@
 			margin: 4px;
 		}
 	}
+	&-title {
+		white-space: nowrap;
+		text-overflow: ellipsis;
+		overflow: hidden;
+		max-width: 100%;
+		line-height: normal;
+	}
 }
 
 .navigation {
@@ -188,13 +195,27 @@
 				height: auto;
 			}
 		}
+		&--hidden {
+			display: none;
+		}
 		html.ui-layout-condensed & {
 			height: @form-row-desktop-height-condensed;
 		}
 	}
 	&__image {
+		.mdl-form__control& {
+			padding-left: 0;
+			padding-right: 0;
+			max-width: 100%;
+
+			img {
+				max-width: 100%;
+			}
+		}
+
 		@media screen and (max-width: @layout-tablet-size-threshold) {	
 			.mdl-form__control& {
+				padding-left: 0;
 				padding-right: 0;
 			}
 			width: 100%;
@@ -208,6 +229,7 @@
 		cursor: pointer;
 	}
 	&__icon {
+		.flex-shrink(0);
 		width: 32px;
 		padding-left: @form-row-desktop-padding;
 		html.ui-layout-condensed & {
@@ -246,7 +268,7 @@
 			padding-left: @form-row-desktop-padding-condensed;
 		}
 		
-		.flex-shrink(2);
+		.flex-shrink(0);
 		.flex-grow(2);
 		.flex-2011(2 2 auto);
 		
@@ -262,6 +284,7 @@
 			}
 		}
 		padding-right: @form-row-desktop-padding;
+		padding-left: 4px;
 		html.ui-layout-condensed & {
 			padding-left: @form-row-desktop-padding-condensed;
 		}
@@ -321,6 +344,7 @@
 	&__title {
 		margin: 0;
 		padding-left: @form-row-desktop-padding + @mdl-grid-spacing;
+
 		html.ui-layout-condensed & {
 			padding-left: @form-row-desktop-padding-condensed + @mdl-grid-spacing;
 		}
@@ -345,17 +369,40 @@
 		html.ui-capitalize-values & {
 			text-transform: uppercase;
 		}
-		&--setpoint {
+		&--setpoint, &--rollerblind {
 			padding: 0 10px 0 5px;
 		}
-		&--rollerblind {
-			padding: 0 10px 0 5px;
+		&--group {
+			padding: 0 5px 0 5px;
+			font-weight: normal;
 		}
+		&--text-link {
+			font-weight: normal;
+		}
+		&--switch, &--slider {
+			padding: 0 10px 0 10px;
+		}
+	}
+	&__text {
+		overflow: hidden;
+		flex-shrink: 2;
+		text-overflow: ellipsis;
+	}
+	&__webview, &__video {
+		padding-left: 0px;
+		padding-right: 0px;
+		width: 100%;
+	}
+	&__buttons {
+		padding-top: 2px;
 	}
 	&--no-label {
 		.mdl-form__title {
 			display: none;
 		}
+	}
+	&--hidden {
+		display: none;
 	}
 }
 
@@ -366,7 +413,7 @@
 	
 	.expand();
 	.flex-display(flex);
-	overflow-y: scroll;
+	overflow-y: auto;
 	
 	.align-items(center);
 	.align-items-2011(center);
@@ -375,14 +422,21 @@
 	&--overflow {
 		display: block;
 	}
-	&__content {
+	&__wrapper {
 		flex-grow: 2;
 		max-width: 800px;
 		width: 100%;
-		margin: 40px 100px;
-		@media screen and (max-width: @layout-tablet-size-threshold) {
-			margin: 20px;
+		margin: auto;
+		padding: 40px 100px;
+		.ui-layout-condensed & {
+			padding: 10px;
 		}
+		@media screen and (max-width: @layout-tablet-size-threshold) {
+			padding: 20px;
+		}
+	}
+	&__content {
+		margin: 0 auto;
 	}
 }
 
@@ -635,3 +689,45 @@ html.flexbox-legacy {
 		}
 	}
 }
+
+.mdl-notify {
+	border-radius: 2px 2px 0 0;
+	background: #323232;
+
+	@media screen and (max-width: @layout-mobile-size-threshold) {
+		border-radius: 0;
+		width: 100%;
+	}
+
+	&__text {
+		padding: 14px 24px;
+		vertical-align: middle;
+		color: white;
+		font-weight: 400;
+	}
+
+	&__container {
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		z-index: 1;
+
+		.flex-display();
+		.justify-content(center);
+	}
+
+	&--hidden {
+		display: none;
+	}
+}
+
+// MS Edge hacks
+@supports (-ms-ime-align:auto) {
+	.mdl-slider.mdl-slider.is-upgraded {
+		-ms-appearance: none;
+		height: 32px;
+ 		margin: 0;
+	}
+}
+

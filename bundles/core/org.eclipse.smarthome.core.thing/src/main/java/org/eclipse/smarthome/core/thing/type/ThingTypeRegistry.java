@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -127,7 +127,6 @@ public class ThingTypeRegistry {
      * fetch the thing type first using
      * {@link ThingTypeRegistry#getThingType(ThingTypeUID)} and use
      * {@link ThingType#getChannelType(ChannelUID)} afterwards.
-     * </p>
      *
      * @param channel channel
      * @return channel type or null if no channel type was found
@@ -144,7 +143,6 @@ public class ThingTypeRegistry {
      * fetch the thing type first using
      * {@link ThingTypeRegistry#getThingType(ThingTypeUID)} and use
      * {@link ThingType#getChannelType(ChannelUID)} afterwards.
-     * </p>
      *
      * @param channel channel
      * @param locale locale (can be null)

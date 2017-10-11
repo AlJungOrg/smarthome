@@ -23,12 +23,11 @@ import org.eclipse.smarthome.automation.Trigger;
 import org.eclipse.smarthome.config.core.ConfigDescriptionParameter;
 import org.eclipse.smarthome.config.core.ConfigDescriptionParameter.Type;
 import org.eclipse.smarthome.config.core.ConfigDescriptionParameterBuilder;
+import org.eclipse.smarthome.config.core.Configuration;
 import org.eclipse.smarthome.config.core.FilterCriteria;
 import org.eclipse.smarthome.config.core.ParameterOption;
 import org.junit.Assert;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Test adding, retrieving and updating rules from the RuleEngine
@@ -38,38 +37,41 @@ import org.slf4j.LoggerFactory;
  */
 public class RuleEngineTest {
 
-    Logger log = LoggerFactory.getLogger(RuleEngineTest.class);
-
     private RuleEngine createRuleEngine() {
-        BundleContextMockup bc = new BundleContextMockup();
-        RuleEngine ruleEngine = new RuleEngine(bc);
-        ruleEngine.setModuleTypeManager(new ModuleTypeManagerMockup(bc, ruleEngine));
+        RuleEngine ruleEngine = new RuleEngine();
+        ruleEngine.setModuleTypeRegistry(new ModuleTypeRegistryMockup());
         return ruleEngine;
     }
 
     /**
      * test adding and retrieving rules
+     *
      */
     @Test
     public void testAddRetrieveRules() {
         RuleEngine ruleEngine = createRuleEngine();
-        Rule rule0 = new Rule();
+        Rule rule0 = new Rule(ruleEngine.getUniqueId());
         ruleEngine.addRule(rule0, true);
-        Collection<Rule> rules = ruleEngine.getRules();
+        Collection<RuntimeRule> rules = ruleEngine.getRuntimeRules();
         Assert.assertNotNull("null returned instead of rules list", rules);
         Assert.assertEquals("empty rules list is returned", 1, rules.size());
-        rules.add(new Rule());
-        Assert.assertNotEquals("new copy of rules list should be returned", rules.hashCode(),
-                ruleEngine.getRules().hashCode());
-
+        Assert.assertEquals("Returned rule with wrong UID", "rule_1", rules.iterator().next().getUID());
         Rule rule1 = createRule();
         ruleEngine.addRule(rule1, true);
-        Rule rule1Get = ruleEngine.getRule("rule1");
+        rules = ruleEngine.getRuntimeRules();
+        Assert.assertEquals("rules list should contain 2 rules", 2, rules.size());
+        RuntimeRule rule1Get = ruleEngine.getRuntimeRule("rule1");
         Assert.assertEquals("Returned rule with wrong UID", "rule1", rule1Get.getUID());
+        Rule rule2 = createRule();
+        ruleEngine.addRule(rule2, true);
+        rules = ruleEngine.getRuntimeRules();
+        Assert.assertEquals("rules list should contain 2 rules", 2, rules.size());
+        Assert.assertEquals("rules list should contain 2 rules", rule1Get, ruleEngine.getRuntimeRule("rule1"));
     }
 
     /**
      * test auto map connections of the rule
+     *
      */
     @Test
     public void testAutoMapRuleConnections() {
@@ -91,8 +93,8 @@ public class RuleEngineTest {
 
         // do connections auto mapping
         ruleEngine.addRule(rule, true);
-        Rule ruleGet = ruleEngine.getRule("rule1");
-        Assert.assertEquals("Returned rule with wrong UID", "rule1", ruleGet.getUID());
+        RuntimeRule ruleGet = ruleEngine.getRuntimeRule("AutoMapRule");
+        Assert.assertEquals("Returned rule with wrong UID", "AutoMapRule", ruleGet.getUID());
 
         // check condition connections
         conditionInputs = ruleGet.getConditions().get(0).getInputs();
@@ -118,103 +120,78 @@ public class RuleEngineTest {
 
     /**
      * test editing rule tags
+     *
      */
     @Test
     public void testRuleTags() {
         RuleEngine ruleEngine = createRuleEngine();
 
-        Rule rule2 = new Rule("rule2", null, null, null, null, null);
-        Set<String> ruleTags = new LinkedHashSet<String>();
-        ruleTags.add("tag1");
-        ruleTags.add("tag2");
-        rule2.setTags(ruleTags);
-        ruleEngine.addRule(rule2, true);
-
-        Rule rule2Get = ruleEngine.getRule("rule2");
-        Assert.assertNotNull("Cannot find rule by UID", rule2Get);
-        Assert.assertNotNull("rule.getTags is null", rule2Get.getTags());
-        Assert.assertEquals("rule.getTags is empty", 2, rule2Get.getTags().size());
-
-        Collection<Rule> rules = ruleEngine.getRulesByTag("tag1");
-        Assert.assertNotNull("getRulesByTag returned null", rules);
-        Assert.assertEquals("getRulesByTag returned empty list", 1, rules.size());
-        Rule[] array = new Rule[1];
-        array = rules.toArray(array);
-        Set<String> rule2GetTags = array[0].getTags();
-        Assert.assertNotNull("rule.getTags is null", rule2GetTags);
-        Assert.assertEquals("rule.getTags is empty", 2, rule2GetTags.size());
-        Assert.assertTrue("Missing tag in rule", rule2GetTags.contains("tag1"));
-        Assert.assertTrue("Missing tag in rule", rule2GetTags.contains("tag2"));
-    }
-
-    /**
-     * test get rules by tags
-     */
-    @Test
-    public void testGetRuleByTags() {
-        RuleEngine ruleEngine = createRuleEngine();
-
-        Rule rule1 = new Rule("rule1", null, null, null, null, null);
+        Rule rule1 = new Rule("ruleWithTag1");
         Set<String> ruleTags = new LinkedHashSet<String>();
         ruleTags.add("tag1");
         rule1.setTags(ruleTags);
         ruleEngine.addRule(rule1, true);
 
-        Rule rule2 = new Rule("rule2", null, null, null, null, null);
-        Set<String> ruleTags2 = new LinkedHashSet<String>();
-        ruleTags2.add("tag1");
-        ruleTags2.add("tag2");
-        rule2.setTags(ruleTags2);
+        Rule rule2 = new Rule("ruleWithTags12");
+        ruleTags = new LinkedHashSet<String>();
+        ruleTags.add("tag1");
+        ruleTags.add("tag2");
+        rule2.setTags(ruleTags);
         ruleEngine.addRule(rule2, true);
 
-        Collection<Rule> rules = ruleEngine.getRulesByTags(null);
-        Assert.assertNotNull("Cannot find rule by set of tags: <tag1> ", rules);
-        Assert.assertEquals("Collection of rules doesn't contains both rules.", 2, rules.size());
+        RuntimeRule rule1Get = ruleEngine.getRuntimeRule("ruleWithTag1");
+        Assert.assertNotNull("Cannot find rule by UID", rule1Get);
+        Assert.assertNotNull("rule.getTags is null", rule1Get.getTags());
+        Assert.assertEquals("rule.getTags is empty", 1, rule1Get.getTags().size());
 
-        rules = ruleEngine.getRulesByTags(ruleTags);
-        Assert.assertNotNull("Cannot find rule by set of tags: <tag1> ", rules);
-        Assert.assertEquals("Collection of rules doesn't contains both rules.", 2, rules.size());
-
-        rules = ruleEngine.getRulesByTags(ruleTags2);
-        Assert.assertNotNull("Cannot find rule by set of tags: <tag1, tag2> ", rules);
-        Assert.assertEquals("Collection of rules has to contain only rule2.", 1, rules.size());
+        RuntimeRule rule2Get = ruleEngine.getRuntimeRule("ruleWithTags12");
+        Assert.assertNotNull("Cannot find rule by UID", rule2Get);
+        Assert.assertNotNull("rule.getTags is null", rule2Get.getTags());
+        Assert.assertEquals("rule.getTags is empty", 2, rule2Get.getTags().size());
     }
 
     /**
      * test rule configurations with null
+     *
      */
     @Test
     public void testRuleConfigNull() {
         RuleEngine ruleEngine = createRuleEngine();
 
-        Rule rule3 = new Rule("rule3", createTriggers("typeUID"), createConditions("typeUID"), createActions("typeUID"),
-                null, null);
+        Rule rule3 = new Rule("rule3");
+        rule3.setTriggers(createTriggers("typeUID"));
+        rule3.setConditions(createConditions("typeUID"));
+        rule3.setActions(createActions("typeUID"));
         ruleEngine.addRule(rule3, true);
-        Rule rule3Get = ruleEngine.getRule("rule3");
-        Assert.assertNotNull("Rule configuration description is null", rule3Get.getConfigurationDescriptions());
+        RuntimeRule rule3Get = ruleEngine.getRuntimeRule("rule3");
         Assert.assertNotNull("Rule configuration is null", rule3Get.getConfiguration());
     }
 
     /**
      * test rule configurations with real values
+     *
      */
     @Test
     public void testRuleConfigValue() {
         RuleEngine ruleEngine = createRuleEngine();
 
         List<ConfigDescriptionParameter> configDescriptions = createConfigDescriptions();
-        Map<String, Object> configurations = new HashMap<String, Object>();
+        Configuration configurations = new Configuration();
         configurations.put("config1", 5);
 
-        Rule rule4 = new Rule("rule4", createTriggers("typeUID"), createConditions("typeUID"), createActions("typeUID"),
-                configDescriptions, configurations);
+        Rule rule4 = new Rule("rule4");
+        rule4.setTriggers(createTriggers("typeUID"));
+        rule4.setConditions(createConditions("typeUID"));
+        rule4.setActions(createActions("typeUID"));
+        rule4.setConfigurationDescriptions(configDescriptions);
+        rule4.setConfiguration(configurations);
         ruleEngine.addRule(rule4, true);
-        Rule rule4Get = ruleEngine.getRule("rule4");
-        Map<String, ?> rule4cfg = rule4Get.getConfiguration();
+        RuntimeRule rule4Get = ruleEngine.getRuntimeRule("rule4");
+        Configuration rule4cfg = rule4Get.getConfiguration();
         List<ConfigDescriptionParameter> rule4cfgD = rule4Get.getConfigurationDescriptions();
         Assert.assertNotNull("Rule configuration is null", rule4cfg);
         Assert.assertTrue("Missing config property in rule copy", rule4cfg.containsKey("config1"));
-        Assert.assertEquals("Wrong config value", 5, rule4cfg.get("config1"));
+        Assert.assertEquals("Wrong config value", new BigDecimal(5), rule4cfg.get("config1"));
 
         Assert.assertNotNull("Rule configuration description is null", rule4cfgD);
         Assert.assertEquals("Missing config description in rule copy", 1, rule4cfgD.size());
@@ -229,54 +206,62 @@ public class RuleEngineTest {
 
     /**
      * test rule actions
+     *
      */
     @Test
     public void testRuleActions() {
         RuleEngine ruleEngine = createRuleEngine();
 
         Rule rule1 = createRule();
+        List<Action> actions = rule1.getActions();
         ruleEngine.addRule(rule1, true);
-        Rule rule1Get = ruleEngine.getRule("rule1");
+
+        RuntimeRule rule1Get = ruleEngine.getRuntimeRule("rule1");
         List<Action> actionsGet = rule1Get.getActions();
         Assert.assertNotNull("Null actions list", actionsGet);
         Assert.assertEquals("Empty actions list", 1, actionsGet.size());
         Assert.assertEquals("Returned actions list should not be a copy", actionsGet, rule1Get.getActions());
 
-        actionsGet.add(new Action("actionId2", "typeUID2", null, null));
+        actions.add(new Action("actionId2", "typeUID2", null, null));
+        ruleEngine.updateRule(rule1, true);
+        rule1Get = ruleEngine.getRuntimeRule("rule1");
         List<Action> actionsGet2 = rule1Get.getActions();
         Assert.assertNotNull("Null actions list", actionsGet2);
         Assert.assertEquals("Action was not added to the rule's list of actions", 2, actionsGet2.size());
         Assert.assertNotNull("Rule action with wrong id is returned", rule1Get.getModule("actionId2"));
 
-        actionsGet.add(new Action("actionId3", "typeUID3", null, null));
+        actions.add(new Action("actionId3", "typeUID3", null, null));
+        ruleEngine.updateRule(rule1, true);// ruleEngine.update will update the RuntimeRule.moduleMap with the new
+        // module
+        rule1Get = ruleEngine.getRuntimeRule("rule1");
         List<Action> actionsGet3 = rule1Get.getActions();
         Assert.assertNotNull("Null actions list", actionsGet3);
         Assert.assertEquals("Action was not added to the rule's list of actions", 3, actionsGet3.size());
-        // Assert.assertNull("Rule modules are not cached", rule1Get.getModule("actionId3"));
-        ruleEngine.updateRule(rule1Get);// ruleEngine.update will update the RuntimeRule.moduleMap with the new
-        // module
-        Assert.assertNotNull("Rule modules map was not updated", ruleEngine.getRule("rule1").getModule("actionId3"));
+        Assert.assertNotNull("Rule modules map was not updated",
+                ruleEngine.getRuntimeRule("rule1").getModule("actionId3"));
     }
 
     /**
      * test rule triggers
+     *
      */
     @Test
     public void testRuleTriggers() {
         RuleEngine ruleEngine = createRuleEngine();
 
         Rule rule1 = createRule();
+        List<Trigger> triggers = rule1.getTriggers();
         ruleEngine.addRule(rule1, true);
-        Rule rule1Get = ruleEngine.getRule("rule1");
+        RuntimeRule rule1Get = ruleEngine.getRuntimeRule("rule1");
         List<Trigger> triggersGet = rule1Get.getTriggers();
         Assert.assertNotNull("Null triggers list", triggersGet);
         Assert.assertEquals("Empty triggers list", 1, triggersGet.size());
         Assert.assertEquals("Returned triggers list should not be a copy", triggersGet, rule1Get.getTriggers());
 
-        triggersGet.add(new Trigger("triggerId2", "typeUID2", null));
-        ruleEngine.updateRule(rule1Get);// ruleEngine.update will update the RuntimeRule.moduleMap with the new
-                                        // module
-        Rule rule2Get = ruleEngine.getRule("rule1");
+        triggers.add(new Trigger("triggerId2", "typeUID2", null));
+        ruleEngine.updateRule(rule1, true);// ruleEngine.update will update the RuntimeRule.moduleMap with the new
+                                           // module
+        RuntimeRule rule2Get = ruleEngine.getRuntimeRule("rule1");
         List<Trigger> triggersGet2 = rule2Get.getTriggers();
         Assert.assertNotNull("Null triggers list", triggersGet2);
         Assert.assertEquals("Trigger was not added to the rule's list of triggers", 2, triggersGet2.size());
@@ -286,24 +271,25 @@ public class RuleEngineTest {
     }
 
     /**
-     * test rule conditions
+     * test rule condition
      */
     @Test
     public void testRuleConditions() {
         RuleEngine ruleEngine = createRuleEngine();
 
         Rule rule1 = createRule();
+        List<Condition> conditions = rule1.getConditions();
         ruleEngine.addRule(rule1, true);
-        Rule rule1Get = ruleEngine.getRule("rule1");
+        RuntimeRule rule1Get = ruleEngine.getRuntimeRule("rule1");
         List<Condition> conditionsGet = rule1Get.getConditions();
         Assert.assertNotNull("Null conditions list", conditionsGet);
         Assert.assertEquals("Empty conditions list", 1, conditionsGet.size());
         Assert.assertEquals("Returned conditions list should not be a copy", conditionsGet, rule1Get.getConditions());
 
-        conditionsGet.add(new Condition("conditionId2", "typeUID2", null, null));
-        ruleEngine.updateRule(rule1Get);// ruleEngine.update will update the RuntimeRule.moduleMap with the new
-                                        // module
-        Rule rule2Get = ruleEngine.getRule("rule1");
+        conditions.add(new Condition("conditionId2", "typeUID2", null, null));
+        ruleEngine.updateRule(rule1, true);// ruleEngine.update will update the RuntimeRule.moduleMap with the new
+        // module
+        RuntimeRule rule2Get = ruleEngine.getRuntimeRule("rule1");
         List<Condition> conditionsGet2 = rule2Get.getConditions();
         Assert.assertNotNull("Null conditions list", conditionsGet2);
         Assert.assertEquals("Condition was not added to the rule's list of conditions", 2, conditionsGet2.size());
@@ -313,23 +299,25 @@ public class RuleEngineTest {
     }
 
     private Rule createRule() {
-        List<ConfigDescriptionParameter> configDescriptions = null;// new LinkedHashSet<ConfigDescriptionParameter>();
-        Map<String, Object> configurations = null;// new HashMap<String, Object>();
-        return new Rule("rule1", createTriggers("typeUID"), createConditions("typeUID"), createActions("typeUID"),
-                configDescriptions, configurations);
+        Rule rule = new Rule("rule1");
+        rule.setTriggers(createTriggers("typeUID"));
+        rule.setConditions(createConditions("typeUID"));
+        rule.setActions(createActions("typeUID"));
+        return rule;
     }
 
     private Rule createAutoMapRule() {
-        List<ConfigDescriptionParameter> configDescriptions = null;// new LinkedHashSet<ConfigDescriptionParameter>();
-        Map<String, Object> configurations = null;// new HashMap<String, Object>();
-        return new Rule("rule1", createTriggers(ModuleTypeManagerMockup.TRIGGER_TYPE),
-                createConditions(ModuleTypeManagerMockup.CONDITION_TYPE),
-                createActions(ModuleTypeManagerMockup.ACTION_TYPE), configDescriptions, configurations);
+        Rule rule = new Rule("AutoMapRule");
+        rule.setTriggers(createTriggers(ModuleTypeRegistryMockup.TRIGGER_TYPE));
+        rule.setConditions(createConditions(ModuleTypeRegistryMockup.CONDITION_TYPE));
+        rule.setActions(createActions(ModuleTypeRegistryMockup.ACTION_TYPE));
+        return rule;
+
     }
 
     private List<Trigger> createTriggers(String type) {
         List<Trigger> triggers = new ArrayList<Trigger>();
-        Map<String, Object> configurations = new HashMap<String, Object>();
+        Configuration configurations = new Configuration();
         configurations.put("a", "x");
         configurations.put("b", "y");
         configurations.put("c", "z");
@@ -339,7 +327,7 @@ public class RuleEngineTest {
 
     private List<Condition> createConditions(String type) {
         List<Condition> conditions = new ArrayList<Condition>();
-        Map<String, Object> configurations = new HashMap<String, Object>();
+        Configuration configurations = new Configuration();
         configurations.put("a", "x");
         configurations.put("b", "y");
         configurations.put("c", "z");
@@ -354,7 +342,7 @@ public class RuleEngineTest {
 
     private List<Action> createActions(String type) {
         List<Action> actions = new ArrayList<Action>();
-        Map<String, Object> configurations = new HashMap<String, Object>();
+        Configuration configurations = new Configuration();
         configurations.put("a", "x");
         configurations.put("b", "y");
         configurations.put("c", "z");

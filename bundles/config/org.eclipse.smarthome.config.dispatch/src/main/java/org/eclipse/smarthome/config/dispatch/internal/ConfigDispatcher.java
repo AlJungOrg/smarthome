@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,9 +7,7 @@
  */
 package org.eclipse.smarthome.config.dispatch.internal;
 
-import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
-import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
-import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
+import static java.nio.file.StandardWatchEventKinds.*;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -18,7 +16,8 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchEvent.Kind;
-import java.nio.file.WatchService;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.List;
@@ -29,7 +28,6 @@ import java.util.Properties;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.smarthome.config.core.ConfigConstants;
-import org.eclipse.smarthome.core.service.AbstractWatchQueueReader;
 import org.eclipse.smarthome.core.service.AbstractWatchService;
 import org.osgi.service.cm.Configuration;
 import org.osgi.service.cm.ConfigurationAdmin;
@@ -45,30 +43,44 @@ import org.slf4j.LoggerFactory;
  * The name of the configuration folder can be provided as a program argument "smarthome.configdir" (default is "conf").
  * Configurations for OSGi services are kept in a subfolder that can be provided as a program argument
  * "smarthome.servicedir" (default is "services"). Any file in this folder with the extension .cfg will be processed.
- * </p>
  *
  * <p>
  * The format of the configuration file is similar to a standard property file, with the exception that the property
  * name can be prefixed by the service pid of the {@link ManagedService}:
- * </p>
+ * 
  * <p>
  * &lt;service-pid&gt;:&lt;property&gt;=&lt;value&gt;
- * </p>
+ * 
  * <p>
  * In case the pid does not contain any ".", the default service pid namespace is prefixed, which can be defined by the
  * program argument "smarthome.servicepid" (default is "org.eclipse.smarthome").
- * </p>
+ * 
  * <p>
  * If no pid is defined in the property line, the default pid namespace will be used together with the filename. E.g. if
  * you have a file "security.cfg", the pid that will be used is "org.eclipse.smarthome.security".
- * </p>
+ * 
  * <p>
  * Last but not least, a pid can be defined in the first line of a cfg file by prefixing it with "pid:", e.g.
  * "pid: com.acme.smarthome.security".
  *
  * @author Kai Kreuzer - Initial contribution and API
+ * @author Petar Valchev - Added sort by modification time, when configuration files are read
+ * @author Ana Dimova - reduce to a single watch thread for all class instances
  */
 public class ConfigDispatcher extends AbstractWatchService {
+
+    private static String getPathToWatch() {
+        String progArg = System.getProperty(SERVICEDIR_PROG_ARGUMENT);
+        if (progArg != null) {
+            return ConfigConstants.getConfigFolder() + File.separator + progArg;
+        } else {
+            return ConfigConstants.getConfigFolder() + File.separator + SERVICES_FOLDER;
+        }
+    }
+
+    public ConfigDispatcher() {
+        super(getPathToWatch());
+    }
 
     /** The program argument name for setting the service config directory path */
     final static public String SERVICEDIR_PROG_ARGUMENT = "smarthome.servicedir";
@@ -118,56 +130,28 @@ public class ConfigDispatcher extends AbstractWatchService {
         this.configAdmin = null;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see
-     * org.eclipse.smarthome.core.service.AbstractWatchService#getSourcePath()
-     */
-    @Override
-    protected String getSourcePath() {
-        String progArg = System.getProperty(SERVICEDIR_PROG_ARGUMENT);
-        if (progArg != null) {
-            return ConfigConstants.getConfigFolder() + File.separator + progArg;
-        } else {
-            return ConfigConstants.getConfigFolder() + File.separator + SERVICES_FOLDER;
-        }
-    }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see
-     * org.eclipse.smarthome.core.service.AbstractWatchService#watchSubDirectories
-     * ()
-     */
     @Override
     protected boolean watchSubDirectories() {
         return false;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see
-     * org.eclipse.smarthome.core.service.AbstractWatchService#registerDirecotry
-     * (java.nio.file.Path)
-     */
     @Override
-    protected void registerDirectory(Path subDir) throws IOException {
-        subDir.register(watchService, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY);
+    protected Kind<?>[] getWatchEventKinds(Path subDir) {
+        return new Kind<?>[] { ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY };
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see
-     * org.eclipse.smarthome.core.service.AbstractWatchService#buildWatchQueueReader
-     * (java.nio.file.WatchService, java.nio.file.Path)
-     */
     @Override
-    protected AbstractWatchQueueReader buildWatchQueueReader(WatchService watchService, Path toWatch) {
-        return new WatchQueueReader(watchService, toWatch);
+    protected void processWatchEvent(WatchEvent<?> event, Kind<?> kind, Path path) {
+        if (kind == ENTRY_CREATE || kind == ENTRY_MODIFY) {
+            try {
+                File f = path.toFile();
+                if (!f.isHidden()) {
+                    processConfigFile(f);
+                }
+            } catch (IOException e) {
+                logger.warn("Could not process config file '{}': {}", path, e);
+            }
+        }
     }
 
     private String getDefaultServiceConfigFile() {
@@ -189,9 +173,17 @@ public class ConfigDispatcher extends AbstractWatchService {
     }
 
     private void readConfigs() {
-        File dir = new File(getSourcePath());
+        File dir = getSourcePath().toFile();
         if (dir.exists()) {
             File[] files = dir.listFiles();
+            // Sort the files by modification time,
+            // so that the last modified file is processed last.
+            Arrays.sort(files, new Comparator<File>() {
+                @Override
+                public int compare(File left, File right) {
+                    return Long.valueOf(left.lastModified()).compareTo(right.lastModified());
+                }
+            });
             for (File file : files) {
                 try {
                     processConfigFile(file);
@@ -303,21 +295,4 @@ public class ConfigDispatcher extends AbstractWatchService {
         }
     }
 
-    private class WatchQueueReader extends AbstractWatchQueueReader {
-
-        public WatchQueueReader(WatchService watchService, Path dir) {
-            super(watchService, dir);
-        }
-
-        @Override
-        protected void processWatchEvent(WatchEvent<?> event, Kind<?> kind, Path path) {
-            if (kind == ENTRY_CREATE || kind == ENTRY_MODIFY) {
-                try {
-                    processConfigFile(new File(dir.toAbsolutePath() + File.separator + path.toString()));
-                } catch (IOException e) {
-                    logger.warn("Could not process config file '{}': {}", path, e);
-                }
-            }
-        }
-    }
 }

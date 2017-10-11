@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -14,11 +14,9 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
 
-import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -125,6 +123,8 @@ public class DateTimeTypeTest {
                         "2014-03-30T10:58:47.033+0200") },
                 { new ParameterSet(TimeZone.getTimeZone("CET"), "2014-03-30T10:58:47UTS",
                         "2014-03-30T10:58:47.000+0200") },
+                { new ParameterSet(TimeZone.getTimeZone("GMT+5"), "2014-03-30T10:58:47.000Z",
+                        "2014-03-30T15:58:47.000+0500") },
                 { new ParameterSet(TimeZone.getTimeZone("GMT"), initTimeMap(), TimeZone.getTimeZone("GMT"),
                         "2014-03-30T10:58:47.033+0000") },
                 { new ParameterSet(TimeZone.getTimeZone("GMT+2"), initTimeMap(), TimeZone.getTimeZone("GML"),
@@ -157,11 +157,6 @@ public class DateTimeTypeTest {
      */
     public DateTimeTypeTest(ParameterSet parameterSet) {
         this.parameterSet = parameterSet;
-    }
-
-    @After
-    public void afterTest() {
-        System.out.println("");
     }
 
     @Test
@@ -202,19 +197,6 @@ public class DateTimeTypeTest {
         }
 
         DateTimeType dt = DateTimeType.valueOf(inputTimeString);
-
-        // create debug output to reproduce
-        System.out.println("createDate (Default TimeZone: expected="
-                + parameterSet.defaultTimeZone.getDisplayName(false, TimeZone.SHORT, Locale.ROOT) + "|current="
-                + TimeZone.getDefault().getDisplayName() + "):");
-        if (parameterSet.inputTimeZone == null) {
-            System.out.println("\tInput: " + inputTimeString);
-        } else {
-            System.out.println("\tInput: " + inputTimeString
-                    + parameterSet.inputTimeZone.getDisplayName(false, TimeZone.SHORT, Locale.ROOT));
-        }
-        System.out.println("\tExpected: " + parameterSet.expectedResult);
-        System.out.println("\tResult  : " + dt.toString());
 
         // Test
         assertEquals(parameterSet.expectedResult, dt.toString());

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -16,6 +16,7 @@ import org.junit.Test;
 /**
  *
  * @author Chris Jackson - added fromRGB() test
+ * @author Stefan Triller - more tests for type conversions
  *
  */
 public class HSBTypeTest {
@@ -53,12 +54,6 @@ public class HSBTypeTest {
     private void compareHsbToRgbValues(String hsbValues, int red, int green, int blue) {
         HSBType hsb = new HSBType(hsbValues);
 
-        System.out.println("HSB INPUT: " + hsbValues);
-        System.out.println("RGB EXPECTED: " + red + "," + green + "," + blue);
-        System.out.println("RGB ACTUAL (0-100): " + hsb.getRed() + "," + hsb.getGreen() + "," + hsb.getBlue());
-        System.out.println("RGB ACTUAL (0-255): " + convertPercentToByte(hsb.getRed()) + ","
-                + convertPercentToByte(hsb.getGreen()) + "," + convertPercentToByte(hsb.getBlue()) + "\n");
-
         assertEquals(red, convertPercentToByte(hsb.getRed()));
         assertEquals(green, convertPercentToByte(hsb.getGreen()));
         assertEquals(blue, convertPercentToByte(hsb.getBlue()));
@@ -81,12 +76,36 @@ public class HSBTypeTest {
         HSBType hsb = new HSBType(hsbValues);
         HSBType hsbRgb = HSBType.fromRGB(red, green, blue);
 
-        System.out.println("HSB EXPECTED: " + hsbValues);
-        System.out.println(
-                "HSB ACTUAL  : " + hsbRgb.getHue() + "," + hsbRgb.getSaturation() + "," + hsbRgb.getBrightness());
-
         assertEquals(hsb.getHue(), hsbRgb.getHue());
         assertEquals(hsb.getSaturation(), hsbRgb.getSaturation());
         assertEquals(hsb.getBrightness(), hsbRgb.getBrightness());
     }
+
+    @Test
+    public void testConversionToOnOffType() {
+        assertEquals(OnOffType.ON, new HSBType("100,100,100").as(OnOffType.class));
+        assertEquals(OnOffType.ON, new HSBType("100,100,1").as(OnOffType.class));
+        assertEquals(OnOffType.OFF, new HSBType("100,100,0").as(OnOffType.class));
+    }
+
+    @Test
+    public void testConversionToDecimalType() {
+        assertEquals(new DecimalType("1.0"), new HSBType("100,100,100").as(DecimalType.class));
+        assertEquals(new DecimalType("0.01"), new HSBType("100,100,1").as(DecimalType.class));
+        assertEquals(DecimalType.ZERO, new HSBType("100,100,0").as(DecimalType.class));
+    }
+
+    @Test
+    public void testConversionToPercentType() {
+        assertEquals(PercentType.HUNDRED, new HSBType("100,100,100").as(PercentType.class));
+        assertEquals(new PercentType("1"), new HSBType("100,100,1").as(PercentType.class));
+        assertEquals(PercentType.ZERO, new HSBType("100,100,0").as(PercentType.class));
+    }
+
+    @Test
+    public void testConversionToPointType() {
+        // should not be possible => null
+        assertEquals(null, new HSBType("100,100,100").as(PointType.class));
+    }
+
 }

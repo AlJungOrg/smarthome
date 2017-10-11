@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -49,14 +49,13 @@ import org.slf4j.LoggerFactory;
  * {@link Config#getCert()}. If there is no SSL-Certificate, but an path to an external SSL-Certificate file what is set
  * in {@link Config#getTrustCertPath()} this will be set. If no SSL-Certificate is set in the {@link Config} it will be
  * red out from the server and set in {@link Config#setCert(String)}.
- * </p>
+ * 
  * <p>
  * If no {@link Config} is given the SSL-Certificate will be stored locally.
- * </p>
+ * 
  * <p>
  * The method {@link #writePEMCertFile(String)} saves the SSL-Certificate in a file at the given path. If all
  * SSL-Certificates shout be ignored the flag <i>exeptAllCerts</i> have to be true at the constructor
- * </p>
  *
  * @author Michael Ochel - Initial contribution
  * @author Matthias Siegele - Initial contribution
@@ -88,7 +87,7 @@ public class HttpTransportImpl implements HttpTransport {
 
     /**
      * Creates a new {@link HttpTransportImpl} with configurations of the given {@link Config} and set ignore all
-     * SSL-Certificates..
+     * SSL-Certificates.
      *
      * @param config
      * @param exeptAllCerts (true = all will ignore)

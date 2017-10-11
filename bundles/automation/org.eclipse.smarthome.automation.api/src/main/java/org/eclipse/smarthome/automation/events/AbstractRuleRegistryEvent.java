@@ -7,38 +7,37 @@
  */
 package org.eclipse.smarthome.automation.events;
 
-import org.eclipse.smarthome.automation.Rule;
+import org.eclipse.smarthome.automation.dto.RuleDTO;
 import org.eclipse.smarthome.core.events.AbstractEvent;
 
 /**
  * abstract class for rule events
  *
  * @author Benedikt Niehues - initial contribution
+ * @author Markus Rathgeb - Use the DTO for the Rule representation
  *
  */
 public abstract class AbstractRuleRegistryEvent extends AbstractEvent {
 
-    private final Rule rule;
+    private final RuleDTO rule;
 
     /**
      * Must be called in subclass constructor to create a new rule registry event.
      *
-     * @param topic
-     * @param payload
-     * @param source
-     * @param ruleDTO
+     * @param topic the topic of the event
+     * @param payload the payload of the event
+     * @param source the source of the event
+     * @param ruleDTO the ruleDTO for which this event is created
      */
-    public AbstractRuleRegistryEvent(String topic, String payload, String source, Rule rule) {
+    public AbstractRuleRegistryEvent(String topic, String payload, String source, RuleDTO rule) {
         super(topic, payload, source);
         this.rule = rule;
     }
 
     /**
-     * returns the RuleDTO which caused the Event
-     *
-     * @return
+     * @return the RuleDTO which caused the Event
      */
-    public Rule getRule() {
+    public RuleDTO getRule() {
         return this.rule;
     }
 

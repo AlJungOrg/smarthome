@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -21,12 +21,10 @@ import org.eclipse.smarthome.ui.basic.render.WidgetRenderer;
  * <p>
  * This is an implementation of the {@link WidgetRenderer} interface, which can produce HTML code for Colorpicker
  * widgets.
- * </p>
  *
  * <p>
  * Note: This renderer requires the files "jquery.miniColors.css" and "jquery.miniColors.js" in the web folder of this
  * bundle
- * </p>
  *
  * @author Kai Kreuzer - Initial contribution and API
  * @author Vlad Ivanov - BasicUI changes
@@ -34,17 +32,11 @@ import org.eclipse.smarthome.ui.basic.render.WidgetRenderer;
  */
 public class ColorpickerRenderer extends AbstractWidgetRenderer {
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public boolean canRender(Widget w) {
         return w instanceof Colorpicker;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public EList<Widget> renderWidget(Widget w, StringBuilder sb) throws RenderException {
         Colorpicker cp = (Colorpicker) w;
@@ -63,18 +55,15 @@ public class ColorpickerRenderer extends AbstractWidgetRenderer {
             HSBType hsbState = (HSBType) state;
             hexValue = "#" + Integer.toHexString(hsbState.getRGB()).substring(2);
         }
-        String label = getLabel(cp);
         String purelabel = itemUIRegistry.getLabel(w);
         purelabel = purelabel.replaceAll("\\\"", "\\\\'");
 
-        snippet = StringUtils.replace(snippet, "%id%", itemUIRegistry.getWidgetId(cp));
-        snippet = StringUtils.replace(snippet, "%category%", getCategory(w));
-        snippet = StringUtils.replace(snippet, "%icon_type%", config.getIconType());
-        snippet = StringUtils.replace(snippet, "%state%", getState(w));
-        snippet = StringUtils.replace(snippet, "%item%", w.getItem());
-        snippet = StringUtils.replace(snippet, "%label%", label);
-        snippet = StringUtils.replace(snippet, "%purelabel%", purelabel);
+        // Should be called before preprocessSnippet
         snippet = StringUtils.replace(snippet, "%state%", hexValue);
+        snippet = StringUtils.replace(snippet, "%icon_state%", escapeURL(hexValue));
+
+        snippet = preprocessSnippet(snippet, w);
+        snippet = StringUtils.replace(snippet, "%purelabel%", purelabel);
         snippet = StringUtils.replace(snippet, "%frequency%", frequency);
         snippet = StringUtils.replace(snippet, "%servletname%", WebAppServlet.SERVLET_NAME);
 

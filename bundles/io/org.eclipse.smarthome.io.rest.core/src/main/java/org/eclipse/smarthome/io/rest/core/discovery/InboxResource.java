@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,10 +7,9 @@
  */
 package org.eclipse.smarthome.io.rest.core.discovery;
 
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.stream.Stream;
 
+import javax.annotation.security.RolesAllowed;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -26,15 +25,16 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriInfo;
 
-import org.eclipse.smarthome.config.discovery.DiscoveryResult;
 import org.eclipse.smarthome.config.discovery.DiscoveryResultFlag;
 import org.eclipse.smarthome.config.discovery.dto.DiscoveryResultDTO;
 import org.eclipse.smarthome.config.discovery.dto.DiscoveryResultDTOMapper;
 import org.eclipse.smarthome.config.discovery.inbox.Inbox;
+import org.eclipse.smarthome.core.auth.Role;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingUID;
 import org.eclipse.smarthome.io.rest.JSONResponse;
 import org.eclipse.smarthome.io.rest.RESTResource;
+import org.eclipse.smarthome.io.rest.Stream2JSONInputStream;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -50,8 +50,10 @@ import io.swagger.annotations.ApiResponses;
  * @author Kai Kreuzer - refactored for using the OSGi JAX-RS connector and removed ThingSetupManager
  * @author Yordan Zhelev - Added Swagger annotations
  * @author Chris Jackson - Updated to use JSONResponse. Fixed null response from approve.
+ * @author Franck Dechavanne - Added DTOs to ApiResponses
  */
 @Path(InboxResource.PATH_INBOX)
+@RolesAllowed({ Role.ADMIN })
 @Api(value = InboxResource.PATH_INBOX)
 public class InboxResource implements RESTResource {
 
@@ -114,12 +116,10 @@ public class InboxResource implements RESTResource {
     @GET
     @Produces({ MediaType.WILDCARD })
     @ApiOperation(value = "Get all discovered things.")
-    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK") })
+    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK", response = DiscoveryResultDTO.class) })
     public Response getAll() {
-        List<DiscoveryResult> discoveryResults = inbox.getAll();
-        Set<DiscoveryResultDTO> discoveryResultBeans = convertToListBean(discoveryResults);
-
-        return Response.ok(discoveryResultBeans).build();
+        Stream<DiscoveryResultDTO> discoveryStream = inbox.getAll().stream().map(DiscoveryResultDTOMapper::map);
+        return Response.ok(new Stream2JSONInputStream(discoveryStream)).build();
     }
 
     @POST
@@ -140,12 +140,9 @@ public class InboxResource implements RESTResource {
         return Response.ok().build();
     }
 
-    private Set<DiscoveryResultDTO> convertToListBean(List<DiscoveryResult> discoveryResults) {
-        Set<DiscoveryResultDTO> discoveryResultBeans = new LinkedHashSet<>();
-        for (DiscoveryResult discoveryResult : discoveryResults) {
-            discoveryResultBeans.add(DiscoveryResultDTOMapper.map(discoveryResult));
-        }
-        return discoveryResultBeans;
+    @Override
+    public boolean isSatisfied() {
+        return inbox != null;
     }
 
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -103,7 +103,7 @@ class BindingInfoI18nTest extends OSGiTest {
     void 'assert using default locale'() {
         // Set german locale
         ConfigurationAdmin configAdmin = getService(ConfigurationAdmin.class);
-        Configuration config = configAdmin.getConfiguration("org.eclipse.smarthome.core.localeprovider");
+        Configuration config = configAdmin.getConfiguration("org.eclipse.smarthome.core.i18nprovider");
         Dictionary<String, String> localeCfg = new Hashtable<String, String>();
         localeCfg.put("language", "de");
         localeCfg.put("country", "DE");

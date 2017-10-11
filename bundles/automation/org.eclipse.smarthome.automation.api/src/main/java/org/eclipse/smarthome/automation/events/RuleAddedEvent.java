@@ -7,7 +7,7 @@
  */
 package org.eclipse.smarthome.automation.events;
 
-import org.eclipse.smarthome.automation.Rule;
+import org.eclipse.smarthome.automation.dto.RuleDTO;
 
 /**
  * An {@link RuleAddedEvent} notifies subscribers that an item has been added.
@@ -23,13 +23,13 @@ public class RuleAddedEvent extends AbstractRuleRegistryEvent {
     /**
      * constructs a new rule added event
      *
-     * @param topic
-     * @param payload
-     * @param source
-     * @param ruleDTO
+     * @param topic the topic of the event
+     * @param payload the payload of the event
+     * @param source the source of the event
+     * @param ruleDTO the rule for which this event is created
      */
-    public RuleAddedEvent(String topic, String payload, String source, Rule ruleDTO) {
-        super(topic, payload, source, ruleDTO);
+    public RuleAddedEvent(String topic, String payload, String source, RuleDTO rule) {
+        super(topic, payload, source, rule);
     }
 
     @Override
@@ -39,7 +39,7 @@ public class RuleAddedEvent extends AbstractRuleRegistryEvent {
 
     @Override
     public String toString() {
-        return "Rule '" + getRule().getUID() + "' has been added.";
+        return "Rule '" + getRule().uid + "' has been added.";
     }
 
 }

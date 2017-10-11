@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -9,20 +9,17 @@ package org.eclipse.smarthome.binding.yahooweather.handler;
 
 import static org.eclipse.smarthome.binding.yahooweather.YahooWeatherBindingConstants.*;
 
-import java.io.IOException;
 import java.math.BigDecimal;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
+import org.eclipse.smarthome.binding.yahooweather.internal.connection.YahooWeatherConnection;
 import org.eclipse.smarthome.config.core.Configuration;
 import org.eclipse.smarthome.config.core.status.ConfigStatusMessage;
+import org.eclipse.smarthome.core.cache.ExpiringCacheMap;
 import org.eclipse.smarthome.core.library.types.DecimalType;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.Thing;
@@ -43,13 +40,25 @@ import org.slf4j.LoggerFactory;
  * @author Kai Kreuzer - Initial contribution
  * @author Stefan Bußweiler - Integrate new thing status handling
  * @author Thomas Höfer - Added config status provider
+ * @author Christoph Weitkamp - Changed use of caching utils to ESH ExpiringCacheMap
+ * 
  */
 public class YahooWeatherHandler extends ConfigStatusThingHandler {
 
-    private static final String LOCATION_NOT_FOUND = "yahooweather.configparam.location.notfound";
     private static final String LOCATION_PARAM = "location";
 
     private final Logger logger = LoggerFactory.getLogger(YahooWeatherHandler.class);
+
+    private static final int MAX_DATA_AGE = 3 * 60 * 60 * 1000; // 3h
+    private static final int CACHE_EXPIRY = 10 * 1000; // 10s
+    private static final String CACHE_KEY_CONFIG = "CONFIG_STATUS";
+    private static final String CACHE_KEY_WEATHER = "WEATHER";
+
+    private final ExpiringCacheMap<String, String> cache = new ExpiringCacheMap<>(CACHE_EXPIRY);
+
+    private final YahooWeatherConnection connection = new YahooWeatherConnection();
+
+    private long lastUpdateTime;
 
     private BigDecimal location;
     private BigDecimal refresh;
@@ -65,11 +74,10 @@ public class YahooWeatherHandler extends ConfigStatusThingHandler {
     @Override
     public void initialize() {
         logger.debug("Initializing YahooWeather handler.");
-        super.initialize();
 
         Configuration config = getThing().getConfiguration();
 
-        location = (BigDecimal) config.get("location");
+        location = (BigDecimal) config.get(LOCATION_PARAM);
 
         try {
             refresh = (BigDecimal) config.get("refresh");
@@ -82,6 +90,11 @@ public class YahooWeatherHandler extends ConfigStatusThingHandler {
             refresh = new BigDecimal(60);
         }
 
+        cache.put(CACHE_KEY_CONFIG, () -> connection.getResponseFromQuery(
+                "SELECT location FROM weather.forecast WHERE woeid = " + location.toPlainString()));
+        cache.put(CACHE_KEY_WEATHER, () -> connection.getResponseFromQuery(
+                "SELECT * FROM weather.forecast WHERE u = 'c' AND woeid = " + location.toPlainString()));
+
         startAutomaticRefresh();
     }
 
@@ -91,23 +104,19 @@ public class YahooWeatherHandler extends ConfigStatusThingHandler {
     }
 
     private void startAutomaticRefresh() {
-        Runnable runnable = new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    boolean success = updateWeatherData();
-                    if (success) {
-                        updateState(new ChannelUID(getThing().getUID(), CHANNEL_TEMPERATURE), getTemperature());
-                        updateState(new ChannelUID(getThing().getUID(), CHANNEL_HUMIDITY), getHumidity());
-                        updateState(new ChannelUID(getThing().getUID(), CHANNEL_PRESSURE), getPressure());
-                    }
-                } catch (Exception e) {
-                    logger.debug("Exception occurred during execution: {}", e.getMessage(), e);
+        refreshJob = scheduler.scheduleAtFixedRate(() -> {
+            try {
+                boolean success = updateWeatherData();
+                if (success) {
+                    updateState(new ChannelUID(getThing().getUID(), CHANNEL_TEMPERATURE), getTemperature());
+                    updateState(new ChannelUID(getThing().getUID(), CHANNEL_HUMIDITY), getHumidity());
+                    updateState(new ChannelUID(getThing().getUID(), CHANNEL_PRESSURE), getPressure());
                 }
+            } catch (Exception e) {
+                logger.debug("Exception occurred during execution: {}", e.getMessage(), e);
+                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.OFFLINE.COMMUNICATION_ERROR, e.getMessage());
             }
-        };
-
-        refreshJob = scheduler.scheduleAtFixedRate(runnable, 0, refresh.intValue(), TimeUnit.SECONDS);
+        }, 0, refresh.intValue(), TimeUnit.SECONDS);
     }
 
     @Override
@@ -139,51 +148,54 @@ public class YahooWeatherHandler extends ConfigStatusThingHandler {
     public Collection<ConfigStatusMessage> getConfigStatus() {
         Collection<ConfigStatusMessage> configStatus = new ArrayList<>();
 
-        try {
-            String weatherData = getWeatherData();
-            String result = StringUtils.substringBetween(weatherData, "<item><title>", "</title>");
-            if ("City not found".equals(result)) {
-                configStatus.add(ConfigStatusMessage.Builder.error(LOCATION_PARAM).withMessageKey(LOCATION_NOT_FOUND)
-                        .withArguments(location).build());
+        final String locationData = cache.get(CACHE_KEY_CONFIG);
+        if (locationData != null) {
+            String city = getValue(locationData, "location", "city");
+            if (city == null) {
+                configStatus.add(ConfigStatusMessage.Builder.error(LOCATION_PARAM)
+                        .withMessageKeySuffix("location-not-found").withArguments(location.toPlainString()).build());
             }
-        } catch (IOException e) {
-            logger.debug("Communication error occurred while getting Yahoo weather information.", e);
         }
 
         return configStatus;
     }
 
     private synchronized boolean updateWeatherData() {
-        try {
-            weatherData = getWeatherData();
-            if (weatherData != null) {
-                updateStatus(ThingStatus.ONLINE);
-                return true;
+        final String data = cache.get(CACHE_KEY_WEATHER);
+        if (data != null) {
+            if (data.contains("\"results\":null")) {
+                if (isCurrentDataExpired()) {
+                    logger.trace(
+                            "The Yahoo Weather API did not return any data. Omiting the old result because it became too old.");
+                    weatherData = null;
+                    updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.OFFLINE.COMMUNICATION_ERROR,
+                            "@text/offline.no-data");
+                    return false;
+                } else {
+                    // simply keep the old data
+                    logger.trace("The Yahoo Weather API did not return any data. Keeping the old result.");
+                    return false;
+                }
+            } else {
+                lastUpdateTime = System.currentTimeMillis();
+                weatherData = data;
             }
-        } catch (IOException e) {
-            logger.warn("Error accessing Yahoo weather: {}", e.getMessage());
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.OFFLINE.COMMUNICATION_ERROR, e.getMessage());
+            updateStatus(ThingStatus.ONLINE);
+            return true;
         }
+        weatherData = null;
+        updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.OFFLINE.COMMUNICATION_ERROR,
+                "@text/offline.location [\"" + location.toPlainString() + "\"");
         return false;
     }
 
-    private String getWeatherData() throws IOException {
-        String urlString = "https://query.yahooapis.com/v1/public/yql?format=json&q=SELECT%20*%20FROM%20weather.forecast%20WHERE%20u=%27c%27%20AND%20woeid%20=%20%27"
-                + location + "%27";
-        try {
-            URL url = new URL(urlString);
-            URLConnection connection = url.openConnection();
-            return IOUtils.toString(connection.getInputStream());
-        } catch (MalformedURLException e) {
-            logger.debug("Constructed url '{}' is not valid: {}", urlString, e.getMessage());
-            return null;
-        }
+    private boolean isCurrentDataExpired() {
+        return lastUpdateTime + MAX_DATA_AGE < System.currentTimeMillis();
     }
 
     private State getHumidity() {
         if (weatherData != null) {
-            String humidity = StringUtils.substringAfter(weatherData, "atmosphere");
-            humidity = StringUtils.substringBetween(humidity, "humidity\":\"", "\"");
+            String humidity = getValue(weatherData, "atmosphere", "humidity");
             if (humidity != null) {
                 return new DecimalType(humidity);
             }
@@ -193,10 +205,15 @@ public class YahooWeatherHandler extends ConfigStatusThingHandler {
 
     private State getPressure() {
         if (weatherData != null) {
-            String pressure = StringUtils.substringAfter(weatherData, "atmosphere");
-            pressure = StringUtils.substringBetween(pressure, "pressure\":\"", "\"");
+            String pressure = getValue(weatherData, "atmosphere", "pressure");
             if (pressure != null) {
-                return new DecimalType(pressure);
+                DecimalType ret = new DecimalType(pressure);
+                if (ret.doubleValue() > 10000.0) {
+                    // Unreasonably high, record so far was 1085,8 hPa
+                    // The Yahoo API currently returns inHg values although it claims they are mbar - therefore convert
+                    ret = new DecimalType(BigDecimal.valueOf((long) (ret.doubleValue() / 0.3386388158), 2));
+                }
+                return ret;
             }
         }
         return UnDefType.UNDEF;
@@ -204,12 +221,19 @@ public class YahooWeatherHandler extends ConfigStatusThingHandler {
 
     private State getTemperature() {
         if (weatherData != null) {
-            String temp = StringUtils.substringAfter(weatherData, "condition");
-            temp = StringUtils.substringBetween(temp, "temp\":\"", "\"");
+            String temp = getValue(weatherData, "condition", "temp");
             if (temp != null) {
                 return new DecimalType(temp);
             }
         }
         return UnDefType.UNDEF;
+    }
+
+    private String getValue(String data, String element, String param) {
+        String tmp = StringUtils.substringAfter(data, element);
+        if (tmp != null) {
+            return StringUtils.substringBetween(tmp, param + "\":\"", "\"");
+        }
+        return null;
     }
 }

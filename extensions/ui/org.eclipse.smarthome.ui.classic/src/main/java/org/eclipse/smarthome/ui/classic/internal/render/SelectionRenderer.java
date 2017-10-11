@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -25,27 +25,22 @@ import org.eclipse.smarthome.ui.classic.render.WidgetRenderer;
  */
 public class SelectionRenderer extends AbstractWidgetRenderer {
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public boolean canRender(Widget w) {
         return w instanceof Selection;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public EList<Widget> renderWidget(Widget w, StringBuilder sb) throws RenderException {
         String snippet = getSnippet("selection");
 
-        snippet = StringUtils.replace(snippet, "%category%", escapeURLPath(itemUIRegistry.getCategory(w)));
+        snippet = StringUtils.replace(snippet, "%category%", getCategory(w));
+        snippet = StringUtils.replace(snippet, "%state%", getState(w));
         snippet = StringUtils.replace(snippet, "%format%", getFormat());
-        snippet = StringUtils.replace(snippet, "%label_header%", getLabel(w));
 
         String state = itemUIRegistry.getState(w).toString();
         Selection selection = (Selection) w;
+        String mappedValue = "";
 
         StringBuilder rowSB = new StringBuilder();
         for (Mapping mapping : selection.getMappings()) {
@@ -57,11 +52,13 @@ public class SelectionRenderer extends AbstractWidgetRenderer {
                     mapping.getLabel() != null ? mapping.getLabel() : "");
             if (state.equals(mapping.getCmd())) {
                 rowSnippet = StringUtils.replace(rowSnippet, "%checked%", "checked=\"true\"");
+                mappedValue = (mapping.getLabel() != null) ? mapping.getLabel() : mapping.getCmd();
             } else {
                 rowSnippet = StringUtils.replace(rowSnippet, "%checked%", "");
             }
             rowSB.append(rowSnippet);
         }
+        snippet = StringUtils.replace(snippet, "%label_header%", getLabel(w, mappedValue));
         snippet = StringUtils.replace(snippet, "%rows%", rowSB.toString());
 
         // Process the color tags

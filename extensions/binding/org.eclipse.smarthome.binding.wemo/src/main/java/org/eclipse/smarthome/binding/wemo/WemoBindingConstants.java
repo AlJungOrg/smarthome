@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -31,10 +31,12 @@ public class WemoBindingConstants {
     public final static ThingTypeUID THING_TYPE_BRIDGE = new ThingTypeUID(BINDING_ID, "bridge");
     public final static ThingTypeUID THING_TYPE_MZ100 = new ThingTypeUID(BINDING_ID, "MZ100");
     public final static ThingTypeUID THING_TYPE_MAKER = new ThingTypeUID(BINDING_ID, "Maker");
+    public final static ThingTypeUID THING_TYPE_COFFEE = new ThingTypeUID(BINDING_ID, "CoffeeMaker");
 
     // List of all Channel ids
     public final static String CHANNEL_STATE = "state";
     public final static String CHANNEL_MOTIONDETECTION = "motionDetection";
+    public final static String CHANNEL_LASTMOTIONDETECTED = "lastMotionDetected";
     public final static String CHANNEL_LASTCHANGEDAT = "lastChangedAt";
     public final static String CHANNEL_LASTONFOR = "lastOnFor";
     public final static String CHANNEL_ONTODAY = "onToday";
@@ -49,9 +51,19 @@ public class WemoBindingConstants {
     public final static String CHANNEL_RELAY = "relay";
     public final static String CHANNEL_SENSOR = "sensor";
 
+    public final static String CHANNEL_COFFEEMODE = "coffeeMode";
+    public final static String CHANNEL_MODETIME = "modeTime";
+    public final static String CHANNEL_TIMEREMAINING = "timeRemaining";
+    public final static String CHANNEL_WATERLEVELREACHED = "waterLevelReached";
+    public final static String CHANNEL_CLEANADVISE = "cleanAdvise";
+    public final static String CHANNEL_FILTERADVISE = "filterAdvise";
+    public final static String CHANNEL_BREWED = "brewed";
+    public final static String CHANNEL_LASTCLEANED = "lastCleaned";
+
     // List of thing configuration properties
     public static final String UDN = "udn";
     public static final String DEVICE_ID = "deviceID";
+    public static final String POLLINGINTERVALL = "pollingInterval";
 
     public final static Set<ThingTypeUID> SUPPORTED_BRIDGE_THING_TYPES = ImmutableSet.of(THING_TYPE_BRIDGE);
 
@@ -61,6 +73,7 @@ public class WemoBindingConstants {
             THING_TYPE_INSIGHT, THING_TYPE_LIGHTSWITCH, THING_TYPE_MOTION);
 
     public final static Set<ThingTypeUID> SUPPORTED_THING_TYPES = ImmutableSet.of(THING_TYPE_SOCKET, THING_TYPE_INSIGHT,
-            THING_TYPE_LIGHTSWITCH, THING_TYPE_MOTION, THING_TYPE_BRIDGE, THING_TYPE_MZ100, THING_TYPE_MAKER);
+            THING_TYPE_LIGHTSWITCH, THING_TYPE_MOTION, THING_TYPE_BRIDGE, THING_TYPE_MZ100, THING_TYPE_MAKER,
+            THING_TYPE_COFFEE);
 
 }

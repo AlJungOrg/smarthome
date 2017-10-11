@@ -14,6 +14,8 @@ import java.util.Set;
 
 import org.eclipse.smarthome.automation.Rule;
 import org.eclipse.smarthome.automation.RuleStatusInfo;
+import org.eclipse.smarthome.automation.dto.RuleDTO;
+import org.eclipse.smarthome.automation.dto.RuleDTOMapper;
 import org.eclipse.smarthome.core.events.AbstractEventFactory;
 import org.eclipse.smarthome.core.events.Event;
 import org.slf4j.Logger;
@@ -23,7 +25,7 @@ import org.slf4j.LoggerFactory;
  * this is a factory to create Rule Events
  *
  * @author Benedikt Niehues - initial contribution
- *
+ * @author Markus Rathgeb - Use the DTO for the Rule representation
  */
 public class RuleEventFactory extends AbstractEventFactory {
 
@@ -69,7 +71,7 @@ public class RuleEventFactory extends AbstractEventFactory {
     }
 
     private Event createRuleUpdatedEvent(String topic, String payload, String source) {
-        Rule[] ruleDTO = deserializePayload(payload, Rule[].class);
+        RuleDTO[] ruleDTO = deserializePayload(payload, RuleDTO[].class);
         if (ruleDTO.length != 2) {
             throw new IllegalArgumentException("Creation of RuleUpdatedEvent failed: invalid payload: " + payload);
         }
@@ -82,46 +84,49 @@ public class RuleEventFactory extends AbstractEventFactory {
     }
 
     private Event createRuleRemovedEvent(String topic, String payload, String source) {
-        Rule ruleDTO = deserializePayload(payload, Rule.class);
+        RuleDTO ruleDTO = deserializePayload(payload, RuleDTO.class);
         return new RuleRemovedEvent(topic, payload, source, ruleDTO);
     }
 
     private Event createRuleAddedEvent(String topic, String payload, String source) {
-        Rule ruleDTO = deserializePayload(payload, Rule.class);
+        RuleDTO ruleDTO = deserializePayload(payload, RuleDTO.class);
         return new RuleAddedEvent(topic, payload, source, ruleDTO);
     }
 
     private String getRuleId(String topic) {
         String[] topicElements = getTopicElements(topic);
-        if (topicElements.length != 4)
+        if (topicElements.length != 4) {
             throw new IllegalArgumentException("Event creation failed, invalid topic: " + topic);
+        }
         return topicElements[2];
     }
 
     /**
-     * creates a rule updated event
+     * Creates a rule updated event
      *
-     * @param rule the updated rule
-     * @param oldRule the old rule
-     * @param source
-     * @return
+     * @param rule the new rule
+     * @param oldRule the rule that has been updated
+     * @param source the source of the event
+     * @return {@link RuleUpdatedEvent} instance
      */
     public static RuleUpdatedEvent createRuleUpdatedEvent(Rule rule, Rule oldRule, String source) {
         String topic = buildTopic(RULE_UPDATED_EVENT_TOPIC, rule);
-        List<Rule> rules = new LinkedList<Rule>();
-        rules.add(rule);
-        rules.add(oldRule);
+        final RuleDTO ruleDto = RuleDTOMapper.map(rule);
+        final RuleDTO oldRuleDto = RuleDTOMapper.map(oldRule);
+        List<RuleDTO> rules = new LinkedList<RuleDTO>();
+        rules.add(ruleDto);
+        rules.add(oldRuleDto);
         String payload = serializePayload(rules);
-        return new RuleUpdatedEvent(topic, payload, source, rule, oldRule);
+        return new RuleUpdatedEvent(topic, payload, source, ruleDto, oldRuleDto);
     }
 
     /**
-     * creates a rule status info event
+     * Creates a rule status info event
      *
-     * @param statusInfo
-     * @param rule
-     * @param source
-     * @return
+     * @param statusInfo the status info of the event
+     * @param ruleUID the UID of the rule for which the event is created
+     * @param source the source of the event
+     * @return {@link RuleStatusInfoEvent} instance
      */
     public static RuleStatusInfoEvent createRuleStatusInfoEvent(RuleStatusInfo statusInfo, String ruleUID,
             String source) {
@@ -131,29 +136,31 @@ public class RuleEventFactory extends AbstractEventFactory {
     }
 
     /**
-     * creates a rule removed event
+     * Creates a rule removed event
      *
-     * @param rule
-     * @param source
-     * @return
+     * @param rule the rule for which this event is created
+     * @param source the source of the event
+     * @return {@link RuleRemovedEvent} instance
      */
     public static RuleRemovedEvent createRuleRemovedEvent(Rule rule, String source) {
         String topic = buildTopic(RULE_REMOVED_EVENT_TOPIC, rule);
-        String payload = serializePayload(rule);
-        return new RuleRemovedEvent(topic, payload, source, rule);
+        final RuleDTO ruleDto = RuleDTOMapper.map(rule);
+        String payload = serializePayload(ruleDto);
+        return new RuleRemovedEvent(topic, payload, source, ruleDto);
     }
 
     /**
-     * creates a rule added event
+     * Creates a rule added event
      *
-     * @param rule
-     * @param source
-     * @return
+     * @param rule the rule for which this event is created
+     * @param source the source of the event
+     * @return {@link RuleAddedEvent} instance
      */
     public static RuleAddedEvent createRuleAddedEvent(Rule rule, String source) {
         String topic = buildTopic(RULE_ADDED_EVENT_TOPIC, rule);
-        String payload = serializePayload(rule);
-        return new RuleAddedEvent(topic, payload, source, rule);
+        final RuleDTO ruleDto = RuleDTOMapper.map(rule);
+        String payload = serializePayload(ruleDto);
+        return new RuleAddedEvent(topic, payload, source, ruleDto);
     }
 
     private static String buildTopic(String topic, String ruleUID) {

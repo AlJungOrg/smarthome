@@ -20,7 +20,7 @@ VariableDeclaration:
 ;
 
 Rule:
-	'rule' name=(ID|STRING)
+	'rule' name=(STRING|ID)
 	'when' eventtrigger+=EventTrigger ('or' eventtrigger+=EventTrigger)*
 	'then' script=Script
 	'end'
@@ -30,8 +30,11 @@ EventTrigger:
 	UpdateEventTrigger |
 	CommandEventTrigger |
 	ChangedEventTrigger |
+	EventEmittedTrigger |
 	TimerTrigger |
-	SystemTrigger
+	SystemTrigger |
+	ThingStateUpdateEventTrigger |
+	ThingStateChangedEventTrigger
 ;
 
 CommandEventTrigger:
@@ -45,6 +48,11 @@ UpdateEventTrigger:
 ChangedEventTrigger:
 	'Item' item=ItemName 'changed' ('from' oldState=ValidState)? ('to' newState=ValidState)?
 ;		
+
+EventEmittedTrigger:
+	'Channel' channel=(STRING|ID) 'triggered' (trigger=ValidTrigger)?
+;
+
 
 TimerTrigger:
 	'Time' 'cron' cron=STRING |
@@ -66,6 +74,13 @@ SystemOnShutdownTrigger:
 	'System' 'shuts down'
 ;
 
+ThingStateUpdateEventTrigger:
+    'Thing' thing=STRING 'received update' (state=ThingValidState)?
+;
+
+ThingStateChangedEventTrigger:
+    'Thing' thing=STRING 'changed' ('from' oldState=ThingValidState)? ('to' newState=ThingValidState)?
+;
 	
 ItemName :
 	ID
@@ -77,4 +92,18 @@ ValidState:
 
 ValidCommand:
 	ID | Number | STRING
+;
+
+ValidTrigger:
+	ID | Number | STRING
+;
+
+ThingValidState:
+    'UNINITIALIZED' |
+    'INITIALIZING' |
+    'UNKNOWN' |
+    'ONLINE' |
+    'OFFLINE' |
+    'REMOVING' |
+    'REMOVED'
 ;

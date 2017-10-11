@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -14,7 +14,7 @@ import java.util.Map;
 
 import org.eclipse.smarthome.config.core.ConfigDescription;
 import org.eclipse.smarthome.config.core.ConfigDescriptionProvider;
-import org.eclipse.smarthome.config.xml.XmlConfigDescriptionProvider;
+import org.eclipse.smarthome.config.xml.AbstractXmlConfigDescriptionProvider;
 import org.eclipse.smarthome.config.xml.osgi.XmlDocumentBundleTracker;
 import org.eclipse.smarthome.config.xml.osgi.XmlDocumentProvider;
 import org.eclipse.smarthome.core.thing.binding.ThingTypeProvider;
@@ -55,7 +55,7 @@ public class ThingTypeXmlProvider implements XmlDocumentProvider<List<?>> {
     private Logger logger = LoggerFactory.getLogger(ThingTypeXmlProvider.class);
 
     private Bundle bundle;
-    private XmlConfigDescriptionProvider configDescriptionProvider;
+    private AbstractXmlConfigDescriptionProvider configDescriptionProvider;
     private XmlThingTypeProvider thingTypeProvider;
 
     // temporary cache
@@ -65,9 +65,9 @@ public class ThingTypeXmlProvider implements XmlDocumentProvider<List<?>> {
 
     private XmlChannelTypeProvider channelTypeProvider;
 
-    public ThingTypeXmlProvider(Bundle bundle, XmlConfigDescriptionProvider configDescriptionProvider,
+    public ThingTypeXmlProvider(Bundle bundle, AbstractXmlConfigDescriptionProvider configDescriptionProvider,
             XmlThingTypeProvider thingTypeProvider, XmlChannelTypeProvider channelTypeProvider)
-                    throws IllegalArgumentException {
+            throws IllegalArgumentException {
 
         if (bundle == null) {
             throw new IllegalArgumentException("The Bundle must not be null!");
@@ -137,7 +137,7 @@ public class ThingTypeXmlProvider implements XmlDocumentProvider<List<?>> {
 
         // create channel group types
         for (ChannelGroupTypeXmlResult type : this.channelGroupTypeRefs) {
-            this.channelTypeProvider.addChannelGroupType(this.bundle, type.toChannelGroupType(channelTypes));
+            this.channelTypeProvider.addChannelGroupType(this.bundle, type.toChannelGroupType());
         }
 
         // create thing and bridge types

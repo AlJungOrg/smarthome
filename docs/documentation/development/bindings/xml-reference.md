@@ -4,7 +4,7 @@ layout: documentation
 
 {% include base.html %}
 
-# Declaring Configurations, Bindings and Things 
+# Declaring Configurations, Bindings and Things
 
 Specific services and bindings have to provide meta information which is used for visualization, validation or internal service mapping. Meta information can be provided by registering specific services at the *OSGi* service registry or by specifying them in a declarative way, which is described in this chapter.
 
@@ -12,7 +12,7 @@ Specific services and bindings have to provide meta information which is used fo
 
 - Configuration descriptions: Used for visualization and validation of configuration properties (optional)
 - Binding definitions: Required to declare a binding (mandatory)
-- Bridge and *Thing* descriptions: Required to specify which bridges and *Thing*s are provided by the binding, which relations they have to each other and which channels they offer (mandatory) 
+- Bridge and *Thing* descriptions: Required to specify which bridges and *Thing*s are provided by the binding, which relations they have to each other and which channels they offer (mandatory)
 
 
 ## Configuration Descriptions
@@ -49,7 +49,7 @@ The following HTML tags are allowed -: ```<b>, <br>, <em>, <h1>, <h2>, <h3>, <h4
     </parameter-group>
 
     <parameter name="String" type="{text|integer|decimal|boolean}" min="Decimal" max="Decimal" step="Decimal" pattern="String" required="{true|false}" readOnly="{true|false}" multiple="{true|false}" groupName="String" unit="A|cd|K|kgv|m|mol|s|g|rad|sr|Hz|N|Pa|J|W|C|V|F|Ω|S|Wb|T|H|Cel|lm|lx|Bq|Gy|Sv|kat|m/s2|m2v|m3|kph|%|l|min|h|d|week|y">
-      <context>{network-address|password|password-create|color|date|datetime|email|month|week|time|tel|url|item|thing|group|tag|service}</context>
+      <context>{network-address|password|password-create|color|date|datetime|email|month|week|dayOfWeek|time|tel|url|item|thing|group|tag|service|channel|rule|location}</context>
       <required>{true|false}</required>
       <default>String</default>
       <label>String</label>
@@ -87,6 +87,7 @@ The following HTML tags are allowed -: ```<b>, <br>, <em>, <h1>, <h2>, <h3>, <h4
   <tr><td>parameter.groupName</td><td>Sets a group name for this parameter (optional).</td></tr>
   <tr><td>parameter.unit</td><td>Specifies the unit of measurements. The unit declaration in the parameter definition shown above contains the set of valid units. The unit must only be set if the type of the parameter is either integer or decimal (optional).</td></tr>
   <tr><td>advanced</td><td>Specifies that this is an advanced parameter. Advanced parameters may be hidden by a UI (optional).</td></tr>
+  <tr><td>verify</td><td>Specifies that this is parameter requires a verification stage with the user before sending. Parameters flagged with *verify=true* could be considered dangerous and should be protected from accidental use by a UI - eg by adding an "Are you sure" prompt (optional).</td></tr>
   <tr><td>context</td><td>The context of the configuration parameter (optional).</td></tr>
   <tr><td>required</td><td>The flag indicating if the configuration parameter has to be set or not (deprecated, optional, default: false).</td></tr>
   <tr><td>default</td><td>The default value of the configuration parameter (optional).</td></tr>
@@ -100,6 +101,59 @@ The following HTML tags are allowed -: ```<b>, <br>, <em>, <h1>, <h2>, <h3>, <h4
   <tr><td>criteria</td><td>The filter criteria for values of a dynamic selection list (optional).</td></tr>  
   <tr><td>criteria.name</td><td>The name of the context related filter.</td></tr>  
 </table>
+
+### Supported Contexts
+
+Context is used to provide some semantic details about the parameter. The UIs use it to render different kind of input widgets. The following contexts require a specific format of the content:
+
+<table><tr><th>Name</th><th>Type</th><th>Format</th><th>Sample implementation</th></tr>
+  <tr><td>network-addess</td><td>text</td><td>IPv4,IPv6, domain name</td>
+  <td><code>&lt;input type="text"/></code></td></tr>
+  <tr><td>password</td><td>text</td><td>alphanumeric characters</td><td><code>&lt;input type="password"/></code></td></tr>
+  <tr><td>password-create</td><td>text</td><td>alphanumeric characters</td><td>custom password input</td></tr>
+  <tr><td>color</td><td>text</td><td>#000000 - #ffffff (hex color)</td><td><code>&lt;input type="color"/></code></td></tr>
+  <tr><td>date</td><td>text</td><td>YYYY-MM-DD</td><td><code>&lt;input type="date"/></code></td></tr>
+  <tr><td>datetime</td><td>text</td><td>YYYY-MM-DD hh:mm</td><td>custom input field</td></tr>
+  <tr><td>email</td><td>text</td><td>username@domain.com</td><td><code>&lt;input type="email"/></code></td></tr>
+  <tr><td>month</td><td>text</td><td>month of year</td><td>custom input field</td></tr>
+  <tr><td>week</td><td>integer</td><td>week of year</td><td>custom input field</td></tr>
+  <tr><td>dayOfWeek</td><td>text</td><td>MON, TUE, WED, THU, FRI, SAT, SUN <br></td><td>custom input field</td></tr>
+  <tr><td>time</td><td>text/integer</td><td>hh:mm:ss/milliseconds since epoch</td><td><code>&lt;input type="time"/></code></td></tr>
+  <tr><td>telephone</td><td>text</td><td>telephone number</td><td>custom input field</td></tr>
+  <tr><td>url</td><td>text</td><td>web url</td><td><code>&lt;input type="url"/></code></td></tr>
+  <tr><td>item</td><td>text</td><td>Item name</td><td>custom input field</td></tr>
+  <tr><td>thing</td><td>text</td><td>UID of a thing</td><td>custom input field</td></tr>
+  <tr><td>group</td><td>text</td><td>group name to which this parameter belongs</td><td></td></tr>
+  <tr><td>tag</td><td>text</td><td>tag name</td><td>custom input field</td></tr>
+  <tr><td>service</td><td>text</td><td>service name</td><td>custom input field</td></tr>
+  <tr><td>channel</td><td>text</td><td>UID of a channel<br></td><td>custom input field</td></tr>
+  <tr><td>rule</td><td>text</td><td>UID of a rule<br></td><td>custom input field</td></tr>
+  <tr><td>location</td><td>text</td><td>latitude,longitude[,altitude]<br></td><td>custom input field</td></tr>
+  
+</table>
+
+Further, the <strong>item</strong> context can contain criteria to filter the list of items. For example:
+
+```xml
+<filter>
+  <criteria name="type">Switch,Dimmer</criteria>
+  <criteria name="tag">Light,Heating</criteria>
+</filter>
+```
+
+In the case of above filter only those items will be shown that satisfy the filter's coniditions. The above filter is evaluated as follows: 
+
+```
+(type=Switch OR type=Dimmer) AND (tag=Light OR tag=Heating) 
+
+```
+Similarly, the <strong>Channel</strong> context can contain criteria to filter channels based on <strong>kind</strong> field. The value of <strong>kind</strong> can either be STATE or TRIGGER. For example:
+
+```xml
+<filter>
+  <criteria name="kind">STATE|TRIGGER</criteria>
+</filter>
+```
 
 Groups allow parameters to be grouped together into logical blocks so that the user can find the parameters they are looking for. A parameter can be placed into a group so that the UI knows how to display the information.
 <table>
@@ -251,11 +305,21 @@ Bridge and *Thing* descriptions must be placed as XML file(s) (with the ending `
 
     <channels>
       <channel id="channelID" typeId="channelTypeID" />
+      OR
+      <channel id="channelID" typeId="channelTypeID">
+        <label>String</label>
+        <description>String</description>
+      </channel>
       ...
     </channels>
     OR
     <channel-groups>
       <channel-group id="channelGroupID" typeId="channelGroupTypeID" />
+      OR
+      <channel-group id="channelGroupID" typeId="channelGroupTypeID">
+        <label>String</label>
+        <description>String</description>
+      </channel-group>
       ...
     </channel-groups>
 
@@ -277,11 +341,21 @@ Bridge and *Thing* descriptions must be placed as XML file(s) (with the ending `
 
     <channels>
       <channel id="channelID" typeId="channelTypeID" />
+      OR
+      <channel id="channelID" typeId="channelTypeID">
+        <label>String</label>
+        <description>String</description>
+      </channel>
       ...
     </channels>
     OR
     <channel-groups>
       <channel-group id="channelGroupID" typeId="channelGroupTypeID" />
+      OR
+      <channel-group id="channelGroupID" typeId="channelGroupTypeID">
+        <label>String</label>
+        <description>String</description>
+      </channel-group>
       ...
     </channel-groups>
 
@@ -294,6 +368,8 @@ Bridge and *Thing* descriptions must be placed as XML file(s) (with the ending `
 
   <channel-type id="channelTypeID" advanced="{true|false}">
     <item-type>Dimmer</item-type>
+    OR
+    <kind>trigger</kind>
     <label>String</label>
     <description>String</description>
     <category>String</category>
@@ -311,6 +387,15 @@ Bridge and *Thing* descriptions must be placed as XML file(s) (with the ending `
         ...
       </options>
     </state>
+    OR
+    <event>
+      <options>
+        <option value="String" />
+        OR
+        <option value="String">String</option>
+        ...
+      </options>
+    </event>
 
     <config-description>
       ...
@@ -351,6 +436,8 @@ Bridge and *Thing* descriptions must be placed as XML file(s) (with the ending `
   <tr><td>channels</td><td>The channels the bridge/<i>Thing</i> provides (optional).</td></tr>
   <tr><td>channel.id</td><td>An identifier of the channel the bridge/<i>Thing</i> provides (mandatory).</td></tr>
   <tr><td>channel.typeId</td><td>An identifier of the channel type definition the bridge/<i>Thing</i> provides (mandatory).</td></tr>
+  <tr><td>label</td><td>A human-readable label for the channel (optional).</td></tr>
+  <tr><td>description</td><td>A human-readable description for the channel (optional).</td></tr>
   <tr><td>channel-groups</td><td>The channel groups defining the channels the bridge/<i>Thing</i> provides (optional).</td></tr>
   <tr><td>channel-group.id</td><td>An identifier of the channel group the bridge/<i>Thing</i> provides (mandatory).</td></tr>
   <tr><td>channel-group.typeId</td><td>An identifier of the channel group type definition the bridge/<i>Thing</i> provides (mandatory).</td></tr>
@@ -364,7 +451,8 @@ Bridge and *Thing* descriptions must be placed as XML file(s) (with the ending `
   <tr><td><b>Property</b></td><td><b>Description</b></td></tr>
   <tr><td>channel-type.id</td><td>An identifier for the channel type (mandatory).</td></tr>
   <tr><td>channel-type.advanced</td><td>The flag indicating if this channel contains advanced functionalities which should be typically not shown in the basic view of user interfaces (optional, default: false).</td></tr>
-  <tr><td>item-type</td><td>An item type of the channel (mandatory). All item types are specified in <code>ItemFactory</code> instances. The following items belong to the core: <code>Switch, Rollershutter, Contact, String, Number, Dimmer, DateTime, Color, Image</code>.</td></tr>
+  <tr><td>kind</td><td>The kind of channel. <code>state</code> for channels which have a state, <code>trigger</code> for trigger channels. <code>state</code> is the default.</td></tr>
+  <tr><td>item-type</td><td>An item type of the channel (mandatory if kind <code>state</code>, which is the default). All item types are specified in <code>ItemFactory</code> instances. The following items belong to the core: <code>Switch, Rollershutter, Contact, String, Number, Dimmer, DateTime, Color, Image</code>.</td></tr>
   <tr><td>label</td><td>A human-readable label for the channel (mandatory).</td></tr>
   <tr><td>description</td><td>A human-readable description for the channel (optional).</td></tr>
   <tr><td>category</td><td>The category for the channel, e.g. <code>TEMPERATURE</code> (optional).</td></tr>
@@ -379,6 +467,10 @@ Bridge and *Thing* descriptions must be placed as XML file(s) (with the ending `
   <tr><td>options</td><td>A list restricting all possible values (optional).</td></tr>
   <tr><td>option</td><td>The description for the option (optional).</td></tr>
   <tr><td>option.value</td><td>The value for the option (mandatory).</td></tr>
+  <tr><td>event</td><td>The restrictions of an trigger event which gives information how to interpret it (optional).</td></tr>
+  <tr><td>options</td><td>A list restricting all possible values (optional).</td></tr>
+  <tr><td>option</td><td>The description for the option (optional).</td></tr>
+  <tr><td>option.value</td><td>The value for the option (mandatory).</td></tr>  
   <tr><td>config-description</td><td>The configuration description for the channel within the ConfigDescriptionRegistry (optional).</td></tr>
   <tr><td>config-description-ref</td><td>The reference to a configuration description for the channel within the ConfigDescriptionRegistry (optional).</td></tr>
   <tr><td>config-description-ref.uri</td><td>The URI of the configuration description for the channel within the ConfigDescriptionRegistry (mandatory).</td></tr>

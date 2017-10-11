@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -54,6 +54,8 @@ public class WemoLinkDiscoveryService extends AbstractDiscoveryService implement
 
     public final static Set<ThingTypeUID> SUPPORTED_THING_TYPES = Collections.singleton(THING_TYPE_MZ100);
 
+    public static final String NORMALIZE_ID_REGEX = "[^a-zA-Z0-9_]";
+
     /**
      * Maximum time to search for devices in seconds.
      */
@@ -69,17 +71,24 @@ public class WemoLinkDiscoveryService extends AbstractDiscoveryService implement
      */
     private final static int SCAN_INTERVAL = 120;
 
+    /**
+     * The handler for WeMo Link bridge
+     */
     private WemoBridgeHandler wemoBridgeHandler;
 
     /**
      * Job which will do the background scanning
      */
     private WemoLinkScan scanningRunnable;
+
     /**
      * Schedule for scanning
      */
     private ScheduledFuture<?> scanningJob;
 
+    /**
+     * The Upnp service
+     */
     private UpnpIOService service;
 
     public WemoLinkDiscoveryService(WemoBridgeHandler wemoBridgeHandler, UpnpIOService upnpIOService) {
@@ -136,6 +145,13 @@ public class WemoLinkDiscoveryService extends AbstractDiscoveryService implement
 
                         stringParser = StringEscapeUtils.unescapeXml(stringParser);
 
+                        // check if there are already paired devices with WeMo Link
+                        if ("0".equals(stringParser)) {
+                            logger.debug("There are no devices connected with WeMo Link. Exit discovery");
+                            return;
+                        }
+
+                        // Build parser for received <DeviceList>
                         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
                         DocumentBuilder db = dbf.newDocumentBuilder();
                         InputSource is = new InputSource();
@@ -170,6 +186,8 @@ public class WemoLinkDiscoveryService extends AbstractDiscoveryService implement
                             NodeList model = element.getElementsByTagName("ModelCode");
                             line = (Element) model.item(0);
                             String endDeviceModelID = getCharacterDataFromElement(line);
+                            endDeviceModelID = endDeviceModelID.replaceAll(NORMALIZE_ID_REGEX, "_");
+
                             logger.trace("ModelCode: " + endDeviceModelID);
 
                             if (SUPPORTED_THING_TYPES.contains(new ThingTypeUID(BINDING_ID, endDeviceModelID))) {
@@ -240,6 +258,10 @@ public class WemoLinkDiscoveryService extends AbstractDiscoveryService implement
     @Override
     public String getUDN() {
         return (String) this.wemoBridgeHandler.getThing().getConfiguration().get(UDN);
+    }
+
+    @Override
+    public void onServiceSubscribed(String service, boolean succeeded) {
     }
 
     @Override

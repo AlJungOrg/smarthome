@@ -56,7 +56,8 @@ public class TemplateResource implements RESTResource {
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(value = "Get all available templates.", response = Template.class, responseContainer = "Collection")
-    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK") })
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "OK", response = Template.class, responseContainer = "Collection") })
     public Response getAll(@HeaderParam("Accept-Language") @ApiParam(value = "language") String language) {
         Locale locale = LocaleUtil.getLocale(language);
         return Response.ok(templateRegistry.getAll(locale)).build();
@@ -66,7 +67,7 @@ public class TemplateResource implements RESTResource {
     @Path("/{templateUID}")
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(value = "Gets a template corresponding to the given UID.", response = Template.class)
-    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
+    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK", response = Template.class),
             @ApiResponse(code = 404, message = "Template corresponding to the given UID does not found.") })
     public Response getByUID(@HeaderParam("Accept-Language") @ApiParam(value = "language") String language,
             @PathParam("templateUID") @ApiParam(value = "templateUID", required = true) String templateUID) {
@@ -77,5 +78,10 @@ public class TemplateResource implements RESTResource {
         } else {
             return Response.status(Status.NOT_FOUND).build();
         }
+    }
+
+    @Override
+    public boolean isSatisfied() {
+        return templateRegistry != null;
     }
 }

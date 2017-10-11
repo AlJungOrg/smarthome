@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -8,11 +8,11 @@
 package org.eclipse.smarthome.io.rest.core.channel;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
+import java.util.stream.Stream;
 
+import javax.annotation.security.RolesAllowed;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.Path;
@@ -28,12 +28,14 @@ import org.eclipse.smarthome.config.core.dto.ConfigDescriptionDTO;
 import org.eclipse.smarthome.config.core.dto.ConfigDescriptionDTOMapper;
 import org.eclipse.smarthome.config.core.dto.ConfigDescriptionParameterDTO;
 import org.eclipse.smarthome.config.core.dto.ConfigDescriptionParameterGroupDTO;
+import org.eclipse.smarthome.core.auth.Role;
 import org.eclipse.smarthome.core.thing.dto.ChannelTypeDTO;
 import org.eclipse.smarthome.core.thing.type.ChannelType;
 import org.eclipse.smarthome.core.thing.type.ChannelTypeRegistry;
 import org.eclipse.smarthome.core.thing.type.ChannelTypeUID;
 import org.eclipse.smarthome.io.rest.LocaleUtil;
 import org.eclipse.smarthome.io.rest.RESTResource;
+import org.eclipse.smarthome.io.rest.Stream2JSONInputStream;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -45,8 +47,10 @@ import io.swagger.annotations.ApiResponses;
  * Provides access to ChannelType via REST.
  *
  * @author Chris Jackson - Initial contribution
+ * @author Franck Dechavanne - Added DTOs to ApiResponses
  */
 @Path(ChannelTypeResource.PATH_CHANNEL_TYPES)
+@RolesAllowed({ Role.ADMIN })
 @Api(value = ChannelTypeResource.PATH_CHANNEL_TYPES)
 public class ChannelTypeResource implements RESTResource {
 
@@ -75,13 +79,14 @@ public class ChannelTypeResource implements RESTResource {
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(value = "Gets all available channel types.", response = ChannelTypeDTO.class, responseContainer = "Set")
-    @ApiResponses(value = @ApiResponse(code = 200, message = "OK") )
+    @ApiResponses(value = @ApiResponse(code = 200, message = "OK", response = ChannelTypeDTO.class, responseContainer = "Set"))
     public Response getAll(
             @HeaderParam(HttpHeaders.ACCEPT_LANGUAGE) @ApiParam(value = HttpHeaders.ACCEPT_LANGUAGE) String language) {
         Locale locale = LocaleUtil.getLocale(language);
-        Set<ChannelTypeDTO> channelTypeDTOs = convertToChannelTypeDTOs(channelTypeRegistry.getChannelTypes(locale),
-                locale);
-        return Response.ok(channelTypeDTOs).build();
+
+        Stream<ChannelTypeDTO> channelStream = channelTypeRegistry.getChannelTypes(locale).stream()
+                .map(c -> convertToChannelTypeDTO(c, locale));
+        return Response.ok(new Stream2JSONInputStream(channelStream)).build();
     }
 
     @GET
@@ -89,7 +94,7 @@ public class ChannelTypeResource implements RESTResource {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(value = "Gets channel type by UID.", response = ChannelTypeDTO.class)
     @ApiResponses(value = {
-            @ApiResponse(code = 200, message = "Channel type with provided channelTypeUID does not exist."),
+            @ApiResponse(code = 200, message = "Channel type with provided channelTypeUID does not exist.", response = ChannelTypeDTO.class),
             @ApiResponse(code = 404, message = "No content") })
     public Response getByUID(@PathParam("channelTypeUID") @ApiParam(value = "channelTypeUID") String channelTypeUID,
             @HeaderParam(HttpHeaders.ACCEPT_LANGUAGE) @ApiParam(value = HttpHeaders.ACCEPT_LANGUAGE) String language) {
@@ -102,15 +107,9 @@ public class ChannelTypeResource implements RESTResource {
         }
     }
 
-    public Set<ChannelTypeDTO> getChannelTypeDTOs(Locale locale) {
-        List<ChannelType> channelTypes = channelTypeRegistry.getChannelTypes();
-        Set<ChannelTypeDTO> channelTypeDTOs = convertToChannelTypeDTOs(channelTypes, locale);
-        return channelTypeDTOs;
-    }
-
     private ChannelTypeDTO convertToChannelTypeDTO(ChannelType channelType, Locale locale) {
         final ConfigDescription configDescription;
-        if (channelType.hasConfigDescriptionURI()) {
+        if (channelType.getConfigDescriptionURI() != null) {
             configDescription = this.configDescriptionRegistry
                     .getConfigDescription(channelType.getConfigDescriptionURI(), locale);
         } else {
@@ -130,17 +129,12 @@ public class ChannelTypeResource implements RESTResource {
         }
 
         return new ChannelTypeDTO(channelType.getUID().toString(), channelType.getLabel(), channelType.getDescription(),
-                channelType.getCategory(), channelType.getItemType(), parameters, parameterGroups,
-                channelType.getState(), channelType.getTags());
+                channelType.getCategory(), channelType.getItemType(), channelType.getKind(), parameters,
+                parameterGroups, channelType.getState(), channelType.getTags(), channelType.isAdvanced());
     }
 
-    private Set<ChannelTypeDTO> convertToChannelTypeDTOs(List<ChannelType> channelTypes, Locale locale) {
-        Set<ChannelTypeDTO> channelTypeDTOs = new HashSet<>();
-
-        for (ChannelType channelType : channelTypes) {
-            channelTypeDTOs.add(convertToChannelTypeDTO(channelType, locale));
-        }
-
-        return channelTypeDTOs;
+    @Override
+    public boolean isSatisfied() {
+        return channelTypeRegistry != null && configDescriptionRegistry != null;
     }
 }

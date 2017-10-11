@@ -35,6 +35,7 @@ import org.eclipse.smarthome.config.core.ConfigDescriptionParameter;
  * @author Yordan Mihaylov - Initial Contribution
  * @author Ana Dimova - Initial Contribution
  * @author Vasil Ilchev - Initial Contribution
+ * @author Markus Rathgeb - Add default constructor for deserialization
  */
 public class RuleTemplate implements Template {
 
@@ -87,14 +88,23 @@ public class RuleTemplate implements Template {
     private List<ConfigDescriptionParameter> configDescriptions;
 
     /**
+     * Default constructor for deserialization e.g. by Gson.
+     */
+    protected RuleTemplate() {
+    }
+
+    /**
      * This constructor creates a {@link RuleTemplate} instance.
      *
-     * @param UID is an unique identifier of the {@link RuleTemplate} instance.
-     * @param triggers - list of unique {@link Trigger}s participating in the {@link Rule}
-     * @param conditions - list of unique {@link Condition}s participating in the {@link Rule}
-     * @param actions - list of unique {@link Action}s participating in the {@link Rule}
-     * @param configDescriptions - set of configuration properties of the {@link Rule}
-     * @param visibility defines if the template can be public or private.
+     * @param UID is an unique identifier of the {@link RuleTemplate} instance
+     * @param label short human readable description
+     * @param description a detailed human readable description
+     * @param tags a set of tags
+     * @param triggers list of unique {@link Trigger}s participating in the {@link Rule}
+     * @param conditions list of unique {@link Condition}s participating in the {@link Rule}
+     * @param actions list of unique {@link Action}s participating in the {@link Rule}
+     * @param configDescriptions set of configuration properties of the {@link Rule}
+     * @param visibility defines if the template can be public or private
      */
     public RuleTemplate(String UID, String label, String description, Set<String> tags, List<Trigger> triggers,
             List<Condition> conditions, List<Action> actions, List<ConfigDescriptionParameter> configDescriptions,
@@ -108,8 +118,9 @@ public class RuleTemplate implements Template {
         this.actions = actions;
         this.configDescriptions = configDescriptions;
         this.visibility = visibility;
-        if (tags == null || tags.isEmpty())
+        if (tags == null || tags.isEmpty()) {
             return;
+        }
         this.tags = new HashSet<String>(tags);
     }
 
@@ -175,7 +186,7 @@ public class RuleTemplate implements Template {
      *
      * @return a {@link Set} of {@link ConfigDescriptionParameter}s.
      */
-    public List<ConfigDescriptionParameter> getConfigurationDescription() {
+    public List<ConfigDescriptionParameter> getConfigurationDescriptions() {
         return configDescriptions != null ? configDescriptions : Collections.<ConfigDescriptionParameter> emptyList();
     }
 
@@ -183,6 +194,7 @@ public class RuleTemplate implements Template {
      * This method is used to get a {@link Module} participating in Rule
      *
      * @param id unique id of the module in this rule.
+     * @param <T> the type of the module
      * @return module with specified id or null when it does not exist.
      */
     public <T extends Module> T getModule(String id) {
@@ -192,8 +204,9 @@ public class RuleTemplate implements Template {
     /**
      * This method is used to return a group of {@link Module}s of this rule
      *
-     * @param clazz optional parameter defining type looking modules. The types
+     * @param moduleClazz optional parameter defining type looking modules. The types
      *            are {@link Trigger}, {@link Condition} or {@link Action}
+     * @param <T> the type of the module that is required
      * @return list of modules of defined type or all modules when the type is not
      *         specified.
      */

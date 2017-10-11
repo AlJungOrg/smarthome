@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -11,9 +11,14 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.eclipse.smarthome.core.events.Event;
 import org.eclipse.smarthome.core.events.EventPublisher;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceReference;
+import org.osgi.util.tracker.ServiceTracker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,11 +31,13 @@ import com.google.common.collect.Iterables;
  *
  * @author Dennis Nobel - Initial contribution
  * @author Stefan Bußweiler - Migration to new event mechanism
+ * @author Victor Toni - provide elements as {@link Stream}
  *
  * @param <E>
  *            type of the element
  */
-public abstract class AbstractRegistry<E, K> implements ProviderChangeListener<E>, Registry<E, K> {
+public abstract class AbstractRegistry<E, K, P extends Provider<E>>
+        implements ProviderChangeListener<E>, Registry<E, K> {
 
     private enum EventType {
         ADDED,
@@ -40,6 +47,9 @@ public abstract class AbstractRegistry<E, K> implements ProviderChangeListener<E
 
     private final Logger logger = LoggerFactory.getLogger(AbstractRegistry.class);
 
+    private Class<P> providerClazz;
+    private ServiceTracker<P, P> providerTracker;
+
     protected Map<Provider<E>, Collection<E>> elementMap = new ConcurrentHashMap<Provider<E>, Collection<E>>();
 
     protected Collection<RegistryChangeListener<E>> listeners = new CopyOnWriteArraySet<RegistryChangeListener<E>>();
@@ -47,6 +57,64 @@ public abstract class AbstractRegistry<E, K> implements ProviderChangeListener<E
     protected ManagedProvider<E, K> managedProvider;
 
     protected EventPublisher eventPublisher;
+
+    /**
+     * Constructor.
+     *
+     * @param providerClazz the class of the providers (see e.g. {@link AbstractRegistry#addProvider(Provider)}), null
+     *            if no providers should be tracked automatically after activation
+     */
+    protected AbstractRegistry(final Class<P> providerClazz) {
+        this.providerClazz = providerClazz;
+    }
+
+    protected void activate(final BundleContext context) {
+        if (providerClazz != null) {
+            /*
+             * The handlers for 'add' and 'remove' the services implementing the provider class (cardinality is
+             * multiple) rely on an active component.
+             * To grant that the add and remove functions are called only for an active component, we use a provider
+             * tracker.
+             */
+            providerTracker = new ProviderTracker(context, providerClazz);
+            providerTracker.open();
+        }
+    }
+
+    protected void deactivate() {
+        if (providerTracker != null) {
+            providerTracker.close();
+            providerTracker = null;
+        }
+    }
+
+    private final class ProviderTracker extends ServiceTracker<P, P> {
+
+        private final BundleContext context;
+
+        /**
+         * Constructor.
+         *
+         * @param context the bundle context to lookup services
+         * @param providerClazz the class that implementing services should be tracked
+         */
+        public ProviderTracker(final BundleContext context, final Class<P> providerClazz) {
+            super(context, providerClazz.getName(), null);
+            this.context = context;
+        }
+
+        @Override
+        public P addingService(ServiceReference<P> reference) {
+            final P service = context.getService(reference);
+            addProvider(service);
+            return service;
+        }
+
+        @Override
+        public void removedService(ServiceReference<P> reference, P service) {
+            removeProvider(service);
+        }
+    }
 
     @Override
     public void added(Provider<E> provider, E element) {
@@ -69,7 +137,14 @@ public abstract class AbstractRegistry<E, K> implements ProviderChangeListener<E
 
     @Override
     public Collection<E> getAll() {
-        return ImmutableList.copyOf(Iterables.concat(elementMap.values()));
+        return stream().collect(Collectors.toList());
+    }
+
+    @Override
+    public Stream<E> stream() {
+        return elementMap.values()                              // gets a Collection<Collection<E>>
+                .stream()                                       // creates a Stream<Collection<E>>
+                .flatMap(collection -> collection.stream());    // flattens the stream to Stream<E>
     }
 
     @Override

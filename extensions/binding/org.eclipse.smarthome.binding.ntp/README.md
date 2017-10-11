@@ -1,9 +1,3 @@
----
-layout: documentation
----
-
-{% include base.html %}
-
 # NTP Binding
  
 The NTP binding is used for displaying the local date and time based update from an NTP server.
@@ -14,7 +8,7 @@ This binding supports one ThingType: ntp
  
 ## Discovery
  
-Discovery is used to place one default item in the inbox as convenient way to add a Thing for the local time.
+Discovery is used to place one default item in the inbox as a convenient way to add a Thing for the local time.
  
 ## Binding Configuration
  
@@ -22,7 +16,7 @@ The binding has no configuration options, all configuration is done at Thing lev
  
 ## Thing Configuration
  
-The things has a few configuration options:
+The thing has a few configuration options:
 
 | Option |  Description  |
 |-----------------|--------------------------------------------------- |
@@ -35,7 +29,11 @@ The things has a few configuration options:
  
 ## Channels
  
-The ntp binding has only one channel  `dateTime`
+The ntp binding has two channels:
+* `dateTime` which provides the data in a dateTime type
+* `string` which provides the data in a string type. The string channel can be configured with the formatting of the date & time. This also allows proper representation of timezones other than the java machine default one.
+See the [java documentation](http://docs.oracle.com/javase/6/docs/api/java/text/SimpleDateFormat.html) for the detailed information on the formatting
+
  
  
 ## Full Example
@@ -49,4 +47,5 @@ Items:
 
 ```
 DateTime Date  "Date [%1$tA, %1$td.%1$tm.%1$tY %1$tH:%1$tM]"  { channel="ntp:ntp:demo:dateTime" }
+
 ```

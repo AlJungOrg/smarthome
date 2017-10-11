@@ -206,6 +206,10 @@
 		}
 
 		function destroy() {
+			if (_t.onHide !== undefined) {
+				_t.onHide();
+			}
+
 			document.removeEventListener("keydown", onkeydown);
 		}
 
@@ -261,6 +265,42 @@
 		};
 	}
 
+	function VisibilityChangeProxy(delay, maxEvents) {
+		var
+			_t = this;
+
+		function processEvent(event) {
+			event.widget.setVisible(event.visibility);
+		}
+
+		_t.queue = [];
+		_t.timeout = null;
+
+		_t.processEvents = function() {
+			_t.timeout = null;
+
+			while (_t.queue.length !== 0) {
+				processEvent(_t.queue[0]);
+				_t.queue = _t.queue.slice(1);
+			}
+		};
+
+		_t.push = function(event) {
+			if (_t.queue.length > maxEvents) {
+				return;
+			}
+
+			_t.queue.push(event);
+
+			if (_t.timeout === null) {
+				_t.timeout = setTimeout(_t.processEvents, delay);
+			} else {
+				clearTimeout(_t.timeout);
+				_t.timeout = setTimeout(_t.processEvents, delay);
+			}
+		};
+	}
+
 	/* class Control */
 	function Control(parentNode) {
 		var
@@ -268,57 +308,136 @@
 			suppress = false;
 
 		_t.parentNode = parentNode;
+		_t.formRow = parentNode.parentNode;
 		_t.item = _t.parentNode.getAttribute(o.itemAttribute);
 		_t.id = _t.parentNode.getAttribute(o.idAttribute);
 		_t.icon = _t.parentNode.parentNode.querySelector(o.formIcon);
+		_t.visible = !_t.formRow.classList.contains(o.formRowHidden);
+		_t.label = _t.parentNode.parentNode.querySelector(o.formLabel);
 
 		if (_t.icon !== null) {
 			_t.iconName = _t.icon.getAttribute(o.iconAttribute);
 		}
 
 		_t.reloadIcon = function(state) {
-			// This condition should be always true, but who knows?
+			// Some widgets don't have icons
 			if (_t.icon !== null) {
 				_t.icon.setAttribute("src",
 					"/icon/" +
 					_t.iconName +
 					"?state=" +
-					state +
+					encodeURIComponent(state) +
 					"&format=" +
 					smarthome.UI.iconType
 				);
 			}
 		};
 
-		_t.setValue = function(value) {
-			_t.reloadIcon(value);
+		_t.setVisible = function(state) {
+			if (state) {
+				_t.formRow.classList.remove(o.formRowHidden);
+			} else {
+				_t.formRow.classList.add(o.formRowHidden);
+			}
+
+			_t.visible = state;
+		};
+
+		_t.setValue = function(value, itemState) {
+			_t.reloadIcon(itemState);
 			if (suppress) {
 				suppress = false;
 			} else {
-				_t.setValuePrivate(value);
+				_t.setValuePrivate(value, itemState);
 			}
 		};
 
 		_t.setValuePrivate = function() {};
 
-		_t.supressUpdate = function() {
+		_t.setLabel = function() {};
+
+		_t.suppressUpdate = function() {
 			suppress = true;
+		};
+
+		_t.setLabelColor = function(color) {
+			if (_t.label !== null) {
+				_t.label.style.color = color;
+			}
+		};
+
+		_t.setValueColor = function(color) {
+			_t.parentNode.style.color = color;
 		};
 	}
 
+	/* class Frame */
+	/* Mimics Control interface, only setVisible method is used */
+	function Frame(parentNode) {
+		var
+			_t = this;
+
+		_t.parentNode = parentNode;
+		_t.id = _t.parentNode.getAttribute(o.idAttribute);
+		_t.visible = !_t.parentNode.classList.contains(o.formHidden);
+		_t.title = _t.parentNode.querySelector(o.formTitle);
+
+		_t.setVisible = function(state) {
+			if (state) {
+				_t.parentNode.classList.remove(o.formHidden);
+			} else {
+				_t.parentNode.classList.add(o.formHidden);
+			}
+
+			_t.visible = state;
+		};
+
+		_t.setLabel = function(label) {
+			_t.title.innerHTML = label;
+		};
+
+		_t.setValue = function() {};
+		_t.suppressUpdate = function() {};
+	}
+
 	/* class ControlImage */
-	function ControlImage(parentNode) {
+	function ControlImage(parentNode, callSuper) {
+		// Some controls combine Image functionality with
+		// other classes, so calling Control is conditional
+		if (callSuper) {
+			Control.call(this, parentNode);
+		}
+
 		var
 			_t = this;
 
 		_t.image = parentNode.querySelector("img");
 		_t.updateInterval = parseInt(parentNode.getAttribute("data-update-interval"), 10);
 
+		_t.url = parentNode.getAttribute("data-proxied-url");
+		_t.validUrl = parentNode.getAttribute("data-valid-url") === "true";
+
+		_t.setValuePrivate = function(value, itemState) {
+			if (itemState.startsWith("data:")) {
+				// Image element associated to an item of type ImageItem
+				_t.image.setAttribute("src", itemState);
+			} else if ((itemState !== "UNDEF") || (_t.validUrl)) {
+				// Image element associated to an item of type StringItem (URL)
+				// Or no associated item but url is set and valid in the image element
+				_t.image.setAttribute("src", _t.url + "&t=" + Date.now());
+			} else {
+				// No associated item and url is not set or not valid in the image element
+				_t.image.setAttribute("src", "images/none.png");
+			}
+		};
+
 		if (_t.updateInterval === 0) {
 			return;
 		}
-
-		_t.url = _t.image.getAttribute("src").replace(/\d+$/, "");
+		// Limit the refresh interval to 100 ms
+		if (_t.updateInterval < 100) {
+			_t.updateInterval = 100;
+		}
 
 		var
 			interval = setInterval(function() {
@@ -326,8 +445,8 @@
 					clearInterval(interval);
 					return;
 				}
-				_t.image.setAttribute("src", _t.url + Math.random().toString().slice(2));
-			}, _t.updateInterval * 1000);
+				_t.image.setAttribute("src", _t.url + "&t=" + Date.now());
+			}, _t.updateInterval);
 	}
 
 	/* class ControlText extends Control */
@@ -337,8 +456,12 @@
 		var
 			_t = this;
 
-		_t.setValue = function(value) {
-			parentNode.innerHTML = value;
+		_t.hasValue = _t.parentNode.getAttribute("data-has-value") === "true";
+
+		_t.setValuePrivate = function(value) {
+			if (_t.hasValue) {
+				parentNode.innerHTML = value;
+			}
 		};
 	}
 
@@ -349,7 +472,10 @@
 		var
 			_t = this;
 
+		_t.hasValue = _t.parentNode.getAttribute("data-has-value") === "true";
+		_t.value = _t.parentNode.parentNode.querySelector(o.formValue);
 		_t.count = _t.parentNode.getAttribute("data-count") * 1;
+		_t.suppressUpdateButtons = false;
 		_t.reset = function() {
 			_t.buttons.forEach(function(button) {
 				button.classList.remove(o.buttonActiveClass);
@@ -371,22 +497,35 @@
 					item: _t.item,
 					value: value
 			}));
-			_t.supressUpdate();
+			_t.suppressUpdateButtons = true;
 		};
 		_t.valueMap = {};
 		_t.buttons = [].slice.call(_t.parentNode.querySelectorAll(o.controlButton));
-		_t.setValuePrivate = function(value) {
+		_t.setValuePrivate = function(value, itemState) {
+			if (_t.hasValue) {
+				_t.value.innerHTML = value;
+			}
+
 			if (_t.count === 1) {
+				return;
+			}
+
+			if (_t.suppressUpdateButtons) {
+				_t.suppressUpdateButtons = false;
 				return;
 			}
 
 			_t.reset();
 			if (
 				(_t.valueMap !== undefined) &&
-				(_t.valueMap[value] !== undefined)
+				(_t.valueMap[itemState] !== undefined)
 			) {
-				_t.valueMap[value].classList.add(o.buttonActiveClass);
+				_t.valueMap[itemState].classList.add(o.buttonActiveClass);
 			}
+		};
+
+		_t.setValueColor = function(color) {
+			_t.value.style.color = color;
 		};
 
 		_t.buttons.forEach.call(_t.buttons, function(button) {
@@ -464,13 +603,17 @@
 			});
 		};
 
-		_t.setValuePrivate = function(value) {
-			_t.value = "" + value;
-			if (_t.valueMap[value] !== undefined) {
-				_t.valueNode.innerHTML = _t.valueMap[value];
+		_t.setValuePrivate = function(value, itemState) {
+			_t.value = "" + itemState;
+			if (_t.valueMap[itemState] !== undefined) {
+				_t.valueNode.innerHTML = _t.valueMap[itemState];
 			} else {
 				_t.valueNode.innerHTML = "";
 			}
+		};
+
+		_t.setValueColor = function(color) {
+			_t.valueNode.style.color = color;
 		};
 
 		_t.parentNode.parentNode.addEventListener("click", _t.showModal);
@@ -596,8 +739,8 @@
 		_t.value = isNaN(parseFloat(_t.value)) ? 0 : parseFloat(_t.value);
 		_t.valueNode = _t.parentNode.parentNode.querySelector(o.formValue);
 
-		_t.setValuePrivate = function(value) {
-			_t.value = value * 1;
+		_t.setValuePrivate = function(value, itemState) {
+			_t.value = itemState * 1;
 			_t.valueNode.innerHTML = value;
 		};
 
@@ -705,6 +848,7 @@
 		_t.value = color;
 		_t.hsvValue = rgb2hsv(color);
 		_t.interval = null;
+		_t.isBeingChanged = false;
 
 		_t.colorpicker = _t.container.querySelector(o.colorpicker.colorpicker);
 		_t.image = _t.container.querySelector(o.colorpicker.image);
@@ -726,17 +870,10 @@
 					y: event.touches[0].pageY - _t.colorpicker.offsetTop
 				};
 			} else {
-				if (featureSupport.eventLayerXY && featureSupport.pointerEvents) {
-					pos = {
-						x: event.layerX,
-						y: event.layerY
-					};
-				} else {
-					pos = {
-						x: event.pageX - _t.colorpicker.offsetLeft,
-						y: event.pageY - _t.colorpicker.offsetTop
-					};
-				}
+				pos = {
+					x: event.pageX - _t.colorpicker.offsetLeft,
+					y: event.pageY - _t.colorpicker.offsetTop
+				};
 			}
 			var
 				maxR = _t.image.clientWidth / 2,
@@ -806,6 +943,8 @@
 				clearInterval(_t.interval);
 				_t.interval = null;
 			}
+
+			_t.isBeingChanged = false;
 			window.removeEventListener("mouseup", onWindowMouseup);
 		}
 
@@ -814,11 +953,11 @@
 				callback(_t.hsvValue);
 			}, 300);
 
-			smarthome.changeListener.pause();
 			window.addEventListener("mouseup", onWindowMouseup);
 
 			updateValue(event);
 			callback(_t.hsvValue);
+			_t.isBeingChanged = true;
 
 			event.stopPropagation();
 		}
@@ -842,8 +981,9 @@
 				clearInterval(_t.interval);
 				_t.interval = null;
 			}
-			smarthome.changeListener.resume();
+
 			window.removeEventListener("mouseup", onWindowMouseup);
+			_t.isBeingChanged = false;
 			event.stopPropagation();
 		}
 
@@ -851,13 +991,19 @@
 			callback(_t.hsvValue);
 		}, 200);
 
+		_t.updateColor = function(c) {
+			if (_t.isBeingChanged) {
+				return;
+			}
+
+			setColor(c);
+		};
+
 		// Some browsers fire onchange while the slider handle is being moved.
 		// This is incorrect, according to the specs, but it's impossible to detect,
 		// so DebounceProxy is used
 		function onSliderChange() {
 			_t.hsvValue.v = _t.slider.value / 100;
-			smarthome.changeListener.pause();
-
 			_t.debounceProxy.call();
 		}
 
@@ -866,7 +1012,6 @@
 
 			_t.debounceProxy.call();
 			_t.debounceProxy.finish();
-			smarthome.changeListener.resume();
 		}
 
 		_t.slider.addEventListener("change", onSliderChange);
@@ -963,9 +1108,12 @@
 		}
 
 		_t.value = hex2rgb(_t.parentNode.getAttribute("data-value"));
+		_t.modalControl = null;
 		_t.buttonUp = _t.parentNode.querySelector(o.colorpicker.up);
 		_t.buttonDown = _t.parentNode.querySelector(o.colorpicker.down);
 		_t.buttonPick = _t.parentNode.querySelector(o.colorpicker.pick);
+		_t.longPress = false;
+		_t.pressed = false;
 
 		_t.setValue = function(value) {
 			var
@@ -976,6 +1124,10 @@
 					v: t[2] / 100
 				};
 			_t.value = Colorpicker.hsv2rgb(hsv);
+
+			if (_t.modalControl !== null) {
+				_t.modalControl.updateColor(_t.value);
+			}
 		};
 
 		function emitEvent(value) {
@@ -987,12 +1139,27 @@
 		}
 
 		function onMouseDown(command) {
+			_t.pressed = true;
+			_t.longPress = false;
+
 			interval = setInterval(function() {
+				_t.longPress = true;
 				emitEvent(command);
 			}, repeatInterval);
 		}
 
-		function onMouseUp() {
+		function onMouseUp(command) {
+			if (!_t.pressed) {
+				return;
+			}
+
+			if (!_t.longPress) {
+				emitEvent(command);
+			}
+
+			_t.pressed = false;
+			_t.longPress = false;
+
 			clearInterval(interval);
 		}
 
@@ -1000,6 +1167,10 @@
 			_t.modal = new Modal(renderTemplate("template-colorpicker"));
 			_t.modal.show();
 			_t.modal.container.classList.add(o.colorpicker.modalClass);
+			_t.modal.onHide = function() {
+				_t.modalControl = null;
+				_t.modal = null;
+			};
 
 			_t.modalControl = new Colorpicker(_t.modal.container, _t.value, function(color) {
 				_t.value = Colorpicker.hsv2rgb(color);
@@ -1017,23 +1188,25 @@
 
 		var
 			upButtonMouseDown = onMouseDown.bind(null, "INCREASE"),
-			downButtonMouseDown = onMouseDown.bind(null, "DECREASE");
+			downButtonMouseDown = onMouseDown.bind(null, "DECREASE"),
+			upButtonMouseUp = onMouseUp.bind(null, "ON"),
+			downButtonMouseUp = onMouseUp.bind(null, "OFF");
 
 		// Up button
 		_t.buttonUp.addEventListener("touchstart", upButtonMouseDown);
 		_t.buttonUp.addEventListener("mousedown", upButtonMouseDown);
-		_t.buttonUp.addEventListener("mouseleave", onMouseUp);
 
-		_t.buttonUp.addEventListener("touchend", onMouseUp);
-		_t.buttonUp.addEventListener("mouseup", onMouseUp);
+		_t.buttonUp.addEventListener("mouseleave", upButtonMouseUp);
+		_t.buttonUp.addEventListener("touchend", upButtonMouseUp);
+		_t.buttonUp.addEventListener("mouseup", upButtonMouseUp);
 
 		// Down button
 		_t.buttonDown.addEventListener("touchstart", downButtonMouseDown);
 		_t.buttonDown.addEventListener("mousedown", downButtonMouseDown);
 
-		_t.buttonDown.addEventListener("touchend", onMouseUp);
-		_t.buttonDown.addEventListener("mouseup", onMouseUp);
-		_t.buttonDown.addEventListener("mouseleave", onMouseUp);
+		_t.buttonDown.addEventListener("touchend", downButtonMouseUp);
+		_t.buttonDown.addEventListener("mouseup", downButtonMouseUp);
+		_t.buttonDown.addEventListener("mouseleave", downButtonMouseUp);
 
 		// Stop button
 		_t.buttonPick.addEventListener("click", onPick);
@@ -1051,20 +1224,31 @@
 				item: _t.item,
 				value: _t.input.checked ? "ON" : "OFF"
 			}));
-			_t.supressUpdate();
 		});
 
-		_t.setValuePrivate = function(v) {
+		_t.hasValue = _t.parentNode.getAttribute("data-has-value") === "true";
+		_t.valueNode = _t.parentNode.parentNode.querySelector(o.formValue);
+
+		_t.setValuePrivate = function(value, itemState) {
 			var
-				value = v === "ON";
+				val = itemState === "ON";
 
-			_t.input.checked = value;
-
-			if (value) {
-				_t.parentNode.MaterialSwitch.on();
-			} else {
-				_t.parentNode.MaterialSwitch.off();
+			if (_t.input.checked !== val) {
+				_t.input.checked = val;
+				if (val) {
+					_t.parentNode.MaterialSwitch.on();
+				} else {
+					_t.parentNode.MaterialSwitch.off();
+				}
 			}
+
+			if (_t.hasValue) {
+				_t.valueNode.innerHTML = value;
+			}
+		};
+
+		_t.setValueColor = function(color) {
+			_t.valueNode.style.color = color;
 		};
 	}
 
@@ -1076,6 +1260,8 @@
 			_t = this;
 
 		_t.input = _t.parentNode.querySelector("input[type=range]");
+		_t.hasValue = _t.parentNode.getAttribute("data-has-value") === "true";
+		_t.valueNode = _t.parentNode.parentNode.querySelector(o.formValue);
 		_t.locked = false;
 
 		(function() {
@@ -1098,7 +1284,6 @@
 				item: _t.item,
 				value: _t.input.value
 			}));
-			_t.supressUpdate();
 		}
 
 		_t.debounceProxy = new DebounceProxy(function() {
@@ -1109,13 +1294,20 @@
 			_t.debounceProxy.call();
 		});
 
-		_t.setValuePrivate = function(value) {
+		_t.setValuePrivate = function(value, itemState) {
+			if (_t.hasValue) {
+				_t.valueNode.innerHTML = value;
+			}
 			if (_t.locked) {
-				_t.reloadIcon(value);
+				_t.reloadIcon(itemState);
 				return;
 			}
-			_t.input.value = value;
+			_t.input.value = itemState;
 			_t.input.MaterialSlider.change();
+		};
+
+		_t.setValueColor = function(color) {
+			_t.valueNode.style.color = color;
 		};
 
 		var
@@ -1139,6 +1331,7 @@
 			unlockTimeout = setTimeout(function() {
 				_t.locked = false;
 			}, 300);
+			_t.debounceProxy.finish();
 		}
 
 		_t.input.addEventListener("touchstart", onChangeStart);
@@ -1156,12 +1349,17 @@
 			_t = this;
 
 		_t.target = parentNode.getAttribute("data-target");
+		_t.hasValue = _t.parentNode.getAttribute("data-has-value") === "true";
 		_t.container = parentNode.parentNode.querySelector(o.formValue);
 
 		_t.setValuePrivate = function(value) {
-			if (_t.container !== null) {
+			if (_t.hasValue) {
 				_t.container.innerHTML = value;
 			}
+		};
+
+		_t.setValueColor = function(color) {
+			_t.container.style.color = color;
 		};
 
 		parentNode.parentNode.addEventListener("click", function() {
@@ -1178,7 +1376,7 @@
 		});
 	}
 
-		function UI(root) {
+	function UI(root) {
 		/* const */
 		var
 			NavigationState = {
@@ -1198,11 +1396,26 @@
 		_t.loading = _t.root.querySelector(o.uiLoadingBar);
 		_t.layoutTitle = document.querySelector(o.layoutTitle);
 		_t.iconType = document.body.getAttribute(o.iconTypeAttribute);
+		_t.notification = document.querySelector(o.notify);
 
-		function setTitle(title) {
-			document.title = title;
-			_t.layoutTitle.innerHTML = title;
-		}
+		_t.setTitle = function(title, needsEscape) {
+			var
+				escapedText = title,
+				escapeTable = [
+					[ /&/g, "&amp;" ],
+					[ /</g, "&lt;"  ],
+					[ />/g, "&gt;"  ]
+				];
+
+			if (needsEscape) {
+				for (var i = 0; i < escapeTable.length; i++) {
+					escapedText = escapedText.replace(escapeTable[i][0], escapeTable[i][1]);
+				}
+			}
+
+			document.querySelector("title").innerHTML = escapedText;
+			_t.layoutTitle.innerHTML = escapedText;
+		};
 
 		function replaceContent(xmlResponse) {
 			var
@@ -1219,7 +1432,8 @@
 				}
 			});
 
-			setTitle(nodeArray[0].textContent);
+			// HTML entities are already escaped on server
+			_t.setTitle(nodeArray[0].textContent, false);
 
 			var
 				contentElement = document.querySelector(".page-content");
@@ -1308,10 +1522,14 @@
 			_t.newPage = page;
 
 			_t.showLoadingBar();
-			_t.destination = "/basicui/app?w=" + page + "&sitemap=" + smarthome.UI.sitemap;
+			_t.destination =
+				"/basicui/app?w=" + page +
+				"&sitemap=" + smarthome.UI.sitemap;
 
 			ajax({
-				url: _t.destination + "&__async=true",
+				url: _t.destination +
+					"&subscriptionId=" + smarthome.subscriptionId +
+					"&__async=true",
 				callback: _t.navigateCallback
 			});
 
@@ -1322,16 +1540,25 @@
 
 		_t.initControls = function() {
 			smarthome.dataModel = {};
+			smarthome.dataModelLegacy = {};
 
 			function appendControl(control) {
+				// dataModelLegacy keeps item → widgets binding for
+				// long-polling event listener
 				if (
-					(smarthome.dataModel[control.item] === undefined) ||
-					(smarthome.dataModel[control.item].widgets === undefined)
+					(smarthome.dataModelLegacy[control.item] === undefined) ||
+					(smarthome.dataModelLegacy[control.item].widgets === undefined)
 				) {
-					smarthome.dataModel[control.item] = { widgets: [] };
+					if (control.item !== undefined) {
+						smarthome.dataModelLegacy[control.item] = { widgets: [] };
+					}
 				}
 
-				smarthome.dataModel[control.item].widgets.push(control);
+				if (control.item !== undefined) {
+					smarthome.dataModelLegacy[control.item].widgets.push(control);
+				}
+
+				smarthome.dataModel[control.id] = control;
 			}
 
 			[].forEach.call(document.querySelectorAll(o.formControls), function(e) {
@@ -1357,10 +1584,10 @@
 					break;
 				case "chart":
 				case "image":
-					new ControlImage(e);
+					appendControl(new ControlImage(e, true));
 					break;
 				case "image-link":
-					new ControlImage(e);
+					appendControl(new ControlImage(e, false));
 				case "text-link":
 				case "group":
 					appendControl(new ControlLink(e));
@@ -1371,12 +1598,30 @@
 				case "colorpicker":
 					appendControl(new ControlColorpicker(e));
 					break;
+				case "video":
+				case "webview":
+				case "mapview":
+					appendControl(new Control(e));
+					break;
 				default:
 					break;
 				}
 				/*eslint no-fallthrough:0*/
 				e.addEventListener("control-change", controlChangeHandler);
 			});
+
+			[].forEach.call(document.querySelectorAll(o.form), function(e) {
+				appendControl(new Frame(e));
+			});
+		};
+
+		_t.showNotification = function(text) {
+			_t.notification.innerHTML = text;
+			_t.notification.classList.remove(o.notifyHidden);
+		};
+
+		_t.hideNotification = function() {
+			_t.notification.classList.add(o.notifyHidden);
 		};
 
 		historyStack.replace(_t.page, document.location.href);
@@ -1408,38 +1653,104 @@
 		this.resume = function() {
 			this.paused = false;
 		};
+
+		this.extractValueFromLabel = function(label) {
+			var
+				value = null;
+
+			if (
+				(typeof(label) === "string") &&
+				(label.indexOf("[") !== -1) &&
+				(label.indexOf("]") !== -1)
+			) {
+				var
+					pos = label.indexOf("[") + 1;
+
+				value = label.substr(
+					pos,
+					label.lastIndexOf("]") - pos
+				);
+			}
+
+			return value;
+		};
+
+		this.getTitleFromLabel = function(label) {
+			var
+				value = this.extractValueFromLabel(label),
+				title = null;
+
+			if (value  !== null) {
+				title = label.substr(0, label.indexOf("[")) + value;
+			}
+
+			return title;
+		};
 	}
 
-	function ChangeListenerEventsource() {
+	function ChangeListenerEventsource(subscribeLocation) {
 		AbstractChangeListener.call(this);
 
 		var
 			_t = this;
 
 		_t.navigate = function(){};
-		_t.source = new EventSource("/rest/events?topics=smarthome/items/*/state");
-		_t.source.addEventListener("message", function(payload) {
+		_t.source = new EventSource(subscribeLocation);
+
+		_t.source.addEventListener("event", function(payload) {
 			if (_t.paused) {
 				return;
 			}
 
 			var
 				data = JSON.parse(payload.data),
-				dataPayload = JSON.parse(data.payload),
-				value = dataPayload.value,
-				item = (function(topic) {
-					topic = topic.split("/");
-					return topic[topic.length - 2];
-				})(data.topic);
+				value,
+				title;
 
-			if (!(item in smarthome.dataModel)) {
+			if (!(data.widgetId in smarthome.dataModel) && (data.widgetId !== smarthome.UI.page)) {
 				return;
 			}
 
-			smarthome.dataModel[item].widgets.forEach(function(widget) {
-				widget.setValue(value);
-			});
+			value = _t.extractValueFromLabel(data.label);
+			if (value === null) {
+				value = data.item.state;
+			}
+			title = _t.getTitleFromLabel(data.label);
+
+			if ((data.widgetId === smarthome.UI.page) && (title !== null)) {
+				smarthome.UI.setTitle(title, true);
+			} else if (smarthome.dataModel[data.widgetId] !== undefined) {
+				var
+					widget = smarthome.dataModel[data.widgetId];
+
+				if (widget.visible !== data.visibility) {
+					smarthome.UI.layoutChangeProxy.push({
+						widget: widget,
+						visibility: data.visibility
+					});
+				} else {
+					widget.setValue(value, data.item.state);
+					if (data.label !== undefined) {
+						widget.setLabel(data.label);
+					}
+					if (data.labelcolor !== undefined) {
+						widget.setLabelColor(data.labelcolor);
+					} else {
+						widget.setLabelColor("");
+					}
+					if (data.valuecolor !== undefined) {
+						widget.setValueColor(data.valuecolor);
+					} else {
+						widget.setValueColor("");
+					}
+				}
+			}
 		});
+
+		_t.source.onerror = function() {
+			_t.source.close();
+			_t.connectionError();
+		};
 	}
 
 	function ChangeListenerLongpolling() {
@@ -1452,10 +1763,18 @@
 		_t.page = document.body.getAttribute("data-page-id");
 
 		function applyChanges(response) {
+			var
+				title;
+
 			try {
 				response = JSON.parse(response);
 			} catch (e) {
 				return;
+			}
+
+			title = _t.getTitleFromLabel(response.title);
+			if (title !== null) {
+				smarthome.UI.setTitle(title, true);
 			}
 
 			function walkWidgets(widgets) {
@@ -1466,13 +1785,36 @@
 
 					var
 						item = widget.item.name,
-						value = widget.item.state;
+						state = widget.item.state,
+						label = widget.label,
+						value = _t.extractValueFromLabel(widget.label),
+						labelcolor = widget.labelcolor,
+						valuecolor = widget.valuecolor;
 
-					smarthome.dataModel[item].widgets.forEach(function(w) {
-						if (value !== "NULL") {
-							w.setValue(value);
-						}
-					});
+					if (value === null) {
+						value = state;
+					}
+
+					if (smarthome.dataModelLegacy[item] !== undefined) {
+						smarthome.dataModelLegacy[item].widgets.forEach(function(w) {
+							if (state !== "NULL") {
+								w.setValue(value, state);
+							}
+							if (label !== undefined) {
+								w.setLabel(label);
+							}
+							if (labelcolor !== undefined) {
+								w.setLabelColor(labelcolor);
+							} else {
+								w.setLabelColor("");
+							}
+							if (valuecolor !== undefined) {
+								w.setValueColor(valuecolor);
+							} else {
+								w.setValueColor("");
+							}
+						});
+					}
 				});
 			}
 
@@ -1529,21 +1871,125 @@
 	}
 
 	function ChangeListener() {
-		if (featureSupport.eventSource) {
-			ChangeListenerEventsource.call(this);
-		} else {
-			ChangeListenerLongpolling.call(this);
+		var
+			_t = this;
+
+		_t.subscribeRequestURL = "/rest/sitemaps/events/subscribe";
+		_t.reconnectInterval = null;
+		_t.subscribeResponse = null;
+		_t.suppressErrorsState = false;
+
+		function initSubscription(address) {
+			if (featureSupport.eventSource) {
+				ChangeListenerEventsource.call(_t, address);
+			} else {
+				ChangeListenerLongpolling.call(_t);
+			}
 		}
+
+		function connectionRestoredNavigateCallback() {
+			// This will override _t.navigate back to
+			// its normal state
+			_t.startSubscriber(_t.subscribeResponse);
+			_t.subscribeResponse = null;
+		}
+
+		_t.connectionRestored = function(response) {
+			clearInterval(_t.reconnectInterval);
+
+			// Temporarily replace navigation callback
+			_t.navigate = connectionRestoredNavigateCallback;
+
+			// Once navigation is completed, this will be used
+			// to restart SSE subscription
+			_t.subscribeResponse = response;
+
+			smarthome.UI.hideNotification();
+			// Reload current page without affecting the history
+			smarthome.UI.navigate(smarthome.UI.page, false);
+		};
+
+		_t.connectionError = function() {
+			if (_t.suppressErrorsState) {
+				return;
+			}
+
+			var
+				notify = renderTemplate(o.notifyTemplateOffline, {});
+
+			smarthome.UI.showNotification(notify);
+
+			_t.reconnectInterval = setInterval(function() {
+				ajax({
+					url: _t.subscribeRequestURL,
+					type: "POST",
+					callback: _t.connectionRestored
+				});
+			}, 10000);
+		};
+
+		_t.suppressErrors = function() {
+			_t.suppressErrorsState = true;
+		};
+
+		_t.startSubscriber = function(response) {
+			var
+				responseJSON,
+				subscribeLocation,
+				subscribeLocationArray,
+				sitemap,
+				subscriptionId,
+				page;
+
+			try {
+				responseJSON = JSON.parse(response.responseText);
+			} catch (e) {
+				return;
+			}
+
+			if (responseJSON.status !== "CREATED") {
+				return;
+			}
+
+			try {
+				subscribeLocation = responseJSON.context.headers.Location[0];
+			} catch (e) {
+				return;
+			}
+
+			subscribeLocationArray = subscribeLocation.split("/");
+			subscriptionId = subscribeLocationArray[subscribeLocationArray.length - 1];
+
+			sitemap = document.body.getAttribute("data-sitemap");
+			page = document.body.getAttribute("data-page-id");
+
+			smarthome.subscriptionId = subscriptionId;
+
+			initSubscription(subscribeLocation +
+				"?sitemap=" + sitemap +
+				"&pageid=" + page);
+		};
+
+		ajax({
+			url: _t.subscribeRequestURL,
+			type: "POST",
+			callback: _t.startSubscriber
+		});
 	}
 
 	document.addEventListener("DOMContentLoaded", function() {
 		smarthome.UI = new UI(document);
+		smarthome.UI.layoutChangeProxy = new VisibilityChangeProxy(100, 50);
 		smarthome.UI.initControls();
 		smarthome.changeListener = new ChangeListener();
+
+		window.addEventListener("beforeunload", function() {
+			smarthome.changeListener.suppressErrors();
+		});
 	});
 })({
 	itemAttribute: "data-item",
-	idAttribute: "data-id",
+	idAttribute: "data-widget-id",
 	iconAttribute: "data-icon",
 	iconTypeAttribute: "data-icon-type",
 	controlButton: "button",
@@ -1551,11 +1997,16 @@
 	modal: ".mdl-modal",
 	modalContainer: ".mdl-modal__content",
 	selectionRows: ".mdl-form__selection-rows",
+	form: ".mdl-form",
+	formTitle: ".mdl-form__title",
+	formHidden: "mdl-form--hidden",
 	formControls: ".mdl-form__control",
+	formRowHidden: "mdl-form__row--hidden",
 	formValue: ".mdl-form__value",
 	formRadio: ".mdl-radio",
 	formRadioControl: ".mdl-radio__button",
 	formIcon: ".mdl-form__icon img",
+	formLabel: ".mdl-form__label",
 	uiLoadingBar: ".ui__loading",
 	layoutTitle: ".mdl-layout-title",
 	layoutHeader: ".mdl-layout__header",
@@ -1580,5 +2031,8 @@
 		background: ".colorpicker__background",
 		colorpicker: ".colorpicker",
 		button: ".colorpicker__buttons > button"
-	}
+	},
+	notify: ".mdl-notify__container",
+	notifyHidden: "mdl-notify--hidden",
+	notifyTemplateOffline: "template-offline-notify"
 });

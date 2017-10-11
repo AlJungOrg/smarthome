@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -9,16 +9,14 @@ package org.eclipse.smarthome.core.thing.xml.internal;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 
-import org.eclipse.smarthome.core.common.osgi.ServiceBinder.Bind;
-import org.eclipse.smarthome.core.common.osgi.ServiceBinder.Unbind;
-import org.eclipse.smarthome.core.i18n.I18nProvider;
+import org.eclipse.smarthome.core.i18n.TranslationProvider;
 import org.eclipse.smarthome.core.thing.UID;
 import org.eclipse.smarthome.core.thing.i18n.ThingTypeI18nUtil;
 import org.eclipse.smarthome.core.thing.type.ChannelGroupType;
@@ -29,12 +27,16 @@ import org.eclipse.smarthome.core.thing.type.ChannelTypeUID;
 import org.eclipse.smarthome.core.types.StateDescription;
 import org.eclipse.smarthome.core.types.StateOption;
 import org.osgi.framework.Bundle;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 
 /**
  * {@link XmlChannelTypeProvider} provides channel types from XML files.
  *
  * @author Dennis Nobel - Initial contribution
+ * @author Kai Kreuzer - fixed concurrency issues
  */
+@Component(immediate = true, property = { "esh.scope=core.xml" })
 public class XmlChannelTypeProvider implements ChannelTypeProvider {
 
     private class LocalizedChannelTypeKey {
@@ -94,19 +96,13 @@ public class XmlChannelTypeProvider implements ChannelTypeProvider {
 
     }
 
-    private Map<Bundle, List<ChannelGroupType>> bundleChannelGroupTypesMap;
+    private final Map<Bundle, List<ChannelGroupType>> bundleChannelGroupTypesMap = new ConcurrentHashMap<>();
+    private final Map<Bundle, List<ChannelType>> bundleChannelTypesMap = new ConcurrentHashMap<>();
 
-    private Map<Bundle, List<ChannelType>> bundleChannelTypesMap;
-
-    private Map<LocalizedChannelTypeKey, ChannelGroupType> localizedChannelGroupTypeCache = new HashMap<>();
-    private Map<LocalizedChannelTypeKey, ChannelType> localizedChannelTypeCache = new HashMap<>();
+    private final Map<LocalizedChannelTypeKey, ChannelGroupType> localizedChannelGroupTypeCache = new ConcurrentHashMap<>();
+    private final Map<LocalizedChannelTypeKey, ChannelType> localizedChannelTypeCache = new ConcurrentHashMap<>();
 
     private ThingTypeI18nUtil thingTypeI18nUtil;
-
-    public XmlChannelTypeProvider() {
-        this.bundleChannelTypesMap = new HashMap<>(10);
-        this.bundleChannelGroupTypesMap = new HashMap<>(10);
-    }
 
     public synchronized void addChannelGroupType(Bundle bundle, ChannelGroupType channelGroupType) {
         if (channelGroupType != null) {
@@ -227,13 +223,12 @@ public class XmlChannelTypeProvider implements ChannelTypeProvider {
         }
     }
 
-    @Bind
-    public void setI18nProvider(I18nProvider i18nProvider) {
+    @Reference
+    public void setTranslationProvider(TranslationProvider i18nProvider) {
         this.thingTypeI18nUtil = new ThingTypeI18nUtil(i18nProvider);
     }
 
-    @Unbind
-    public void unsetI18nProvider(I18nProvider i18nProvider) {
+    public void unsetTranslationProvider(TranslationProvider i18nProvider) {
         this.thingTypeI18nUtil = null;
     }
 
@@ -342,8 +337,8 @@ public class XmlChannelTypeProvider implements ChannelTypeProvider {
             StateDescription state = createLocalizedChannelState(bundle, channelType, channelTypeUID, locale);
 
             ChannelType localizedChannelType = new ChannelType(channelTypeUID, channelType.isAdvanced(),
-                    channelType.getItemType(), label, description, channelType.getCategory(), channelType.getTags(),
-                    state, channelType.getConfigDescriptionURI());
+                    channelType.getItemType(), channelType.getKind(), label, description, channelType.getCategory(),
+                    channelType.getTags(), state, channelType.getEvent(), channelType.getConfigDescriptionURI());
 
             localizedChannelTypeCache.put(localizedChannelTypeKey, localizedChannelType);
 

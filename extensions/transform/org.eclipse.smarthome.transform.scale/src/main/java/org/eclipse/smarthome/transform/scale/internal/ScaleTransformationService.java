@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -38,18 +38,16 @@ public class ScaleTransformationService extends AbstractFileTransformationServic
     private static final Pattern LIMITS_PATTERN = Pattern.compile("(\\[|\\])(.*)\\.\\.(.*)(\\[|\\])");
 
     /**
-     * <p>
-     * Transforms the input <code>source</code> by matching searching the range where it fits
-     * i.e. [min..max]=value or ]min..max]=value
-     * </p>
+     * Performs transformation of the input <code>source</code>
+     * 
+     * The method transforms the input <code>source</code> by matching searching
+     * the range where it fits i.e. [min..max]=value or ]min..max]=value
      *
      * @param properties
      *            the list of properties defining all the available ranges
      * @param source
      *            the input to transform
-     *
-     * @{inheritDoc
-     *
+     * 
      */
     @Override
     protected String internalTransform(Map<Range, String> data, String source) throws TransformationException {
@@ -71,9 +69,9 @@ public class ScaleTransformationService extends AbstractFileTransformationServic
 
     @Override
     protected Map<Range, String> internalLoadTransform(String filename) throws TransformationException {
-        try {
+        try (FileReader reader = new FileReader(filename)) {
             final Properties properties = new Properties();
-            properties.load(new FileReader(filename));
+            properties.load(reader);
             final Map<Range, String> data = new HashMap<>();
 
             for (Entry<Object, Object> f : properties.entrySet()) {
@@ -116,7 +114,7 @@ public class ScaleTransformationService extends AbstractFileTransformationServic
             }
             return data;
         } catch (final IOException ex) {
-            throw new TransformationException("An error occured while opening file.", ex);
+            throw new TransformationException("An error occurred while opening file.", ex);
         }
     }
 

@@ -9,6 +9,7 @@ package org.eclipse.smarthome.automation.core.internal.composite;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.eclipse.smarthome.automation.Action;
@@ -41,7 +42,7 @@ import org.eclipse.smarthome.automation.type.TriggerType;
  * @param <H> type of module handler. It can be {@link TriggerHandler}, {@link ConditionHandler} or
  *            {@link ActionHandler}
  */
-public class AbstractCompositeModuleHandler<M extends Module, MT extends ModuleType, H extends ModuleHandler>
+public abstract class AbstractCompositeModuleHandler<M extends Module, MT extends ModuleType, H extends ModuleHandler>
         implements ModuleHandler {
 
     protected LinkedHashMap<M, H> moduleHandlerMap;
@@ -71,7 +72,7 @@ public class AbstractCompositeModuleHandler<M extends Module, MT extends ModuleT
      */
     protected Map<String, Object> getCompositeContext(Map<String, ?> context) {
         Map<String, Object> result = new HashMap<String, Object>(context);
-        result.putAll(module.getConfiguration());
+        result.putAll(module.getConfiguration().getProperties());
         return result;
     }
 
@@ -88,10 +89,14 @@ public class AbstractCompositeModuleHandler<M extends Module, MT extends ModuleT
 
     @Override
     public void dispose() {
-        if (moduleHandlerMap != null) {
-            moduleHandlerMap.clear();
-            moduleHandlerMap = null;
+        List<M> children = getChildren();
+        for (M child : children) {
+            ModuleHandler childHandler = moduleHandlerMap.remove(child);
+            childHandler.dispose();
         }
+        moduleHandlerMap = null;
     }
+
+    protected abstract List<M> getChildren();
 
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -38,10 +38,9 @@ public class ExecUtil {
      * properly. In that cases another exec-method is to be used. To accomplish this please use the special delimiter '
      * <code>@@</code>'. If <code>commandLine</code> contains this delimiter it is split into a String[] array and the
      * special exec-method is used.
-     * </p>
+     * 
      * <p>
      * A possible {@link IOException} gets logged but no further processing is done.
-     * </p>
      *
      * @param commandLine
      *            the command line to execute
@@ -69,10 +68,9 @@ public class ExecUtil {
      * properly. In that cases another exec-method is to be used. To accomplish this please use the special delimiter '
      * <code>@@</code>'. If <code>commandLine</code> contains this delimiter it is split into a String[] array and the
      * special exec-method is used.
-     * </p>
+     * 
      * <p>
      * A possible {@link IOException} gets logged but no further processing is done.
-     * </p>
      *
      * @param commandLine
      *            the command line to execute
@@ -130,7 +128,7 @@ public class ExecUtil {
                 logger.debug("exit code '{}', result '{}'", exitCode, retval);
             }
         } catch (InterruptedException e) {
-            logger.warn("Timeout occured when executing commandLine '" + commandLine + "'", e);
+            logger.warn("Timeout occurred when executing commandLine '" + commandLine + "'", e);
         }
 
         return retval;

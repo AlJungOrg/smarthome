@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Eclipse SmartHome Script
 Bundle-Vendor: Eclipse.org/SmartHome
-Bundle-Version: 0.8.0.qualifier
+Bundle-Version: 0.9.0.b5
 Bundle-SymbolicName: org.eclipse.smarthome.model.script;singleton:=true
 Require-Bundle: org.eclipse.xtext;visibility:=reexport,
  org.eclipse.xtext.xbase;visibility:=reexport,
@@ -15,14 +15,15 @@ Require-Bundle: org.eclipse.xtext;visibility:=reexport,
  org.eclipse.emf.mwe2.launch;resolution:=optional,
  org.eclipse.xtext.generator;resolution:=optional,
  org.eclipse.xtext.xbase.lib,
- org.objectweb.asm;bundle-version="[5.0.1,6.0.0)";resolution:=optional,
+ org.objectweb.asm;resolution:=optional,
  org.eclipse.smarthome.model.lazygen;resolution:=optional
 Import-Package: com.google.common.base,
  com.google.common.collect,
- org.apache.commons.io;version="2.2.0",
+ org.apache.commons.io,
  org.apache.commons.lang,
  org.apache.commons.logging,
  org.apache.log4j,
+ org.eclipse.smarthome.core.audio,
  org.eclipse.smarthome.core.common.registry,
  org.eclipse.smarthome.core.events,
  org.eclipse.smarthome.core.items,
@@ -30,14 +31,18 @@ Import-Package: com.google.common.base,
  org.eclipse.smarthome.core.library.items,
  org.eclipse.smarthome.core.library.types,
  org.eclipse.smarthome.core.persistence,
+ org.eclipse.smarthome.core.thing,
  org.eclipse.smarthome.core.transform.actions,
  org.eclipse.smarthome.core.types,
+ org.eclipse.smarthome.core.voice,
+ org.eclipse.smarthome.core.voice.text,
  org.eclipse.smarthome.io.console,
  org.eclipse.smarthome.io.console.extensions,
  org.eclipse.smarthome.io.net.exec,
  org.eclipse.smarthome.io.net.http,
  org.eclipse.smarthome.model.core,
  org.eclipse.smarthome.model.persistence.extensions,
+ org.eclipse.smarthome.model.script.engine.action,
  org.eclipse.xtext.xbase.lib,
  org.joda.time,
  org.joda.time.base,
@@ -50,7 +55,7 @@ Import-Package: com.google.common.base,
  org.quartz.impl.matchers,
  org.quartz.utils,
  org.slf4j
-Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Service-Component: OSGI-INF/*.xml
 Export-Package: org.eclipse.smarthome.model.script,
  org.eclipse.smarthome.model.script.actions,
@@ -70,5 +75,5 @@ Export-Package: org.eclipse.smarthome.model.script,
  org.eclipse.smarthome.model.script.serializer,
  org.eclipse.smarthome.model.script.services,
  org.eclipse.smarthome.model.script.validation
-Bundle-Activator: org.eclipse.smarthome.model.script.internal.ScriptActivator
 Bundle-ClassPath: .
+Bundle-ActivationPolicy: lazy

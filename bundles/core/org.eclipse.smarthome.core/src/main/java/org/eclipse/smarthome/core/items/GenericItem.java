@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -17,7 +17,9 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.ExecutorService;
 
+import org.eclipse.smarthome.core.common.ThreadPoolManager;
 import org.eclipse.smarthome.core.events.EventPublisher;
 import org.eclipse.smarthome.core.items.events.ItemEventFactory;
 import org.eclipse.smarthome.core.types.Command;
@@ -26,6 +28,8 @@ import org.eclipse.smarthome.core.types.State;
 import org.eclipse.smarthome.core.types.StateDescription;
 import org.eclipse.smarthome.core.types.StateDescriptionProvider;
 import org.eclipse.smarthome.core.types.UnDefType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
@@ -42,6 +46,10 @@ import com.google.common.collect.ImmutableSet;
  *
  */
 abstract public class GenericItem implements ActiveItem {
+
+    private final Logger logger = LoggerFactory.getLogger(GenericItem.class);
+
+    private static final String ITEM_THREADPOOLNAME = "items";
 
     protected EventPublisher eventPublisher;
 
@@ -69,52 +77,26 @@ abstract public class GenericItem implements ActiveItem {
         this.type = type;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public State getState() {
         return state;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public State getStateAs(Class<? extends State> typeClass) {
-        if (typeClass != null && typeClass.isInstance(state)) {
-            return state;
-        } else {
-            return null;
-        }
+        return state.as(typeClass);
     }
 
-    public void initialize() {
-    }
-
-    public void dispose() {
-        this.eventPublisher = null;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public String getName() {
         return name;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public String getType() {
         return type;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public List<String> getGroupNames() {
         return ImmutableList.copyOf(groupNames);
@@ -184,12 +166,27 @@ abstract public class GenericItem implements ActiveItem {
     }
 
     /**
-     * Sets new state, notifies listeners and sends events.
+     * Set a new state.
+     *
+     * Subclasses may override this method in order to do necessary conversions upfront. Afterwards,
+     * {@link #applyState(State)} should be called by classes overriding this method.
      *
      * @param state
      *            new state of this item
      */
     public void setState(State state) {
+        applyState(state);
+    }
+
+    /**
+     * Sets new state, notifies listeners and sends events.
+     *
+     * Classes overriding the {@link #setState(State)} method should call this method in order to actually set the
+     * state, inform listeners and send the event.
+     *
+     * @param state new state of this item
+     */
+    protected final void applyState(State state) {
         State oldState = this.state;
         this.state = state;
         notifyListeners(oldState, state);
@@ -208,23 +205,29 @@ abstract public class GenericItem implements ActiveItem {
         internalSend(command);
     }
 
-    protected void notifyListeners(State oldState, State newState) {
+    protected void notifyListeners(final State oldState, final State newState) {
         // if nothing has changed, we send update notifications
         Set<StateChangeListener> clonedListeners = null;
         clonedListeners = new CopyOnWriteArraySet<StateChangeListener>(listeners);
-        for (StateChangeListener listener : clonedListeners) {
-            listener.stateUpdated(this, newState);
-        }
-        if (newState != null && !newState.equals(oldState)) {
-            for (StateChangeListener listener : clonedListeners) {
-                listener.stateChanged(this, oldState, newState);
-            }
+        ExecutorService pool = ThreadPoolManager.getPool(ITEM_THREADPOOLNAME);
+        for (final StateChangeListener listener : clonedListeners) {
+            pool.execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        listener.stateUpdated(GenericItem.this, newState);
+                        if (newState != null && !newState.equals(oldState)) {
+                            listener.stateChanged(GenericItem.this, oldState, newState);
+                        }
+                    } catch (Exception e) {
+                        logger.warn("failed notifying listener '{}' about state update of item {}: {}",
+                                new Object[] { listener.toString(), GenericItem.this.getName(), e.getMessage() }, e);
+                    }
+                }
+            });
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
@@ -402,6 +405,21 @@ abstract public class GenericItem implements ActiveItem {
             }
         }
         return null;
+    }
+
+    /**
+     * Tests if state is within acceptedDataTypes list or a subclass of one of them
+     *
+     * @param acceptedDataTypes list of datatypes this items accepts as a state
+     * @param state to be tested
+     * @return true if state is an acceptedDataType or subclass thereof
+     */
+    public boolean isAcceptedState(List<Class<? extends State>> acceptedDataTypes, State state) {
+        if (acceptedDataTypes.stream().map(clazz -> clazz.isAssignableFrom(state.getClass()))
+                .filter(found -> found == true).findAny().isPresent()) {
+            return true;
+        }
+        return false;
     }
 
 }

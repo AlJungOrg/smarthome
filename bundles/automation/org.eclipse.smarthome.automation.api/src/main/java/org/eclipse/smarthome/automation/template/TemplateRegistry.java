@@ -9,7 +9,8 @@ package org.eclipse.smarthome.automation.template;
 
 import java.util.Collection;
 import java.util.Locale;
-import java.util.Set;
+
+import org.eclipse.smarthome.core.common.registry.Registry;
 
 /**
  * This interface provides functionality to get available {@link Template}s. The {@link Template} can be returned
@@ -20,8 +21,9 @@ import java.util.Set;
  * @author Yordan Mihaylov - Initial Contribution
  * @author Ana Dimova - Initial Contribution
  * @author Vasil Ilchev - Initial Contribution
+ * @param <T>
  */
-public interface TemplateRegistry {
+public interface TemplateRegistry<E extends Template> extends Registry<E, String> {
 
     /**
      * This method is used to get template of specified by type.
@@ -30,16 +32,17 @@ public interface TemplateRegistry {
      * @param locale user locale
      * @return template instance or null.
      */
-    public <T extends Template> T get(String uid);
+    public E get(String uid, Locale locale);
 
     /**
-     * This method is used to get template of specified by type.
+     * This method is used for getting the templates filtered by tag.
      *
-     * @param uid the an unique id in scope of registered templates
-     * @param locale user locale
-     * @return template instance or null.
+     * * @param tag specifies the filter for getting the templates, if it is <code>null</code> then returns all
+     * templates.
+     *
+     * @return the templates, which correspond to the specified filter.
      */
-    public <T extends Template> T get(String uid, Locale locale);
+    public Collection<E> getByTag(String tag);
 
     /**
      * This method is used for getting the templates filtered by tag.
@@ -47,15 +50,7 @@ public interface TemplateRegistry {
      * @param tag specifies the filter for getting the templates, if it is <code>null</code> then returns all templates.
      * @return the templates, which correspond to the specified filter.
      */
-    public <T extends Template> Collection<T> getByTag(String tag);
-
-    /**
-     * This method is used for getting the templates filtered by tag.
-     *
-     * @param tag specifies the filter for getting the templates, if it is <code>null</code> then returns all templates.
-     * @return the templates, which correspond to the specified filter.
-     */
-    public <T extends Template> Collection<T> getByTag(String tag, Locale locale);
+    public Collection<E> getByTag(String tag, Locale locale);
 
     /**
      * This method is used for getting the templates filtered by tags.
@@ -64,7 +59,7 @@ public interface TemplateRegistry {
      *            returns all templates.
      * @return collection of templates, which correspond to the filter.
      */
-    public <T extends Template> Collection<T> getByTags(Set<String> tags);
+    public Collection<E> getByTags(String... tags);
 
     /**
      * This method is used for getting the templates filtered by tags.
@@ -73,22 +68,16 @@ public interface TemplateRegistry {
      *            returns all templates.
      * @return the templates, which correspond to the the filter.
      */
-    public <T extends Template> Collection<T> getByTags(Set<String> tags, Locale locale);
+    public Collection<E> getByTags(Locale locale, String... tags);
 
     /**
      * This method is used for getting all templates, localized by specified locale,
      *
-     * @param moduleType the class of module which is looking for.
+     * @param locale - specifies the localization for the returned elements.
+     *            If a localization resources for this locale are not available the elements are returned with the
+     *            default localization.
      * @return collection of templates, corresponding to specified type
      */
-    public <T extends Template> Collection<T> getAll();
-
-    /**
-     * This method is used for getting all templates, localized by specified locale,
-     *
-     * @param moduleType the class of module which is looking for.
-     * @return collection of templates, corresponding to specified type
-     */
-    public <T extends Template> Collection<T> getAll(Locale locale);
+    public Collection<E> getAll(Locale locale);
 
 }

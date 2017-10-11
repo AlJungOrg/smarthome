@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,15 +7,16 @@
  */
 package org.eclipse.smarthome.core.library.types;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 import java.text.DecimalFormatSymbols;
 
+import org.eclipse.smarthome.core.types.UnDefType;
 import org.junit.Test;
 
 /**
  * @author Thomas.Eichstaedt-Engelen
+ * @author Stefan Triller - more tests for type conversions
  */
 public class DecimalTypeTest {
 
@@ -82,5 +83,44 @@ public class DecimalTypeTest {
         // An integer value with float conversion. This has to work.
         dt = new DecimalType("11.0");
         assertEquals("11" + sep + "0", dt.format("%.1f")); // "11.0"
+    }
+
+    @Test
+    public void testConversionToOnOffType() {
+        assertEquals(OnOffType.ON, new DecimalType("100.0").as(OnOffType.class));
+        assertEquals(OnOffType.ON, new DecimalType("1.0").as(OnOffType.class));
+        assertEquals(OnOffType.OFF, new DecimalType("0.0").as(OnOffType.class));
+    }
+
+    @Test
+    public void testConversionToOpenCloseType() {
+        assertEquals(OpenClosedType.OPEN, new DecimalType("1.0").as(OpenClosedType.class));
+        assertEquals(OpenClosedType.CLOSED, new DecimalType("0.0").as(OpenClosedType.class));
+        assertEquals(UnDefType.UNDEF, new DecimalType("0.5").as(OpenClosedType.class));
+    }
+
+    @Test
+    public void testConversionToUpDownType() {
+        assertEquals(UpDownType.UP, new DecimalType("0.0").as(UpDownType.class));
+        assertEquals(UpDownType.DOWN, new DecimalType("1.0").as(UpDownType.class));
+        assertEquals(UnDefType.UNDEF, new DecimalType("0.5").as(OpenClosedType.class));
+    }
+
+    @Test
+    public void testConversionToHSBType() {
+        assertEquals(new HSBType("0,0,0"), new DecimalType("0.0").as(HSBType.class));
+        assertEquals(new HSBType("0,0,100"), new DecimalType("1.0").as(HSBType.class));
+        assertEquals(new HSBType("0,0,50"), new DecimalType("0.5").as(HSBType.class));
+    }
+
+    @Test
+    public void testConversionToPercentType() {
+        assertEquals(new PercentType(70), new DecimalType("0.7").as(PercentType.class));
+    }
+
+    @Test
+    public void testConversionToPointType() {
+        // should not be possible => null
+        assertEquals(null, new DecimalType("0.23").as(PointType.class));
     }
 }

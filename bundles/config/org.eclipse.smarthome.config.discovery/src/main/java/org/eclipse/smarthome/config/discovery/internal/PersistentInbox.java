@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ScheduledFuture;
@@ -26,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 import org.eclipse.smarthome.config.core.ConfigDescription;
 import org.eclipse.smarthome.config.core.ConfigDescriptionParameter;
 import org.eclipse.smarthome.config.core.ConfigDescriptionRegistry;
+import org.eclipse.smarthome.config.core.ConfigUtil;
 import org.eclipse.smarthome.config.core.Configuration;
 import org.eclipse.smarthome.config.discovery.DiscoveryListener;
 import org.eclipse.smarthome.config.discovery.DiscoveryResult;
@@ -40,6 +42,7 @@ import org.eclipse.smarthome.core.common.ThreadPoolManager;
 import org.eclipse.smarthome.core.events.EventPublisher;
 import org.eclipse.smarthome.core.storage.Storage;
 import org.eclipse.smarthome.core.storage.StorageService;
+import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.ManagedThingProvider;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingRegistry;
@@ -125,6 +128,8 @@ public final class PersistentInbox implements Inbox, DiscoveryListener, ThingReg
 
     private Storage<DiscoveryResult> discoveryResultStorage;
 
+    private Map<DiscoveryResult, Class<?>> resultDiscovererMap = new ConcurrentHashMap<>();
+
     private ScheduledFuture<?> timeToLiveChecker;
 
     private EventPublisher eventPublisher;
@@ -193,7 +198,8 @@ public final class PersistentInbox implements Inbox, DiscoveryListener, ThingReg
                 logger.debug("Discovery result with thing '{}' not added as inbox entry."
                         + " It is already present as thing in the ThingRegistry.", thingUID);
 
-                boolean updated = synchronizeConfiguration(result.getProperties(), thing.getConfiguration());
+                boolean updated = synchronizeConfiguration(result.getThingTypeUID(), result.getProperties(),
+                        thing.getConfiguration());
 
                 if (updated) {
                     logger.debug("The configuration for thing '{}' is updated...", thingUID);
@@ -205,10 +211,13 @@ public final class PersistentInbox implements Inbox, DiscoveryListener, ThingReg
         return false;
     }
 
-    private boolean synchronizeConfiguration(Map<String, Object> properties, Configuration config) {
+    private boolean synchronizeConfiguration(ThingTypeUID thingTypeUID, Map<String, Object> properties,
+            Configuration config) {
         boolean configUpdated = false;
 
         final Set<Map.Entry<String, Object>> propertySet = properties.entrySet();
+        final ThingType thingType = thingTypeRegistry.getThingType(thingTypeUID);
+        final List<ConfigDescriptionParameter> configDescParams = getConfigDescParams(thingType);
 
         for (Map.Entry<String, Object> propertyEntry : propertySet) {
             final String propertyKey = propertyEntry.getKey();
@@ -219,8 +228,12 @@ public final class PersistentInbox implements Inbox, DiscoveryListener, ThingReg
                 continue;
             }
 
+            // Normalize first
+            ConfigDescriptionParameter configDescParam = getConfigDescriptionParam(configDescParams, propertyKey);
+            Object normalizedValue = ConfigUtil.normalizeType(propertyValue, configDescParam);
+
             // If the value is equal to the one of the configuration, there is nothing to do.
-            if (Objects.equals(propertyValue, config.get(propertyKey))) {
+            if (Objects.equals(normalizedValue, config.get(propertyKey))) {
                 continue;
             }
 
@@ -228,11 +241,21 @@ public final class PersistentInbox implements Inbox, DiscoveryListener, ThingReg
             // - the values differ
 
             // update value
-            config.put(propertyKey, propertyValue);
+            config.put(propertyKey, normalizedValue);
             configUpdated = true;
         }
 
         return configUpdated;
+    }
+
+    private ConfigDescriptionParameter getConfigDescriptionParam(List<ConfigDescriptionParameter> configDescParams,
+            String paramName) {
+        for (ConfigDescriptionParameter configDescriptionParameter : configDescParams) {
+            if (configDescriptionParameter.getName().equals(paramName)) {
+                return configDescriptionParameter;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -268,6 +291,7 @@ public final class PersistentInbox implements Inbox, DiscoveryListener, ThingReg
                 if (!isInRegistry(thingUID)) {
                     removeResultsForBridge(thingUID);
                 }
+                resultDiscovererMap.remove(discoveryResult);
                 this.discoveryResultStorage.remove(thingUID.toString());
                 notifyListeners(discoveryResult, EventType.removed);
                 return true;
@@ -285,7 +309,9 @@ public final class PersistentInbox implements Inbox, DiscoveryListener, ThingReg
 
     @Override
     public void thingDiscovered(DiscoveryService source, DiscoveryResult result) {
-        add(result);
+        if (add(result)) {
+            resultDiscovererMap.put(result, source.getClass());
+        }
     }
 
     @Override
@@ -298,8 +324,9 @@ public final class PersistentInbox implements Inbox, DiscoveryListener, ThingReg
             Collection<ThingTypeUID> thingTypeUIDs) {
         HashSet<ThingUID> removedThings = new HashSet<>();
         for (DiscoveryResult discoveryResult : getAll()) {
-            if (thingTypeUIDs.contains(discoveryResult.getThingTypeUID())
-                    && discoveryResult.getTimestamp() < timestamp) {
+            Class<?> discoverer = resultDiscovererMap.get(discoveryResult);
+            if (thingTypeUIDs.contains(discoveryResult.getThingTypeUID()) && discoveryResult.getTimestamp() < timestamp
+                    && (discoverer == null || source.getClass() == discoverer)) {
                 ThingUID thingUID = discoveryResult.getThingUID();
                 removedThings.add(thingUID);
                 remove(thingUID);
@@ -319,7 +346,9 @@ public final class PersistentInbox implements Inbox, DiscoveryListener, ThingReg
 
     @Override
     public void removed(Thing thing) {
-        // nothing to do
+        if (thing instanceof Bridge) {
+            removeResultsForBridge(thing.getUID());
+        }
     }
 
     @Override
@@ -475,30 +504,38 @@ public final class PersistentInbox implements Inbox, DiscoveryListener, ThingReg
      */
     private void getPropsAndConfigParams(final DiscoveryResult discoveryResult, final Map<String, String> props,
             final Map<String, Object> configParams) {
-        final Set<String> paramNames = getConfigDescParamNames(discoveryResult);
+        final List<ConfigDescriptionParameter> configDescParams = getConfigDescParams(discoveryResult);
+        final Set<String> paramNames = getConfigDescParamNames(configDescParams);
         final Map<String, Object> resultProps = discoveryResult.getProperties();
         for (String resultKey : resultProps.keySet()) {
             if (paramNames.contains(resultKey)) {
-                configParams.put(resultKey, resultProps.get(resultKey));
+                ConfigDescriptionParameter param = getConfigDescriptionParam(configDescParams, resultKey);
+                Object normalizedValue = ConfigUtil.normalizeType(resultProps.get(resultKey), param);
+                configParams.put(resultKey, normalizedValue);
             } else {
                 props.put(resultKey, String.valueOf(resultProps.get(resultKey)));
             }
         }
     }
 
-    private Set<String> getConfigDescParamNames(DiscoveryResult discoveryResult) {
-        List<ConfigDescriptionParameter> confDescParams = getConfigDescParams(discoveryResult);
+    private Set<String> getConfigDescParamNames(List<ConfigDescriptionParameter> configDescParams) {
         Set<String> paramNames = new HashSet<>();
-        for (ConfigDescriptionParameter param : confDescParams) {
-            paramNames.add(param.getName());
+        if (configDescParams != null) {
+            for (ConfigDescriptionParameter param : configDescParams) {
+                paramNames.add(param.getName());
+            }
         }
         return paramNames;
     }
 
     private List<ConfigDescriptionParameter> getConfigDescParams(DiscoveryResult discoveryResult) {
-        ThingType type = thingTypeRegistry.getThingType(discoveryResult.getThingTypeUID());
-        if (type != null && type.hasConfigDescriptionURI()) {
-            URI descURI = type.getConfigDescriptionURI();
+        ThingType thingType = thingTypeRegistry.getThingType(discoveryResult.getThingTypeUID());
+        return getConfigDescParams(thingType);
+    }
+
+    private List<ConfigDescriptionParameter> getConfigDescParams(ThingType thingType) {
+        if (thingType != null && thingType.getConfigDescriptionURI() != null) {
+            URI descURI = thingType.getConfigDescriptionURI();
             ConfigDescription desc = configDescRegistry.getConfigDescription(descURI);
             if (desc != null) {
                 return desc.getParameters();
@@ -581,7 +618,7 @@ public final class PersistentInbox implements Inbox, DiscoveryListener, ThingReg
     }
 
     protected void unsetThingTypeRegistry(ThingTypeRegistry thingTypeRegistry) {
-        thingTypeRegistry = null;
+        this.thingTypeRegistry = null;
     }
 
     protected void setConfigDescriptionRegistry(ConfigDescriptionRegistry configDescriptionRegistry) {
@@ -589,7 +626,7 @@ public final class PersistentInbox implements Inbox, DiscoveryListener, ThingReg
     }
 
     protected void unsetConfigDescriptionRegistry(ConfigDescriptionRegistry configDescriptionRegistry) {
-        configDescRegistry = null;
+        this.configDescRegistry = null;
     }
 
     protected void addThingHandlerFactory(ThingHandlerFactory thingHandlerFactory) {

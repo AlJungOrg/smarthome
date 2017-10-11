@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -28,7 +28,6 @@ import com.google.common.collect.ImmutableList;
  * It provides the possibility to transform the element into another java class, that can be persisted. This is needed,
  * if the original element class is not directly persistable. If the element type can be persisted directly the
  * {@link DefaultAbstractManagedProvider} can be used as base class.
- * </p>
  *
  * @author Dennis Nobel - Initial contribution
  *

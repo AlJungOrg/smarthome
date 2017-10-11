@@ -7,11 +7,15 @@
  */
 package org.eclipse.smarthome.automation.rest.internal;
 
+import static org.eclipse.smarthome.automation.RulePredicates.*;
+
 import java.io.IOException;
 import java.net.URLEncoder;
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -21,6 +25,7 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -33,8 +38,19 @@ import org.eclipse.smarthome.automation.Module;
 import org.eclipse.smarthome.automation.Rule;
 import org.eclipse.smarthome.automation.RuleRegistry;
 import org.eclipse.smarthome.automation.Trigger;
+import org.eclipse.smarthome.automation.dto.ActionDTO;
+import org.eclipse.smarthome.automation.dto.ActionDTOMapper;
+import org.eclipse.smarthome.automation.dto.ConditionDTO;
+import org.eclipse.smarthome.automation.dto.ConditionDTOMapper;
+import org.eclipse.smarthome.automation.dto.ModuleDTO;
+import org.eclipse.smarthome.automation.dto.RuleDTO;
+import org.eclipse.smarthome.automation.dto.RuleDTOMapper;
+import org.eclipse.smarthome.automation.dto.TriggerDTO;
+import org.eclipse.smarthome.automation.dto.TriggerDTOMapper;
 import org.eclipse.smarthome.automation.rest.internal.dto.EnrichedRuleDTO;
+import org.eclipse.smarthome.automation.rest.internal.dto.EnrichedRuleDTOMapper;
 import org.eclipse.smarthome.config.core.ConfigUtil;
+import org.eclipse.smarthome.config.core.Configuration;
 import org.eclipse.smarthome.io.rest.JSONResponse;
 import org.eclipse.smarthome.io.rest.RESTResource;
 import org.slf4j.Logger;
@@ -51,6 +67,7 @@ import io.swagger.annotations.ResponseHeader;
  * This class acts as a REST resource for rules and is registered with the Jersey servlet.
  *
  * @author Kai Kreuzer - Initial contribution
+ * @author Markus Rathgeb - Use DTOs
  */
 @Path("rules")
 @Api("rules")
@@ -73,38 +90,44 @@ public class RuleResource implements RESTResource {
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(value = "Get all available rules.", response = EnrichedRuleDTO.class, responseContainer = "Collection")
-    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK") })
-    public Response getAll() {
-        Collection<EnrichedRuleDTO> rules = enrich(ruleRegistry.getAll());
-        return Response.ok(rules).build();
-    }
+    @ApiOperation(value = "Get available rules, optionally filtered by tags and/or prefix.", response = EnrichedRuleDTO.class, responseContainer = "Collection")
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "OK", response = EnrichedRuleDTO.class, responseContainer = "Collection") })
+    public Response get(@QueryParam("prefix") final String prefix, @QueryParam("tags") final List<String> tags) {
+        // match all
+        Predicate<Rule> p = r -> true;
 
-    private Collection<EnrichedRuleDTO> enrich(Collection<Rule> rules) {
-        Collection<EnrichedRuleDTO> enrichedRules = new ArrayList<EnrichedRuleDTO>(rules.size());
-        for (Rule rule : rules) {
-            enrichedRules.add(enrich(rule));
+        // prefix parameter has been used
+        if (null != prefix) {
+            // works also for null prefix
+            // (empty prefix used if searching for rules without prefix)
+            p = p.and(hasPrefix(prefix));
         }
-        return enrichedRules;
-    }
 
-    private EnrichedRuleDTO enrich(Rule rule) {
-        EnrichedRuleDTO enrichedRule = new EnrichedRuleDTO(rule);
-        enrichedRule.enabled = ruleRegistry.isEnabled(rule.getUID());
-        enrichedRule.status = ruleRegistry.getStatus(rule.getUID());
-        return enrichedRule;
+        // tag parameter has been used
+        if (null != tags) {
+            // works also for empty tag list
+            // (empty tags list used if searching for rules without _any_ tags)
+            p = p.and(hasAllTags(tags));
+        }
+
+        final Collection<EnrichedRuleDTO> rules = ruleRegistry.stream().filter(p) // filter according to Predicates
+                .map(rule -> EnrichedRuleDTOMapper.map(rule, ruleRegistry)) // map matching rules
+                .collect(Collectors.toList());
+
+        return Response.ok(rules).build();
     }
 
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @ApiOperation(value = "Creates a rule.")
     @ApiResponses(value = {
-            @ApiResponse(code = 201, message = "Created", responseHeaders = @ResponseHeader(name = "Location", description = "Newly created Rule", response = String.class) ),
+            @ApiResponse(code = 201, message = "Created", responseHeaders = @ResponseHeader(name = "Location", description = "Newly created Rule", response = String.class)),
             @ApiResponse(code = 409, message = "Creation of the rule is refused. Rule with the same UID already exists."),
             @ApiResponse(code = 400, message = "Creation of the rule is refused. Missing required parameter.") })
-    public Response create(@ApiParam(value = "rule data", required = true) Rule rule) throws IOException {
+    public Response create(@ApiParam(value = "rule data", required = true) RuleDTO rule) throws IOException {
         try {
-            Rule newRule = ruleRegistry.add(rule);
+            final Rule newRule = ruleRegistry.add(RuleDTOMapper.map(rule));
             return Response.status(Status.CREATED)
                     .header("Location", "rules/" + URLEncoder.encode(newRule.getUID(), "UTF-8")).build();
 
@@ -123,13 +146,13 @@ public class RuleResource implements RESTResource {
     @GET
     @Path("/{ruleUID}")
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(value = "Gets the rule corresponding to the given UID.", response = Rule.class)
-    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
+    @ApiOperation(value = "Gets the rule corresponding to the given UID.", response = EnrichedRuleDTO.class)
+    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK", response = EnrichedRuleDTO.class),
             @ApiResponse(code = 404, message = "Rule not found") })
     public Response getByUID(@PathParam("ruleUID") @ApiParam(value = "ruleUID", required = true) String ruleUID) {
         Rule rule = ruleRegistry.get(ruleUID);
         if (rule != null) {
-            return Response.ok(enrich(rule)).build();
+            return Response.ok(EnrichedRuleDTOMapper.map(rule, ruleRegistry)).build();
         } else {
             return Response.status(Status.NOT_FOUND).build();
         }
@@ -139,7 +162,7 @@ public class RuleResource implements RESTResource {
     @Path("/{ruleUID}")
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(value = "Removes an existing rule corresponding to the given UID.")
-    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
+    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK", response = String.class),
             @ApiResponse(code = 404, message = "Rule corresponding to the given UID does not found.") })
     public Response remove(@PathParam("ruleUID") @ApiParam(value = "ruleUID", required = true) String ruleUID) {
         Rule removedRule = ruleRegistry.remove(ruleUID);
@@ -158,8 +181,9 @@ public class RuleResource implements RESTResource {
     @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
             @ApiResponse(code = 404, message = "Rule corresponding to the given UID does not found.") })
     public Response update(@PathParam("ruleUID") @ApiParam(value = "ruleUID", required = true) String ruleUID,
-            @ApiParam(value = "rule data", required = true) Rule rule) throws IOException {
-        Rule oldRule = ruleRegistry.update(rule);
+            @ApiParam(value = "rule data", required = true) RuleDTO rule) throws IOException {
+        rule.uid = ruleUID;
+        final Rule oldRule = ruleRegistry.update(RuleDTOMapper.map(rule));
         if (oldRule == null) {
             logger.info("Received HTTP PUT request for update at '{}' for the unknown rule '{}'.", uriInfo.getPath(),
                     ruleUID);
@@ -171,9 +195,9 @@ public class RuleResource implements RESTResource {
 
     @GET
     @Path("/{ruleUID}/config")
-    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(value = "Gets the rule configuration values.")
-    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
+    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK", response = String.class),
             @ApiResponse(code = 404, message = "Rule corresponding to the given UID does not found.") })
     public Response getConfiguration(@PathParam("ruleUID") @ApiParam(value = "ruleUID", required = true) String ruleUID)
             throws IOException {
@@ -184,7 +208,7 @@ public class RuleResource implements RESTResource {
                     ruleUID);
             return Response.status(Status.NOT_FOUND).build();
         } else {
-            return Response.ok(rule.getConfiguration()).build();
+            return Response.ok(rule.getConfiguration().getProperties()).build();
         }
     }
 
@@ -204,7 +228,7 @@ public class RuleResource implements RESTResource {
                     uriInfo.getPath(), ruleUID);
             return Response.status(Status.NOT_FOUND).build();
         } else {
-            rule.setConfiguration(config);
+            rule.setConfiguration(new Configuration(config));
             ruleRegistry.update(rule);
             return Response.ok().build();
         }
@@ -225,7 +249,26 @@ public class RuleResource implements RESTResource {
             return Response.status(Status.NOT_FOUND).build();
         } else {
             ruleRegistry.setEnabled(ruleUID, !"false".equalsIgnoreCase(enabled));
-            ruleRegistry.update(rule);
+            // ruleRegistry.update(rule);
+            return Response.ok().build();
+        }
+    }
+
+    @POST
+    @Path("/{ruleUID}/runnow")
+    @Consumes(MediaType.TEXT_PLAIN)
+    @ApiOperation(value = "Executes actions of the rule.")
+    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
+            @ApiResponse(code = 404, message = "Rule corresponding to the given UID does not found.") })
+    public Response runNow(@PathParam("ruleUID") @ApiParam(value = "ruleUID", required = true) String ruleUID)
+            throws IOException {
+        Rule rule = ruleRegistry.get(ruleUID);
+        if (rule == null) {
+            logger.info("Received HTTP PUT request for update config at '{}' for the unknown rule '{}'.",
+                    uriInfo.getPath(), ruleUID);
+            return Response.status(Status.NOT_FOUND).build();
+        } else {
+            ruleRegistry.runNow(ruleUID);
             return Response.ok().build();
         }
     }
@@ -233,13 +276,14 @@ public class RuleResource implements RESTResource {
     @GET
     @Path("/{ruleUID}/triggers")
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(value = "Gets the rule triggers.", response = Trigger.class, responseContainer = "List")
-    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
+    @ApiOperation(value = "Gets the rule triggers.", response = TriggerDTO.class, responseContainer = "List")
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "OK", response = TriggerDTO.class, responseContainer = "List"),
             @ApiResponse(code = 404, message = "Rule corresponding to the given UID does not found.") })
     public Response getTriggers(@PathParam("ruleUID") @ApiParam(value = "ruleUID", required = true) String ruleUID) {
         Rule rule = ruleRegistry.get(ruleUID);
         if (rule != null) {
-            return Response.ok(rule.getTriggers()).build();
+            return Response.ok(TriggerDTOMapper.map(rule.getTriggers())).build();
         } else {
             return Response.status(Status.NOT_FOUND).build();
         }
@@ -248,13 +292,14 @@ public class RuleResource implements RESTResource {
     @GET
     @Path("/{ruleUID}/conditions")
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(value = "Gets the rule conditions.", response = Condition.class, responseContainer = "List")
-    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
+    @ApiOperation(value = "Gets the rule conditions.", response = ConditionDTO.class, responseContainer = "List")
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "OK", response = ConditionDTO.class, responseContainer = "List"),
             @ApiResponse(code = 404, message = "Rule corresponding to the given UID does not found.") })
     public Response getConditions(@PathParam("ruleUID") @ApiParam(value = "ruleUID", required = true) String ruleUID) {
         Rule rule = ruleRegistry.get(ruleUID);
         if (rule != null) {
-            return Response.ok(rule.getConditions()).build();
+            return Response.ok(ConditionDTOMapper.map(rule.getConditions())).build();
         } else {
             return Response.status(Status.NOT_FOUND).build();
         }
@@ -263,13 +308,14 @@ public class RuleResource implements RESTResource {
     @GET
     @Path("/{ruleUID}/actions")
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(value = "Gets the rule actions.", response = Action.class, responseContainer = "List")
-    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
+    @ApiOperation(value = "Gets the rule actions.", response = ActionDTO.class, responseContainer = "List")
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "OK", response = ActionDTO.class, responseContainer = "List"),
             @ApiResponse(code = 404, message = "Rule corresponding to the given UID does not found.") })
     public Response getActions(@PathParam("ruleUID") @ApiParam(value = "ruleUID", required = true) String ruleUID) {
         Rule rule = ruleRegistry.get(ruleUID);
         if (rule != null) {
-            return Response.ok(rule.getActions()).build();
+            return Response.ok(ActionDTOMapper.map(rule.getActions())).build();
         } else {
             return Response.status(Status.NOT_FOUND).build();
         }
@@ -278,17 +324,17 @@ public class RuleResource implements RESTResource {
     @GET
     @Path("/{ruleUID}/{moduleCategory}/{id}")
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(value = "Gets the rule's module corresponding to the given Category and ID.", response = Module.class)
-    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
+    @ApiOperation(value = "Gets the rule's module corresponding to the given Category and ID.", response = ModuleDTO.class)
+    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK", response = ModuleDTO.class),
             @ApiResponse(code = 404, message = "Rule corresponding to the given UID does not found or does not have a module with such Category and ID.") })
     public Response getModuleById(@PathParam("ruleUID") @ApiParam(value = "ruleUID", required = true) String ruleUID,
             @PathParam("moduleCategory") @ApiParam(value = "moduleCategory", required = true) String moduleCategory,
             @PathParam("id") @ApiParam(value = "id", required = true) String id) {
         Rule rule = ruleRegistry.get(ruleUID);
         if (rule != null) {
-            Module module = getModule(rule, moduleCategory, id);
-            if (module != null) {
-                return Response.ok(module).build();
+            final ModuleDTO dto = getModuleDTO(rule, moduleCategory, id);
+            if (dto != null) {
+                return Response.ok(dto).build();
             }
         }
         return Response.status(Status.NOT_FOUND).build();
@@ -298,7 +344,7 @@ public class RuleResource implements RESTResource {
     @Path("/{ruleUID}/{moduleCategory}/{id}/config")
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(value = "Gets the module's configuration.")
-    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
+    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK", response = String.class),
             @ApiResponse(code = 404, message = "Rule corresponding to the given UID does not found or does not have a module with such Category and ID.") })
     public Response getModuleConfig(@PathParam("ruleUID") @ApiParam(value = "ruleUID", required = true) String ruleUID,
             @PathParam("moduleCategory") @ApiParam(value = "moduleCategory", required = true) String moduleCategory,
@@ -307,7 +353,7 @@ public class RuleResource implements RESTResource {
         if (rule != null) {
             Module module = getModule(rule, moduleCategory, id);
             if (module != null) {
-                return Response.ok(module.getConfiguration()).build();
+                return Response.ok(module.getConfiguration().getProperties()).build();
             }
         }
         return Response.status(Status.NOT_FOUND).build();
@@ -317,7 +363,7 @@ public class RuleResource implements RESTResource {
     @Path("/{ruleUID}/{moduleCategory}/{id}/config/{param}")
     @Produces(MediaType.TEXT_PLAIN)
     @ApiOperation(value = "Gets the module's configuration parameter.", response = String.class)
-    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
+    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK", response = String.class),
             @ApiResponse(code = 404, message = "Rule corresponding to the given UID does not found or does not have a module with such Category and ID.") })
     public Response getModuleConfigParam(
             @PathParam("ruleUID") @ApiParam(value = "ruleUID", required = true) String ruleUID,
@@ -328,7 +374,7 @@ public class RuleResource implements RESTResource {
         if (rule != null) {
             Module module = getModule(rule, moduleCategory, id);
             if (module != null) {
-                return Response.ok(module.getConfiguration().get(param)).build();
+                return Response.ok(module.getConfiguration().getProperties().get(param)).build();
             }
         }
         return Response.status(Status.NOT_FOUND).build();
@@ -350,7 +396,7 @@ public class RuleResource implements RESTResource {
         if (rule != null) {
             Module module = getModule(rule, moduleCategory, id);
             if (module != null) {
-                Map<String, Object> configuration = module.getConfiguration();
+                Configuration configuration = module.getConfiguration();
                 configuration.put(param, ConfigUtil.normalizeType(value));
                 module.setConfiguration(configuration);
                 ruleRegistry.update(rule);
@@ -360,42 +406,60 @@ public class RuleResource implements RESTResource {
         return Response.status(Status.NOT_FOUND).build();
     }
 
-    protected Trigger getTrigger(Rule rule, String id) {
-        for (Trigger trigger : rule.getTriggers()) {
-            if (trigger.getId().equals(id)) {
-                return trigger;
+    protected <T extends Module> T getModuleById(final Collection<T> coll, final String id) {
+        if (coll == null) {
+            return null;
+        }
+        for (final T module : coll) {
+            if (module.getId().equals(id)) {
+                return module;
             }
         }
         return null;
+    }
+
+    protected Trigger getTrigger(Rule rule, String id) {
+        return getModuleById(rule.getTriggers(), id);
     }
 
     protected Condition getCondition(Rule rule, String id) {
-        for (Condition condition : rule.getConditions()) {
-            if (condition.getId().equals(id)) {
-                return condition;
-            }
-        }
-        return null;
+        return getModuleById(rule.getConditions(), id);
     }
 
     protected Action getAction(Rule rule, String id) {
-        for (Action action : rule.getActions()) {
-            if (action.getId().equals(id)) {
-                return action;
-            }
-        }
-        return null;
+        return getModuleById(rule.getActions(), id);
     }
 
     protected Module getModule(Rule rule, String moduleCategory, String id) {
-        Module module = null;
         if (moduleCategory.equals("triggers")) {
-            module = getTrigger(rule, id);
+            return getTrigger(rule, id);
         } else if (moduleCategory.equals("conditions")) {
-            module = getCondition(rule, id);
+            return getCondition(rule, id);
         } else if (moduleCategory.equals("actions")) {
-            module = getAction(rule, id);
+            return getAction(rule, id);
+        } else {
+            return null;
         }
-        return module;
     }
+
+    protected ModuleDTO getModuleDTO(Rule rule, String moduleCategory, String id) {
+        if (moduleCategory.equals("triggers")) {
+            final Trigger trigger = getTrigger(rule, id);
+            return trigger == null ? null : TriggerDTOMapper.map(trigger);
+        } else if (moduleCategory.equals("conditions")) {
+            final Condition condition = getCondition(rule, id);
+            return condition == null ? null : ConditionDTOMapper.map(condition);
+        } else if (moduleCategory.equals("actions")) {
+            final Action action = getAction(rule, id);
+            return action == null ? null : ActionDTOMapper.map(action);
+        } else {
+            return null;
+        }
+    }
+
+    @Override
+    public boolean isSatisfied() {
+        return ruleRegistry != null;
+    }
+
 }

@@ -1,9 +1,3 @@
----
-layout: documentation
----
-
-{% include base.html %}
-
 # YahooWeather Binding
 
 This binding uses the [Yahoo Weather service](https://developer.yahoo.com/weather/) for providing current weather information.
@@ -25,7 +19,7 @@ The weather information that is retrieved is available as these channels:
 
 | Channel Type ID | Item Type    | Description  |
 |-----------------|------------------------|------------- |
-| temperature | Number       | The current temperature in degrees celsius |
+| temperature | Number       | The current temperature in degrees Celsius |
 | humidity | Number       | The current humidity in % |
 | pressure | Number       | The current pressure in millibar (hPa) |
 
@@ -35,7 +29,7 @@ The weather information that is retrieved is available as these channels:
 demo.things:
 
 ```
-yahooweather:weather:berlin [ location="638242" ]
+yahooweather:weather:berlin [ location=638242 ]
 ```
 
 demo.items:

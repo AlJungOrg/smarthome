@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2017 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,9 +7,9 @@
  */
 package org.eclipse.smarthome.io.rest.core.link;
 
-import java.util.ArrayList;
-import java.util.Collection;
+import java.util.stream.Stream;
 
+import javax.annotation.security.RolesAllowed;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.PUT;
@@ -22,6 +22,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriInfo;
 
+import org.eclipse.smarthome.core.auth.Role;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.link.AbstractLink;
 import org.eclipse.smarthome.core.thing.link.ItemChannelLink;
@@ -31,6 +32,7 @@ import org.eclipse.smarthome.core.thing.link.dto.AbstractLinkDTO;
 import org.eclipse.smarthome.core.thing.link.dto.ItemChannelLinkDTO;
 import org.eclipse.smarthome.io.rest.JSONResponse;
 import org.eclipse.smarthome.io.rest.RESTResource;
+import org.eclipse.smarthome.io.rest.Stream2JSONInputStream;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -44,8 +46,10 @@ import io.swagger.annotations.ApiResponses;
  * @author Dennis Nobel - Initial contribution
  * @author Yordan Zhelev - Added Swagger annotations
  * @author Kai Kreuzer - Removed Thing links and added auto link url
+ * @author Franck Dechavanne - Added DTOs to ApiResponses
  */
 @Path(ItemChannelLinkResource.PATH_LINKS)
+@RolesAllowed({ Role.ADMIN })
 @Api(value = ItemChannelLinkResource.PATH_LINKS)
 public class ItemChannelLinkResource implements RESTResource {
 
@@ -61,17 +65,18 @@ public class ItemChannelLinkResource implements RESTResource {
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(value = "Gets all available links.", response = ItemChannelLinkDTO.class, responseContainer = "Collection")
-    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK") })
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "OK", response = ItemChannelLinkDTO.class, responseContainer = "Collection") })
     public Response getAll() {
-        Collection<ItemChannelLink> channelLinks = itemChannelLinkRegistry.getAll();
-        return Response.ok(toBeans(channelLinks)).build();
+        Stream<AbstractLinkDTO> linkStream = itemChannelLinkRegistry.getAll().stream().map(this::toBeans);
+        return Response.ok(new Stream2JSONInputStream(linkStream)).build();
     }
 
     @GET
     @Path("/auto")
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(value = "Tells whether automatic link mode is active or not", response = Boolean.class)
-    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK") })
+    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK", response = Boolean.class) })
     public Response isAutomatic() {
         return Response.ok(thingLinkManager.isAutoLinksEnabled()).build();
     }
@@ -127,13 +132,13 @@ public class ItemChannelLinkResource implements RESTResource {
         this.itemChannelLinkRegistry = null;
     }
 
-    private Collection<AbstractLinkDTO> toBeans(Iterable<ItemChannelLink> links) {
-        Collection<AbstractLinkDTO> beans = new ArrayList<>();
-        for (AbstractLink link : links) {
-            ItemChannelLinkDTO bean = new ItemChannelLinkDTO(link.getItemName(), link.getUID().toString());
-            beans.add(bean);
-        }
-        return beans;
+    private AbstractLinkDTO toBeans(ItemChannelLink link) {
+        return new ItemChannelLinkDTO(link.getItemName(), link.getUID().toString());
+    }
+
+    @Override
+    public boolean isSatisfied() {
+        return itemChannelLinkRegistry != null && thingLinkManager != null;
     }
 
 }
