@@ -125,7 +125,7 @@ public class HueLightDiscoveryService extends AbstractDiscoveryService implement
 
             thingDiscovered(discoveryResult);
         } else {
-            logger.debug("discovered unsupported light of type '{}' and model '{}' with id {}", light.getType(),
+            logger.warn("discovered unsupported light of type '{}' and model '{}' with id {}", light.getType(),
                     modelId, light.getId());
         }
     }
@@ -147,6 +147,8 @@ public class HueLightDiscoveryService extends AbstractDiscoveryService implement
     private ThingUID getThingUID(FullLight light) {
         ThingUID bridgeUID = hueBridgeHandler.getThing().getUID();
         ThingTypeUID thingTypeUID = getThingTypeUID(light);
+
+		logger.debug("discovered thingTypeUID '{}'",thingTypeUID.toString());
 
         if (thingTypeUID != null && getSupportedThingTypes().contains(thingTypeUID)) {
             return new ThingUID(thingTypeUID, bridgeUID, light.getId());

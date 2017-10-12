@@ -115,6 +115,14 @@ public class ItemDTOMapper {
                             .error("Group function 'OR' requires two arguments. Using Equality instead.");
                 }
                 break;
+            case "XOR":
+                if (args.size() == 2) {
+                    groupFunction = new ArithmeticGroupFunction.XOr(args.get(0), args.get(1));
+                } else {
+                    LoggerFactory.getLogger(ItemDTOMapper.class)
+                            .error("Group function 'XOR' requires two arguments. Using Equality instead.");
+                }
+                break;
             case "NAND":
                 if (args.size() == 2) {
                     groupFunction = new ArithmeticGroupFunction.NAnd(args.get(0), args.get(1));

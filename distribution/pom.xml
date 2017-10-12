@@ -15,36 +15,4 @@
   <packaging>pom</packaging>
 
   <name>Eclipse SmartHome Distribution</name>
-
-  <build>
-    <plugins>
-      <plugin>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <version>2.2</version>
-        <executions>
-          <execution>
-            <id>distro-assembly</id>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-            <configuration>
-              <descriptors>
-                <descriptor>src/assemble/repo.xml</descriptor>
-              </descriptors>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
-
-  <dependencies>
-    <dependency>
-      <groupId>org.eclipse.smarthome.products</groupId>
-      <artifactId>org.eclipse.smarthome.repo</artifactId>
-      <version>${project.version}</version>
-      <type>zip</type>
-    </dependency>
-  </dependencies>
 </project>
