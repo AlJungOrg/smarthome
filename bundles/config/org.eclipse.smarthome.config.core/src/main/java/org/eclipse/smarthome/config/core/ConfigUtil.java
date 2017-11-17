@@ -84,8 +84,8 @@ public class ConfigUtil {
         } else if (value instanceof Collection) {
             return normalizeCollection((Collection<?>) value);
         }
-        throw new IllegalArgumentException(
-                "Invalid type '{" + value.getClass().getCanonicalName() + "}' of configuration value!");
+        
+        return value instanceof Double ? BigDecimal.valueOf((Double) value) : value;
     }
 
     /**

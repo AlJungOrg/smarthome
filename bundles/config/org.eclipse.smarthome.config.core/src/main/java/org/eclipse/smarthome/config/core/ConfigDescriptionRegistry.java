@@ -144,6 +144,9 @@ public class ConfigDescriptionRegistry {
 
         boolean found = false;
         for (ConfigDescriptionProvider configDescriptionProvider : this.configDescriptionProviders) {
+        	
+        	if ( uri == null ) break;
+        	
             ConfigDescription config = configDescriptionProvider.getConfigDescription(uri, locale);
 
             if (config != null) {
