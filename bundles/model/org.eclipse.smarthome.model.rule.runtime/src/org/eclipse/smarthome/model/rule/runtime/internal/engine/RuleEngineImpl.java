@@ -1,9 +1,14 @@
 /**
- * Copyright (c) 2014-2017 by the respective copyright holders.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
+ * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0
+ *
+ * SPDX-License-Identifier: EPL-2.0
  */
 package org.eclipse.smarthome.model.rule.runtime.internal.engine;
 
@@ -200,7 +205,7 @@ public class RuleEngineImpl implements ItemRegistryChangeListener, StateChangeLi
         if (!starting && triggerManager != null) {
             Iterable<Rule> rules = triggerManager.getRules(CHANGE, item, oldState, newState);
 
-            executeRules(rules, oldState);
+            executeRules(rules, item, oldState);
         }
     }
 
@@ -208,7 +213,7 @@ public class RuleEngineImpl implements ItemRegistryChangeListener, StateChangeLi
     public void stateUpdated(Item item, State state) {
         if (!starting && triggerManager != null) {
             Iterable<Rule> rules = triggerManager.getRules(UPDATE, item, state);
-            executeRules(rules);
+            executeRules(rules, item);
         }
     }
 
@@ -220,7 +225,7 @@ public class RuleEngineImpl implements ItemRegistryChangeListener, StateChangeLi
                 Item item = itemRegistry.getItem(itemName);
                 Iterable<Rule> rules = triggerManager.getRules(COMMAND, item, command);
 
-                executeRules(rules, command);
+                executeRules(rules, item, command);
             } catch (ItemNotFoundException e) {
                 // ignore commands for non-existent items
             }
@@ -362,17 +367,27 @@ public class RuleEngineImpl implements ItemRegistryChangeListener, StateChangeLi
         }
     }
 
-    protected synchronized void executeRules(Iterable<Rule> rules, Command command) {
+    protected synchronized void executeRules(Iterable<Rule> rules, Item item) {
         for (Rule rule : rules) {
             RuleEvaluationContext context = new RuleEvaluationContext();
+            context.newValue(QualifiedName.create(RulesJvmModelInferrer.VAR_TRIGGERING_ITEM), item);
+            executeRule(rule, context);
+        }
+    }
+
+    protected synchronized void executeRules(Iterable<Rule> rules, Item item, Command command) {
+        for (Rule rule : rules) {
+            RuleEvaluationContext context = new RuleEvaluationContext();
+            context.newValue(QualifiedName.create(RulesJvmModelInferrer.VAR_TRIGGERING_ITEM), item);
             context.newValue(QualifiedName.create(RulesJvmModelInferrer.VAR_RECEIVED_COMMAND), command);
             executeRule(rule, context);
         }
     }
 
-    protected synchronized void executeRules(Iterable<Rule> rules, State oldState) {
+    protected synchronized void executeRules(Iterable<Rule> rules, Item item, State oldState) {
         for (Rule rule : rules) {
             RuleEvaluationContext context = new RuleEvaluationContext();
+            context.newValue(QualifiedName.create(RulesJvmModelInferrer.VAR_TRIGGERING_ITEM), item);
             context.newValue(QualifiedName.create(RulesJvmModelInferrer.VAR_PREVIOUS_STATE), oldState);
             executeRule(rule, context);
         }

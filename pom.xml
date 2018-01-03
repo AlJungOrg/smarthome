@@ -9,7 +9,7 @@
 
   <groupId>org.eclipse.smarthome</groupId>
   <artifactId>smarthome</artifactId>
-  <version>0.9.0-SNAPSHOT</version>
+  <version>0.9.0</version>
 
   <name>Eclipse SmartHome</name>
 
@@ -20,8 +20,8 @@
 
   <licenses>
     <license>
-      <name>Eclipse Public License</name>
-      <url>http://www.eclipse.org/legal/epl-v10.html</url>
+      <name>Eclipse Public License 2.0</name>
+      <url>https://www.eclipse.org/legal/epl-2.0/</url>
     </license>
   </licenses>
 
@@ -90,7 +90,6 @@
       <plugin>
         <groupId>${tycho-groupid}</groupId>
         <artifactId>tycho-maven-plugin</artifactId>
-        <version>${tycho-version}</version>
         <extensions>true</extensions>
       </plugin>
       <plugin>
@@ -166,29 +165,6 @@
       <plugins>
         <plugin>
           <groupId>${tycho-groupid}</groupId>
-          <artifactId>tycho-compiler-plugin</artifactId>
-          <version>${tycho-version}</version>
-          <configuration>
-            <extraClasspathElements>
-              <extraClasspathElement>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>org.apache.felix.scr.ds-annotations</artifactId>
-                <version>${ds-annotations.version}</version>
-              </extraClasspathElement>
-              <extraClasspathElement>
-                <groupId>org.eclipse.jdt</groupId>
-                <artifactId>org.eclipse.jdt.annotation</artifactId>
-                <version>${jdt-annotations.version}</version>
-              </extraClasspathElement>
-            </extraClasspathElements>
-            <compilerArgs>
-              <arg>-err:+nullAnnot(org.eclipse.jdt.annotation.Nullable|org.eclipse.jdt.annotation.NonNull|org.eclipse.jdt.annotation.NonNullByDefault),+inheritNullAnnot</arg>
-              <arg>-warn:+null,+inheritNullAnnot,+nullAnnotConflict,+nullUncheckedConversion,+nullAnnotRedundant,+nullDereference</arg>
-            </compilerArgs>
-          </configuration>
-        </plugin>
-        <plugin>
-          <groupId>${tycho-groupid}</groupId>
           <artifactId>target-platform-configuration</artifactId>
           <version>${tycho-version}</version>
           <configuration>
@@ -209,11 +185,59 @@
         </plugin>
         <plugin>
           <groupId>${tycho-groupid}</groupId>
+          <artifactId>tycho-compiler-plugin</artifactId>
+          <version>${tycho-version}</version>
+          <configuration>
+            <extraClasspathElements>
+              <extraClasspathElement>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>org.apache.felix.scr.ds-annotations</artifactId>
+                <version>${ds-annotations.version}</version>
+              </extraClasspathElement>
+              <extraClasspathElement>
+                <groupId>org.eclipse.jdt</groupId>
+                <artifactId>org.eclipse.jdt.annotation</artifactId>
+                <version>${jdt-annotations.version}</version>
+              </extraClasspathElement>
+            </extraClasspathElements>
+            <compilerArgs>
+              <!--<arg>-err:+nullAnnot(org.eclipse.jdt.annotation.Nullable|org.eclipse.jdt.annotation.NonNull|org.eclipse.jdt.annotation.NonNullByDefault),+inheritNullAnnot</arg>-->
+              <arg>-warn:+nullAnnot(org.eclipse.jdt.annotation.Nullable|org.eclipse.jdt.annotation.NonNull|org.eclipse.jdt.annotation.NonNullByDefault),+null,+inheritNullAnnot,+nullAnnotConflict,+nullUncheckedConversion,+nullAnnotRedundant,+nullDereference</arg>
+            </compilerArgs>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>${tycho-groupid}</groupId>
+          <artifactId>tycho-maven-plugin</artifactId>
+          <version>${tycho-version}</version>
+        </plugin>
+        <plugin>
+          <groupId>${tycho-groupid}</groupId>
+          <artifactId>tycho-source-plugin</artifactId>
+          <version>${tycho-version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.eclipse.tycho.extras</groupId>
+          <artifactId>tycho-source-feature-plugin</artifactId>
+          <version>${tycho-version}</version>
+        </plugin>
+        <plugin>
+          <groupId>${tycho-groupid}</groupId>
           <artifactId>tycho-surefire-plugin</artifactId>
           <version>${tycho-version}</version>
           <configuration>
             <failIfNoTests>false</failIfNoTests>
           </configuration>
+        </plugin>
+        <plugin>
+          <groupId>${tycho-groupid}</groupId>
+          <artifactId>tycho-p2-plugin</artifactId>
+          <version>${tycho-version}</version>
+        </plugin>
+        <plugin>
+          <groupId>${tycho-groupid}</groupId>
+          <artifactId>tycho-versions-plugin</artifactId>
+          <version>${tycho-version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.felix</groupId>
@@ -357,11 +381,6 @@
               </configuration>
             </execution>
           </executions>
-        </plugin>
-        <plugin>
-          <groupId>${tycho-groupid}</groupId>
-          <artifactId>tycho-versions-plugin</artifactId>
-          <version>${tycho-version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>

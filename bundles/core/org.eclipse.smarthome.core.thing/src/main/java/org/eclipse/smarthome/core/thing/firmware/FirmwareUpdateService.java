@@ -1,9 +1,14 @@
 /**
- * Copyright (c) 2014-2017 by the respective copyright holders.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
+ * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0
+ *
+ * SPDX-License-Identifier: EPL-2.0
  */
 package org.eclipse.smarthome.core.thing.firmware;
 
@@ -17,15 +22,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import org.eclipse.smarthome.config.core.validation.ConfigDescriptionValidator;
 import org.eclipse.smarthome.config.core.validation.ConfigValidationException;
-import org.eclipse.smarthome.core.common.SafeMethodCaller;
+import org.eclipse.smarthome.core.common.SafeCaller;
 import org.eclipse.smarthome.core.common.ThreadPoolManager;
 import org.eclipse.smarthome.core.events.Event;
 import org.eclipse.smarthome.core.events.EventFilter;
@@ -93,6 +96,7 @@ public final class FirmwareUpdateService implements EventSubscriber {
     private EventPublisher eventPublisher;
     private TranslationProvider i18nProvider;
     private LocaleProvider localeProvider;
+    private SafeCaller safeCaller;
 
     private final Runnable firmwareStatusRunnable = new Runnable() {
         @Override
@@ -228,29 +232,16 @@ public final class FirmwareUpdateService implements EventSubscriber {
 
         logger.debug("Starting firmware update for thing with UID {} and firmware with UID {}", thingUID, firmwareUID);
 
-        getPool().submit(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    SafeMethodCaller.call(new SafeMethodCaller.ActionWithException<Void>() {
-                        @Override
-                        public Void call() {
-                            firmwareUpdateHandler.updateFirmware(firmware, progressCallback);
-                            return null;
-                        }
-                    }, timeout);
-                } catch (ExecutionException e) {
-                    logger.error(
-                            "Unexpected exception occurred for firmware update of thing with UID {} and firmware with UID {}.",
-                            thingUID, firmwareUID, e.getCause());
-                    progressCallback.failedInternal("unexpected-handler-error");
-                } catch (TimeoutException e) {
-                    logger.error("Timeout occurred for firmware update of thing with UID {} and firmware with UID {}.",
-                            thingUID, firmwareUID, e);
-                    progressCallback.failedInternal("timeout-error");
-                }
-            }
-        });
+        safeCaller.create(firmwareUpdateHandler).withTimeout(timeout).withAsync().onTimeout(() -> {
+            logger.error("Timeout occurred for firmware update of thing with UID {} and firmware with UID {}.",
+                    thingUID, firmwareUID);
+            progressCallback.failedInternal("timeout-error");
+        }).onException(e -> {
+            logger.error(
+                    "Unexpected exception occurred for firmware update of thing with UID {} and firmware with UID {}.",
+                    thingUID, firmwareUID, e.getCause());
+            progressCallback.failedInternal("unexpected-handler-error");
+        }).build().updateFirmware(firmware, progressCallback);
     }
 
     /**
@@ -267,28 +258,16 @@ public final class FirmwareUpdateService implements EventSubscriber {
                     String.format("There is no firmware update handler for thing with UID %s.", thingUID));
         }
         final ProgressCallbackImpl progressCallback = getProgressCallback(thingUID);
-        getPool().submit(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    SafeMethodCaller.call(new SafeMethodCaller.ActionWithException<Void>() {
-                        @Override
-                        public Void call() {
-                            logger.debug("Canceling firmware update for thing with UID {}.", thingUID);
-                            firmwareUpdateHandler.cancel();
-                            return null;
-                        }
-                    });
-                } catch (ExecutionException e) {
-                    logger.error("Unexpected exception occurred while canceling firmware update of thing with UID {}.",
-                            thingUID, e.getCause());
-                    progressCallback.failedInternal("unexpected-handler-error-during-cancel");
-                } catch (TimeoutException e) {
-                    logger.error("Timeout occurred while canceling firmware update of thing with UID {}.", thingUID, e);
-                    progressCallback.failedInternal("timeout-error-during-cancel");
-                }
-            }
-        });
+
+        logger.debug("Cancelling firmware update for thing with UID {}.", thingUID);
+        safeCaller.create(firmwareUpdateHandler).withTimeout(timeout).withAsync().onTimeout(() -> {
+            logger.error("Timeout occurred while cancelling firmware update of thing with UID {}.", thingUID);
+            progressCallback.failedInternal("timeout-error-during-cancel");
+        }).onException(e -> {
+            logger.error("Unexpected exception occurred while cancelling firmware update of thing with UID {}.",
+                    thingUID, e.getCause());
+            progressCallback.failedInternal("unexpected-handler-error-during-cancel");
+        }).build().cancel();
     }
 
     @Override
@@ -544,6 +523,15 @@ public final class FirmwareUpdateService implements EventSubscriber {
 
     protected void unsetLocaleProvider(final LocaleProvider localeProvider) {
         this.localeProvider = null;
+    }
+
+    @Reference
+    protected void setSafeCaller(SafeCaller safeCaller) {
+        this.safeCaller = safeCaller;
+    }
+
+    protected void unsetSafeCaller(SafeCaller safeCaller) {
+        this.safeCaller = null;
     }
 
 }

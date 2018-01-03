@@ -1,9 +1,14 @@
 /**
- * Copyright (c) 2014-2017 by the respective copyright holders.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
+ * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0
+ *
+ * SPDX-License-Identifier: EPL-2.0
  */
 package org.eclipse.smarthome.binding.lifx.internal.util;
 
@@ -15,6 +20,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.binding.lifx.internal.fields.MACAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +34,7 @@ import org.slf4j.LoggerFactory;
  * @author Karel Goderis - Initial Contribution
  * @author Wouter Born - Deadlock fix
  */
+@NonNullByDefault
 public final class LifxThrottlingUtil {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LifxThrottlingUtil.class);
@@ -71,9 +79,9 @@ public final class LifxThrottlingUtil {
      */
     private static List<LifxLightCommunicationTracker> trackers = new CopyOnWriteArrayList<>();
 
-    private static Map<MACAddress, LifxLightCommunicationTracker> macTrackerMapping = new ConcurrentHashMap<MACAddress, LifxLightCommunicationTracker>();
+    private static Map<MACAddress, @Nullable LifxLightCommunicationTracker> macTrackerMapping = new ConcurrentHashMap<>();
 
-    public static void lock(MACAddress mac) {
+    public static void lock(@Nullable MACAddress mac) {
         if (mac != null) {
             LifxLightCommunicationTracker tracker = getOrCreateTracker(mac);
             tracker.lock();
@@ -111,10 +119,11 @@ public final class LifxThrottlingUtil {
         }
     }
 
-    public static void unlock(MACAddress mac) {
+    public static void unlock(@Nullable MACAddress mac) {
         if (mac != null) {
-            if (macTrackerMapping.containsKey(mac)) {
-                macTrackerMapping.get(mac).unlock();
+            LifxLightCommunicationTracker tracker = macTrackerMapping.get(mac);
+            if (tracker != null) {
+                tracker.unlock();
             }
         } else {
             unlock();

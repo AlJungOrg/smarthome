@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
-    Copyright (c) 2014-2017 by the respective copyright holders.
-    All rights reserved. This program and the accompanying materials
-    are made available under the terms of the Eclipse Public License v1.0
-    which accompanies this distribution, and is available at
-    http://www.eclipse.org/legal/epl-v10.html
+    Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+
+    See the NOTICE file(s) distributed with this work for additional
+    information regarding copyright ownership.
+
+    This program and the accompanying materials are made available under the
+    terms of the Eclipse Public License 2.0 which is available at
+    http://www.eclipse.org/legal/epl-2.0
+
+    SPDX-License-Identifier: EPL-2.0
 
 -->
 <features name="${project.artifactId}-${project.version}" xmlns="http://karaf.apache.org/xmlns/features/v1.3.0">
@@ -211,6 +216,12 @@
     <bundle>mvn:org.eclipse.smarthome.automation/org.eclipse.smarthome.automation.rest/${project.version}</bundle>
   </feature>
 
+  <feature name="esh-config-serial" version="${project.version}">
+    <feature>esh-base</feature>
+    <feature>esh-io-transport-serial</feature>
+    <bundle>mvn:org.eclipse.smarthome.config/org.eclipse.smarthome.config.serial/${project.version}</bundle>
+  </feature>
+
   <feature name="esh-io-console-karaf" description="Karaf Console support for SmartHome stuff" version="${project.version}">
     <feature>esh-base</feature>
     <feature>shell</feature>
@@ -285,6 +296,11 @@
   <feature name="esh-io-transport-http" version="${project.version}">
     <feature>esh-base</feature>
     <requirement>esh.tp;filter:="(feature=httpclient)"</requirement>
+  </feature>
+
+  <feature name="esh-io-transport-serial" version="${project.version}">
+    <feature>esh-base</feature>
+    <requirement>esh.tp;filter:="(feature=serial)"</requirement>
   </feature>
 
   <feature name="esh-io-transport-upnp" version="${project.version}">

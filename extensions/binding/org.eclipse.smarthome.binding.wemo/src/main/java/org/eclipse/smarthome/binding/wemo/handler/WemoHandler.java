@@ -1,9 +1,14 @@
 /**
- * Copyright (c) 2014-2017 by the respective copyright holders.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
+ * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0
+ *
+ * SPDX-License-Identifier: EPL-2.0
  */
 package org.eclipse.smarthome.binding.wemo.handler;
 
@@ -12,12 +17,14 @@ import static org.eclipse.smarthome.binding.wemo.WemoBindingConstants.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.URL;
+import java.time.Instant;
+import java.time.ZonedDateTime;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -54,6 +61,7 @@ import org.slf4j.LoggerFactory;
  * @author Hans-Jörg Merk - Initial contribution; Added support for WeMo Insight energy measurement
  * @author Kai Kreuzer - some refactoring for performance and simplification
  * @author Stefan Bußweiler - Added new thing status handling
+ * @author Erdoan Hadzhiyusein - Adapted the class to work with the new DateTimeType
  */
 
 public class WemoHandler extends BaseThingHandler implements UpnpIOParticipant, DiscoveryListener {
@@ -246,9 +254,9 @@ public class WemoHandler extends BaseThingHandler implements UpnpIOParticipant, 
                     logger.error("Unable to parse lastChangedAt value '{}' for device '{}'; expected long",
                             splitInsightParams[1], getThing().getUID());
                 }
-                GregorianCalendar cal = new GregorianCalendar();
-                cal.setTimeInMillis(lastChangedAt);
-                State lastChangedAtState = new DateTimeType(cal);
+                ZonedDateTime zoned= ZonedDateTime.ofInstant(Instant.ofEpochMilli(lastChangedAt), TimeZone.getDefault().toZoneId());
+                
+                State lastChangedAtState = new DateTimeType(zoned);
                 if (lastChangedAt != 0) {
                     logger.trace("New InsightParam lastChangedAt '{}' for device '{}' received", lastChangedAtState,
                             getThing().getUID());
@@ -487,7 +495,7 @@ public class WemoHandler extends BaseThingHandler implements UpnpIOParticipant, 
     @Override
     public Collection<ThingUID> removeOlderResults(DiscoveryService source, long timestamp,
             Collection<ThingTypeUID> thingTypeUIDs) {
-        return null;
+        return Collections.emptyList();
     }
 
 }

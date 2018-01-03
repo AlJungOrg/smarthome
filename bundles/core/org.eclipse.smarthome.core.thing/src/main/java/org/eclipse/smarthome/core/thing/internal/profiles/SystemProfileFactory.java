@@ -1,9 +1,14 @@
 /**
- * Copyright (c) 2014-2017 by the respective copyright holders.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
+ * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0
+ *
+ * SPDX-License-Identifier: EPL-2.0
  */
 package org.eclipse.smarthome.core.thing.internal.profiles;
 
@@ -46,11 +51,13 @@ import org.osgi.service.component.annotations.Component;
 public class SystemProfileFactory implements ProfileFactory, ProfileAdvisor, ProfileTypeProvider {
 
     private static final Set<ProfileType> SUPPORTED_PROFILE_TYPES = Stream
-            .of(SystemProfiles.DEFAULT_TYPE, SystemProfiles.FOLLOW_TYPE, SystemProfiles.RAWBUTTON_TOGGLE_SWITCH_TYPE)
+            .of(SystemProfiles.DEFAULT_TYPE, SystemProfiles.FOLLOW_TYPE, SystemProfiles.RAWBUTTON_TOGGLE_SWITCH_TYPE,
+                    SystemProfiles.RAWROCKER_ON_OFF_TYPE, SystemProfiles.RAWROCKER_DIMMER_TYPE)
             .collect(Collectors.toSet());
 
     private static final Set<ProfileTypeUID> SUPPORTED_PROFILE_TYPE_UIDS = Stream
-            .of(SystemProfiles.DEFAULT, SystemProfiles.FOLLOW, SystemProfiles.RAWBUTTON_TOGGLE_SWITCH)
+            .of(SystemProfiles.DEFAULT, SystemProfiles.FOLLOW, SystemProfiles.RAWBUTTON_TOGGLE_SWITCH,
+                    SystemProfiles.RAWROCKER_ON_OFF, SystemProfiles.RAWROCKER_DIMMER)
             .collect(Collectors.toSet());
 
     @Nullable
@@ -62,6 +69,10 @@ public class SystemProfileFactory implements ProfileFactory, ProfileAdvisor, Pro
             return new SystemFollowProfile(callback);
         } else if (SystemProfiles.RAWBUTTON_TOGGLE_SWITCH.equals(profileTypeUID)) {
             return new RawButtonToggleSwitchProfile(callback);
+        } else if (SystemProfiles.RAWROCKER_ON_OFF.equals(profileTypeUID)) {
+            return new RawRockerOnOffProfile(callback);
+        } else if (SystemProfiles.RAWROCKER_DIMMER.equals(profileTypeUID)) {
+            return new RawRockerDimmerProfile(callback, context);
         } else {
             return null;
         }
@@ -77,6 +88,13 @@ public class SystemProfileFactory implements ProfileFactory, ProfileAdvisor, Pro
                 if (DefaultSystemChannelTypeProvider.SYSTEM_RAWBUTTON.getUID().equals(channel.getChannelTypeUID())) {
                     if (CoreItemFactory.SWITCH.equalsIgnoreCase(itemType)) {
                         return SystemProfiles.RAWBUTTON_TOGGLE_SWITCH;
+                    }
+                } else if (DefaultSystemChannelTypeProvider.SYSTEM_RAWROCKER.getUID()
+                        .equals(channel.getChannelTypeUID())) {
+                    if (CoreItemFactory.SWITCH.equalsIgnoreCase(itemType)) {
+                        return SystemProfiles.RAWROCKER_ON_OFF;
+                    } else if (CoreItemFactory.DIMMER.equalsIgnoreCase(itemType)) {
+                        return SystemProfiles.RAWROCKER_DIMMER;
                     }
                 }
                 break;

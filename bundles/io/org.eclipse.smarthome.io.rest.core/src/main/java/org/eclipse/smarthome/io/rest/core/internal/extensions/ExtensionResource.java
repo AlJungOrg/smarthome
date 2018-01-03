@@ -1,9 +1,14 @@
 /**
- * Copyright (c) 2014-2017 by the respective copyright holders.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
+ * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0
+ *
+ * SPDX-License-Identifier: EPL-2.0
  */
 package org.eclipse.smarthome.io.rest.core.internal.extensions;
 
@@ -43,6 +48,10 @@ import org.eclipse.smarthome.io.rest.JSONResponse;
 import org.eclipse.smarthome.io.rest.LocaleUtil;
 import org.eclipse.smarthome.io.rest.RESTResource;
 import org.eclipse.smarthome.io.rest.Stream2JSONInputStream;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,6 +70,7 @@ import io.swagger.annotations.ApiResponses;
 @Path(ExtensionResource.PATH_EXTENSIONS)
 @RolesAllowed({ Role.ADMIN })
 @Api(value = ExtensionResource.PATH_EXTENSIONS)
+@Component(service = { RESTResource.class, ExtensionResource.class })
 public class ExtensionResource implements RESTResource {
 
     private static final String THREAD_POOL_NAME = "extensionService";
@@ -69,10 +79,11 @@ public class ExtensionResource implements RESTResource {
 
     private final Logger logger = LoggerFactory.getLogger(ExtensionResource.class);
 
-    private Set<ExtensionService> extensionServices = new CopyOnWriteArraySet<>();
+    private final Set<ExtensionService> extensionServices = new CopyOnWriteArraySet<>();
 
     private EventPublisher eventPublisher;
 
+    @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
     protected void addExtensionService(ExtensionService featureService) {
         this.extensionServices.add(featureService);
     }
@@ -81,6 +92,7 @@ public class ExtensionResource implements RESTResource {
         this.extensionServices.remove(featureService);
     }
 
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
     protected void setEventPublisher(EventPublisher eventPublisher) {
         this.eventPublisher = eventPublisher;
     }
@@ -139,18 +151,14 @@ public class ExtensionResource implements RESTResource {
     @ApiResponses(value = { @ApiResponse(code = 200, message = "OK") })
     public Response installExtension(
             final @PathParam("extensionId") @ApiParam(value = "extension ID", required = true) String extensionId) {
-        ThreadPoolManager.getPool(THREAD_POOL_NAME).submit(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    ExtensionService extensionService = getExtensionService(extensionId);
-                    extensionService.install(extensionId);
-                } catch (Exception e) {
-                    logger.error("Exception while installing extension: {}", e.getMessage());
-                    postFailureEvent(extensionId, e.getMessage());
-                }
+        ThreadPoolManager.getPool(THREAD_POOL_NAME).submit(() -> {
+            try {
+                ExtensionService extensionService = getExtensionService(extensionId);
+                extensionService.install(extensionId);
+            } catch (Exception e) {
+                logger.error("Exception while installing extension: {}", e.getMessage());
+                postFailureEvent(extensionId, e.getMessage());
             }
-
         });
         return Response.ok().build();
     }
@@ -179,16 +187,13 @@ public class ExtensionResource implements RESTResource {
     @ApiResponses(value = { @ApiResponse(code = 200, message = "OK") })
     public Response uninstallExtension(
             final @PathParam("extensionId") @ApiParam(value = "extension ID", required = true) String extensionId) {
-        ThreadPoolManager.getPool(THREAD_POOL_NAME).submit(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    ExtensionService extensionService = getExtensionService(extensionId);
-                    extensionService.uninstall(extensionId);
-                } catch (Exception e) {
-                    logger.error("Exception while uninstalling extension: {}", e.getMessage());
-                    postFailureEvent(extensionId, e.getMessage());
-                }
+        ThreadPoolManager.getPool(THREAD_POOL_NAME).submit(() -> {
+            try {
+                ExtensionService extensionService = getExtensionService(extensionId);
+                extensionService.uninstall(extensionId);
+            } catch (Exception e) {
+                logger.error("Exception while uninstalling extension: {}", e.getMessage());
+                postFailureEvent(extensionId, e.getMessage());
             }
         });
         return Response.ok().build();

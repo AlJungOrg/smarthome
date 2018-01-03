@@ -4,7 +4,7 @@ Bundle-Name: Eclipse SmartHome Configuration UPnP Discovery
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Bundle-SymbolicName: org.eclipse.smarthome.config.discovery.upnp
 Bundle-Vendor: Eclipse.org/SmartHome
-Bundle-Version: 0.9.0.qualifier
+Bundle-Version: 0.9.0
 Export-Package: 
  org.eclipse.smarthome.config.discovery.upnp
 Import-Package: 
@@ -18,6 +18,5 @@ Import-Package:
  org.jupnp.registry,
  org.osgi.framework,
  org.osgi.service.component,
- org.osgi.service.component.annotations;resolution:=optional,
  org.slf4j
 Service-Component: OSGI-INF/*.xml
