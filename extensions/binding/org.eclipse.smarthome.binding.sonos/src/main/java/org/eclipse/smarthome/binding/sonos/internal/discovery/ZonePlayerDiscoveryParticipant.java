@@ -1,9 +1,14 @@
 /**
- * Copyright (c) 2014-2017 by the respective copyright holders.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
+ * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0
+ *
+ * SPDX-License-Identifier: EPL-2.0
  */
 package org.eclipse.smarthome.binding.sonos.internal.discovery;
 
@@ -33,7 +38,7 @@ import org.slf4j.LoggerFactory;
 @Component(immediate = true)
 public class ZonePlayerDiscoveryParticipant implements UpnpDiscoveryParticipant {
 
-    private Logger logger = LoggerFactory.getLogger(ZonePlayerDiscoveryParticipant.class);
+    private final Logger logger = LoggerFactory.getLogger(ZonePlayerDiscoveryParticipant.class);
 
     @Override
     public Set<ThingTypeUID> getSupportedThingTypeUIDs() {
@@ -70,27 +75,25 @@ public class ZonePlayerDiscoveryParticipant implements UpnpDiscoveryParticipant 
 
     @Override
     public ThingUID getThingUID(RemoteDevice device) {
-        if (device != null) {
-            if (device.getDetails().getManufacturerDetails().getManufacturer() != null) {
-                if (device.getDetails().getManufacturerDetails().getManufacturer().toUpperCase().contains("SONOS")) {
+        if (device.getDetails().getManufacturerDetails().getManufacturer() != null) {
+            if (device.getDetails().getManufacturerDetails().getManufacturer().toUpperCase().contains("SONOS")) {
 
-                    String modelName = getModelName(device);
-                    if (modelName.equals("ZP80")) {
-                        modelName = "CONNECT";
-                    } else if (modelName.equals("ZP100")) {
-                        modelName = "CONNECTAMP";
-                    }
-                    ThingTypeUID thingUID = new ThingTypeUID(SonosBindingConstants.BINDING_ID, modelName);
-
-                    // In case a new "unknown" Sonos player is discovered a generic ThingTypeUID will be used
-                    if (!SonosBindingConstants.SUPPORTED_KNOWN_THING_TYPES_UIDS.contains(thingUID)) {
-                        thingUID = SonosBindingConstants.ZONEPLAYER_THING_TYPE_UID;
-                    }
-
-                    logger.debug("Discovered a Sonos '{}' thing with UDN '{}'", thingUID,
-                            device.getIdentity().getUdn().getIdentifierString());
-                    return new ThingUID(thingUID, device.getIdentity().getUdn().getIdentifierString());
+                String modelName = getModelName(device);
+                if (modelName.equals("ZP80")) {
+                    modelName = "CONNECT";
+                } else if (modelName.equals("ZP100")) {
+                    modelName = "CONNECTAMP";
                 }
+                ThingTypeUID thingUID = new ThingTypeUID(SonosBindingConstants.BINDING_ID, modelName);
+
+                // In case a new "unknown" Sonos player is discovered a generic ThingTypeUID will be used
+                if (!SonosBindingConstants.SUPPORTED_KNOWN_THING_TYPES_UIDS.contains(thingUID)) {
+                    thingUID = SonosBindingConstants.ZONEPLAYER_THING_TYPE_UID;
+                }
+
+                logger.debug("Discovered a Sonos '{}' thing with UDN '{}'", thingUID,
+                        device.getIdentity().getUdn().getIdentifierString());
+                return new ThingUID(thingUID, device.getIdentity().getUdn().getIdentifierString());
             }
         }
 

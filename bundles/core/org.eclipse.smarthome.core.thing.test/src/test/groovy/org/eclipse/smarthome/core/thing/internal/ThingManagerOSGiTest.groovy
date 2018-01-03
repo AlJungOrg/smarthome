@@ -1,9 +1,14 @@
 /**
- * Copyright (c) 2014-2017 by the respective copyright holders.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
+ * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0
+ *
+ * SPDX-License-Identifier: EPL-2.0
  */
 package org.eclipse.smarthome.core.thing.internal
 
@@ -117,6 +122,9 @@ class ThingManagerOSGiTest extends OSGiTest {
 
         waitForAssert {
             assertThat getBundleContext().getServiceReferences(ReadyMarker, "(" + ThingManager.XML_THING_TYPE + "=" + getBundleContext().getBundle().getSymbolicName() + ")"), is(notNullValue())
+        }
+        waitForAssert {
+            assertThat getBundleContext().getServiceReferences(ChannelItemProvider, null), is(notNullValue())
         }
     }
 
@@ -679,6 +687,7 @@ class ThingManagerOSGiTest extends OSGiTest {
             }
         ] as ThingHandlerFactory
         registerService(thingHandlerFactory)
+        waitForAssert { assertThat itemRegistry.get(itemName), is(notNullValue()) }
 
         callback.statusUpdated(THING, ThingStatusInfoBuilder.create(ThingStatus.ONLINE).build())
 
@@ -1563,6 +1572,7 @@ class ThingManagerOSGiTest extends OSGiTest {
         registerService(thingHandlerFactory)
 
         itemChannelLinkRegistry.add(new ItemChannelLink("testItem", new ChannelUID(THING.getUID(), "channel")))
+        waitForAssert { assertThat itemRegistry.get("testItem"), is(notNullValue()) }
 
         eventPublisher.post(ItemEventFactory.createCommandEvent("testItem", new StringType("TEST")))
 

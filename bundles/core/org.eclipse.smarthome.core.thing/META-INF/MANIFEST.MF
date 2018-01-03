@@ -1,12 +1,12 @@
 Manifest-Version: 1.0
 Bundle-Activator: org.eclipse.smarthome.core.thing.internal.Activator
-Bundle-License: http://www.eclipse.org/legal/epl-v10.html
+Bundle-License: https://www.eclipse.org/legal/epl-2.0/
 Bundle-ManifestVersion: 2
 Bundle-Name: Eclipse SmartHome Core Thing
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Bundle-SymbolicName: org.eclipse.smarthome.core.thing
 Bundle-Vendor: Eclipse.org/SmartHome
-Bundle-Version: 0.9.0.qualifier
+Bundle-Version: 0.9.0
 Export-Package: 
  org.eclipse.smarthome.core.thing,
  org.eclipse.smarthome.core.thing.binding,
@@ -65,7 +65,6 @@ Import-Package:
  org.eclipse.smarthome.io.console.extensions,
  org.osgi.framework,
  org.osgi.service.component,
- org.osgi.service.component.annotations;resolution:=optional,
  org.osgi.service.event,
  org.osgi.util.tracker,
  org.slf4j

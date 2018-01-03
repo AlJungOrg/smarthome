@@ -1,13 +1,19 @@
 /**
- * Copyright (c) 2014-2017 by the respective copyright holders.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
+ * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0
+ *
+ * SPDX-License-Identifier: EPL-2.0
  */
 package org.eclipse.smarthome.ui.internal.items;
 
-import java.util.Calendar;
+import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -31,6 +37,7 @@ import org.eclipse.smarthome.core.items.Item;
 import org.eclipse.smarthome.core.items.ItemNotFoundException;
 import org.eclipse.smarthome.core.items.ItemNotUniqueException;
 import org.eclipse.smarthome.core.items.ItemRegistry;
+import org.eclipse.smarthome.core.items.RegistryHook;
 import org.eclipse.smarthome.core.library.items.CallItem;
 import org.eclipse.smarthome.core.library.items.ColorItem;
 import org.eclipse.smarthome.core.library.items.ContactItem;
@@ -83,6 +90,7 @@ import org.slf4j.LoggerFactory;
  * @author Kai Kreuzer - Initial contribution and API
  * @author Chris Jackson
  * @author Stefan Triller - Method to convert a state into something a sitemap entity can understand
+ * @author Erdoan Hadzhiyusein - Adapted the class to work with the new DateTimeType
  *
  */
 public class ItemUIRegistryImpl implements ItemUIRegistry {
@@ -356,7 +364,6 @@ public class ItemUIRegistryImpl implements ItemUIRegistry {
                                 }
                             }
                         }
-
                         // The following exception handling has been added to work around a Java bug with formatting
                         // numbers. See http://bugs.sun.com/view_bug.do?bug_id=6476425
                         // Without this catch, the whole sitemap, or page can not be displayed!
@@ -874,9 +881,9 @@ public class ItemUIRegistryImpl implements ItemUIRegistry {
                 logger.debug("matchStateToValue: Decimal format exception: ", e);
             }
         } else if (state instanceof DateTimeType) {
-            Calendar val = ((DateTimeType) state).getCalendar();
-            Calendar now = Calendar.getInstance();
-            long secsDif = (now.getTimeInMillis() - val.getTimeInMillis()) / 1000;
+            ZonedDateTime val = ((DateTimeType) state).getZonedDateTime();
+            ZonedDateTime now = ZonedDateTime.now();
+            long secsDif = ChronoUnit.SECONDS.between(now, val);
 
             try {
                 switch (condition) {
@@ -1180,6 +1187,20 @@ public class ItemUIRegistryImpl implements ItemUIRegistry {
             return null;
         }
 
+    }
+
+    @Override
+    public void addRegistryHook(RegistryHook<Item> hook) {
+        if (itemRegistry != null) {
+            itemRegistry.addRegistryHook(hook);
+        }
+    }
+
+    @Override
+    public void removeRegistryHook(RegistryHook<Item> hook) {
+        if (itemRegistry != null) {
+            itemRegistry.removeRegistryHook(hook);
+        }
     }
 
 }

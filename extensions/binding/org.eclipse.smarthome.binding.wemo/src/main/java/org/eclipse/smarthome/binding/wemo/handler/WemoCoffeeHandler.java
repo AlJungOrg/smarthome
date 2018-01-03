@@ -1,9 +1,14 @@
 /**
- * Copyright (c) 2014-2017 by the respective copyright holders.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
+ * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0
+ *
+ * SPDX-License-Identifier: EPL-2.0
  */
 package org.eclipse.smarthome.binding.wemo.handler;
 
@@ -12,12 +17,14 @@ import static org.eclipse.smarthome.binding.wemo.WemoBindingConstants.*;
 import java.io.StringReader;
 import java.math.BigDecimal;
 import java.net.URL;
+import java.time.Instant;
+import java.time.ZonedDateTime;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -61,6 +68,7 @@ import org.xml.sax.InputSource;
  * sent to one of the channels and to update their states.
  *
  * @author Hans-Jörg Merk - Initial contribution
+ * @author Erdoan Hadzhiyusein - Adapted the class to work with the new DateTimeType
  */
 
 public class WemoCoffeeHandler extends BaseThingHandler implements UpnpIOParticipant, DiscoveryListener {
@@ -464,9 +472,8 @@ public class WemoCoffeeHandler extends BaseThingHandler implements UpnpIOPartici
                         getThing().getUID());
                 return null;
             }
-            GregorianCalendar brewCal = new GregorianCalendar();
-            brewCal.setTimeInMillis(value);
-            State dateTimeState = new DateTimeType(brewCal);
+            ZonedDateTime zoned = ZonedDateTime.ofInstant(Instant.ofEpochMilli(value), TimeZone.getDefault().toZoneId());
+            State dateTimeState = new DateTimeType(zoned);
             if (dateTimeState != null) {
                 logger.trace("New attribute brewed '{}' received", dateTimeState);
                 return dateTimeState;
@@ -502,7 +509,7 @@ public class WemoCoffeeHandler extends BaseThingHandler implements UpnpIOPartici
     @Override
     public Collection<ThingUID> removeOlderResults(DiscoveryService source, long timestamp,
             Collection<ThingTypeUID> thingTypeUIDs) {
-        return null;
+        return Collections.emptyList();
     }
 
 }
