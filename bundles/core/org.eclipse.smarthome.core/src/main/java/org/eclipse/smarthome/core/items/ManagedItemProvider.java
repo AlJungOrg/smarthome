@@ -37,6 +37,9 @@ import org.osgi.service.component.annotations.ReferencePolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
+
 /**
  * {@link ManagedItemProvider} is an OSGi service, that allows to add or remove
  * items at runtime by calling {@link ManagedItemProvider#addItem(Item)} or {@link ManagedItemProvider#removeItem(Item)}
@@ -74,6 +77,7 @@ public class ManagedItemProvider extends AbstractManagedProvider<Item, String, P
 
         public List<String> functionParams;
 
+        private String groupFunction; // for migrating old items
     }
 
     private static final @NonNull String ITEM_TYPE_GROUP = "Group";
@@ -194,6 +198,8 @@ public class ManagedItemProvider extends AbstractManagedProvider<Item, String, P
     protected Item toElement(String itemName, PersistedItem persistedItem) {
         ActiveItem item = null;
 
+        migratePersistedItem(persistedItem);
+
         if (persistedItem.itemType.equals(ITEM_TYPE_GROUP)) {
             if (persistedItem.baseItemType != null) {
                 GenericItem baseItem = createItem(persistedItem.baseItemType, itemName);
@@ -228,6 +234,16 @@ public class ManagedItemProvider extends AbstractManagedProvider<Item, String, P
             functionDTO.params = persistedItem.functionParams.toArray(new String[persistedItem.functionParams.size()]);
         }
         return ItemDTOMapper.mapFunction(baseItem, functionDTO);
+    }
+
+    private void migratePersistedItem(PersistedItem persistedItem) {
+        if (persistedItem.groupFunction != null) {
+            Iterator<String> parts = Splitter.on(';').split(persistedItem.groupFunction).iterator();
+            persistedItem.functionName = parts.next();
+            persistedItem.functionParams = ImmutableList.copyOf(parts);
+            persistedItem.baseItemType = "Switch";
+            persistedItem.groupFunction = null;
+        }
     }
 
     private void configureItem(PersistedItem persistedItem, ActiveItem item) {
