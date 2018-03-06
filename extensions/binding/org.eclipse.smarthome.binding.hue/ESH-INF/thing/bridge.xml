@@ -13,7 +13,7 @@
         	<property name="vendor">Philips</property>
         </properties>
         <representation-property>serialNumber</representation-property>
-        
+
         <config-description>
             <parameter name="ipAddress" type="text">
                 <context>network_address</context>
@@ -33,7 +33,7 @@
                 <label>Polling Interval</label>
                 <description>Seconds between fetching values from the Bridge.</description>
                 <required>true</required>
-                <default>10</default>
+                <default>1</default>
             </parameter>
         </config-description>
     </bridge-type>
