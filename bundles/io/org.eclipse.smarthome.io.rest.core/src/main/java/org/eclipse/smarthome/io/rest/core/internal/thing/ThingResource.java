@@ -303,7 +303,7 @@ public class ThingResource implements RESTResource {
             }
         }
 
-        return Response.ok().build();
+        return Response.ok(null, MediaType.APPLICATION_JSON).build();
     }
 
     /**
