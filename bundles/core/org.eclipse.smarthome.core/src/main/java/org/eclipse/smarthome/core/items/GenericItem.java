@@ -276,6 +276,9 @@ abstract public class GenericItem implements ActiveItem {
 
     public void addStateChangeListener(StateChangeListener listener) {
         synchronized (listeners) {
+            if (listeners.contains(listener))  {
+                this.removeStateChangeListener(listener);
+            }
             listeners.add(listener);
         }
     }
