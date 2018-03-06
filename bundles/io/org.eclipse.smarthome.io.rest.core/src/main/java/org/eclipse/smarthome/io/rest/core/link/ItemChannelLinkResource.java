@@ -84,7 +84,7 @@ public class ItemChannelLinkResource implements RESTResource {
     public Response link(@PathParam("itemName") @ApiParam(value = "itemName") String itemName,
             @PathParam("channelUID") @ApiParam(value = "channelUID") String channelUid) {
         itemChannelLinkRegistry.add(new ItemChannelLink(itemName, new ChannelUID(channelUid)));
-        return Response.ok().build();
+        return Response.ok(null, MediaType.APPLICATION_JSON).build();
     }
 
     @DELETE
@@ -105,7 +105,7 @@ public class ItemChannelLinkResource implements RESTResource {
         ItemChannelLink result = itemChannelLinkRegistry
                 .remove(AbstractLink.getIDFor(itemName, new ChannelUID(channelUid)));
         if (result != null) {
-            return Response.ok().build();
+            return Response.ok(null, MediaType.APPLICATION_JSON).build();
         } else {
             return JSONResponse.createErrorResponse(Status.METHOD_NOT_ALLOWED, "Channel is read-only.");
         }

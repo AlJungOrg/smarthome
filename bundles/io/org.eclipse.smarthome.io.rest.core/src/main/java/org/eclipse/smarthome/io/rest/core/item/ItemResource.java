@@ -392,7 +392,7 @@ public class ItemResource implements RESTResource {
             return Response.status(Status.NOT_FOUND).build();
         }
 
-        return Response.ok().build();
+        return Response.ok(null, MediaType.APPLICATION_JSON).build();
     }
 
     @PUT
