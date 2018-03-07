@@ -53,6 +53,8 @@ public class ItemEventFactory extends AbstractEventFactory {
 
     private static final String ITEM_STATE_CHANGED_EVENT_TOPIC = "smarthome/items/{itemName}/statechanged";
 
+    private static final String GROUPITEM_STATE_EVENT_TOPIC = "smarthome/items/{itemName}/{memberName}/state";
+
     private static final String GROUPITEM_STATE_CHANGED_EVENT_TOPIC = "smarthome/items/{itemName}/{memberName}/statechanged";
 
     private static final String ITEM_ADDED_EVENT_TOPIC = "smarthome/items/{itemName}/added";
@@ -283,6 +285,36 @@ public class ItemEventFactory extends AbstractEventFactory {
                 newState.toFullString(), getStateType(oldState), oldState.toFullString());
         String payload = serializePayload(bean);
         return new ItemStateChangedEvent(topic, payload, itemName, newState, oldState);
+    }
+
+    /**
+     * Creates a group item state event.
+     *
+     * @param itemName the name of the group item to send the state update for
+     * @param memberName the name of the member item which was updated
+     * @param state the new state to send
+     * @param source the name of the source identifying the sender (can be null)
+     * @return the created group item state event
+     */
+    public static GroupItemStateEvent createGroupStateEvent(String itemName, String memberName,
+                State state, String source) {
+        assertValidArguments(itemName, memberName, state, "state");
+        String topic = buildGroupTopic(GROUPITEM_STATE_EVENT_TOPIC, itemName, memberName);
+        ItemEventPayloadBean bean = new ItemEventPayloadBean(getStateType(state), state.toFullString());
+        String payload = serializePayload(bean);
+        return new GroupItemStateEvent(topic, payload, itemName, state, source);
+    }
+
+    /**
+     * Creates a group item state event.
+     *
+     * @param itemName the name of the group item to send the state update for
+     * @param memberName the name of the member item which was updated
+     * @param state the new state to send
+     * @return the created group item state event
+     */
+    public static GroupItemStateEvent createGroupStateEvent(String itemName, String memberName, State state) {
+        return createGroupStateEvent(itemName, memberName, state, null);
     }
 
     public static GroupItemStateChangedEvent createGroupStateChangedEvent(String itemName, String memberName,
