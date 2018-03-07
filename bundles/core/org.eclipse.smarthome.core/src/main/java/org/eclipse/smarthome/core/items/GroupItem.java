@@ -350,6 +350,8 @@ public class GroupItem extends GenericItem implements StateChangeListener {
         }
         if (!oldState.equals(this.state)) {
             sendGroupStateChangedEvent(item.getName(), this.state, oldState);
+        } else {
+            sendGroupStateEvent(item.getName(), this.state);
         }
     }
 
@@ -369,6 +371,13 @@ public class GroupItem extends GenericItem implements StateChangeListener {
         if (eventPublisher != null) {
             eventPublisher.post(
                     ItemEventFactory.createGroupStateChangedEvent(this.getName(), memberName, newState, oldState));
+        }
+    }
+
+    private void sendGroupStateEvent(String memberName, State state) {
+        if (eventPublisher != null) {
+            eventPublisher.post(
+                    ItemEventFactory.createGroupStateEvent(this.getName(), memberName, state));
         }
     }
 
