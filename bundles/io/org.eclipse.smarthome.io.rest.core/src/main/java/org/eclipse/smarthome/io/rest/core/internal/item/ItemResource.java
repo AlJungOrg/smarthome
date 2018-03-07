@@ -322,7 +322,7 @@ public class ItemResource implements RESTResource {
             if (command != null) {
                 logger.debug("Received HTTP POST request at '{}' with value '{}'.", uriInfo.getPath(), value);
                 eventPublisher.post(ItemEventFactory.createCommandEvent(itemname, command));
-                ResponseBuilder resbuilder = Response.ok(null, MediaType.APPLICATION_JSON);
+                ResponseBuilder resbuilder = Response.ok();
                 resbuilder.type(MediaType.TEXT_PLAIN);
                 return resbuilder.build();
             } else {
