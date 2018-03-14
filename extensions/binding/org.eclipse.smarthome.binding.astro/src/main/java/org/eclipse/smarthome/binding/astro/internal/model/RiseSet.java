@@ -12,41 +12,44 @@
  */
 package org.eclipse.smarthome.binding.astro.internal.model;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Base class for the rise and set ranges.
  *
  * @author Gerhard Riegler - Initial contribution
  */
 public abstract class RiseSet {
-    private Range rise = new Range();
-    private Range set = new Range();
+
+    protected Map<SunPhaseName, Range> ranges = new HashMap<SunPhaseName, Range>();
 
     /**
      * Returns the rise range.
      */
     public Range getRise() {
-        return rise;
+        return ranges.get(SunPhaseName.SUN_RISE);
     }
 
     /**
      * Sets the rise range.
      */
     public void setRise(Range rise) {
-        this.rise = rise;
+        ranges.put(SunPhaseName.SUN_RISE, rise);
     }
 
     /**
      * Returns the set range.
      */
     public Range getSet() {
-        return set;
+        return ranges.get(SunPhaseName.SUN_SET);
     }
 
     /**
      * Sets the set range.
      */
     public void setSet(Range set) {
-        this.set = set;
+        ranges.put(SunPhaseName.SUN_SET, set);
     }
 
 }

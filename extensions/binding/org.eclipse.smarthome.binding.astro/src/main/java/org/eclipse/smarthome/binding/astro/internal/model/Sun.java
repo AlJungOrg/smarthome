@@ -12,7 +12,6 @@
  */
 package org.eclipse.smarthome.binding.astro.internal.model;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.lang.builder.ToStringBuilder;
@@ -24,8 +23,6 @@ import org.apache.commons.lang.builder.ToStringStyle;
  * @author Gerhard Riegler - Initial contribution
  */
 public class Sun extends RiseSet implements Planet {
-
-    private Map<SunPhaseName, Range> ranges = new HashMap<SunPhaseName, Range>();
 
     private Position position = new Position();
 

@@ -251,6 +251,8 @@ public class SunCalc {
             if (rangeEntry.getValue().matches(Calendar.getInstance())) {
                 if (entryPhase == SunPhaseName.MORNING_NIGHT || entryPhase == SunPhaseName.EVENING_NIGHT) {
                     sun.getPhase().setName(SunPhaseName.NIGHT);
+                } else if (entryPhase == SunPhaseName.NOON) {
+                    sun.getPhase().setName(SunPhaseName.DAYLIGHT);
                 } else {
                     sun.getPhase().setName(entryPhase);
                 }
