@@ -201,7 +201,7 @@ public interface ArithmeticGroupFunction extends GroupFunction {
             if (items != null) {
                 boolean foundOne = false;
                 for (Item item : items) {
-                    if (activeState.equals(item.getState())) {
+                    if (activeState.equals(item.getStateAs(activeState.getClass()))) {
                         if (foundOne == true) {
                             return passiveState;
                         } else {
@@ -221,12 +221,29 @@ public interface ArithmeticGroupFunction extends GroupFunction {
          */
         @Override
         public State getStateAs(Set<Item> items, Class<? extends State> stateClass) {
-            final State state = calculate(items);
+            State state = calculate(items);
             if (stateClass.isInstance(state)) {
                 return state;
             } else {
-                return UnDefType.UNDEF;
+                if (stateClass == DecimalType.class) {
+                    return new DecimalType(count(items, activeState));
+                } else {
+                    return null;
+                }
             }
+        }
+
+        private int count(Set<Item> items, State state) {
+            int count = 0;
+            if (items != null && state != null) {
+                for (Item item : items) {
+                    if (state.equals(item.getStateAs(state.getClass()))) {
+                        count++;
+                    }
+                }
+            }
+            return count;
+
         }
 
         @Override
