@@ -34,7 +34,6 @@ import org.eclipse.smarthome.core.types.State;
 import org.eclipse.smarthome.core.types.UnDefType;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
-import org.osgi.framework.BundleContext;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
 import org.quartz.JobDetail;
@@ -85,7 +84,7 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
             .registerTypeAdapter(State.class, new StateTypeAdapter())
             .create();
 
-    public void activate(final BundleContext bundleContext, final Map<String, Object> config) {
+    public void activate(final Map<String, Object> config) {
         logger.debug("mapdb persistence service is being activated");
 
         if (config != null) {
@@ -123,7 +122,7 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
         logger.debug("mapdb persistence service is now activated");
     }
 
-    public void deactivate(final int reason) {
+    public void deactivate() {
         logger.debug("mapdb persistence service deactivated");
         if (db != null) {
             db.close();
