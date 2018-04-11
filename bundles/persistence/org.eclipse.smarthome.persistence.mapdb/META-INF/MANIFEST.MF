@@ -19,4 +19,4 @@ Import-Package: org.apache.commons.lang,
  org.quartz.impl.matchers,
  org.slf4j
 Service-Component: OSGI-INF/*.xml
-Bundle-Activator: org.eclipse.smarthome.persistence.mapdb.internal.MapDBPersistenceActivator
+Bundle-Activator: org.eclipse.smarthome.persistence.mapdb.internal.MapDbPersistenceActivator

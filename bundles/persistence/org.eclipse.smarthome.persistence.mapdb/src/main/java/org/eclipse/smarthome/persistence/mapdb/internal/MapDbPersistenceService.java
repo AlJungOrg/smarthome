@@ -61,7 +61,7 @@ import org.slf4j.LoggerFactory;
  * @author Jens Viebig
  * @since 1.7.0
  */
-public class MapDBPersistenceService implements QueryablePersistenceService {
+public class MapDbPersistenceService implements QueryablePersistenceService {
 
     private static final String SERVICE_NAME = "mapdb";
 
@@ -77,11 +77,11 @@ public class MapDBPersistenceService implements QueryablePersistenceService {
 
     private static boolean needsCommit = false;
 
-    private static final Logger logger = LoggerFactory.getLogger(MapDBPersistenceService.class);
+    private static final Logger logger = LoggerFactory.getLogger(MapDbPersistenceService.class);
 
     /** holds the local instance of the MapDB database */
     private static DB db;
-    private static Map<String, MapDBItem> map;
+    private static Map<String, MapDbItem> map;
 
     public void activate(final BundleContext bundleContext, final Map<String, Object> config) {
         logger.debug("mapdb persistence service is being activated");
@@ -114,7 +114,7 @@ public class MapDBPersistenceService implements QueryablePersistenceService {
 
         File dbFile = new File(DB_FOLDER_NAME, DB_FILE_NAME);
         db = DBMaker.newFileDB(dbFile).closeOnJvmShutdown().make();
-        Serializer<MapDBItem> serializer = new MapDBitemSerializer();
+        Serializer<MapDbItem> serializer = new MapDbItemSerializer();
         map = db.createTreeMap("itemStore").valueSerializer(serializer).makeOrGet();
         scheduleJob();
         logger.debug("mapdb persistence service is now activated");
@@ -167,11 +167,11 @@ public class MapDBPersistenceService implements QueryablePersistenceService {
         } else if (item instanceof DimmerItem || item instanceof RollershutterItem) {
             state = item.getStateAs(PercentType.class);
         }
-        MapDBItem mItem = new MapDBItem();
+        MapDbItem mItem = new MapDbItem();
         mItem.setName(alias);
         mItem.setState(state);
         mItem.setTimestamp(new Date());
-        MapDBItem oldItem = map.put(alias, mItem);
+        MapDbItem oldItem = map.put(alias, mItem);
 
         if (!commitSameState) {
             if (oldItem != null) {

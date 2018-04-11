@@ -24,7 +24,7 @@ import org.eclipse.smarthome.core.types.State;
  * @since 1.7.0
  *
  */
-public class MapDBItem implements HistoricItem, PersistenceItemInfo, Serializable {
+public class MapDbItem implements HistoricItem, PersistenceItemInfo, Serializable {
 
     private static final long serialVersionUID = 1L;
 

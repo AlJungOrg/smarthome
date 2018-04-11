@@ -10,7 +10,7 @@
 
 -->
 <scr:component xmlns:scr="http://www.osgi.org/xmlns/scr/v1.2.0" activate="activate" deactivate="deactivate" name="org.eclipse.smarthome.persistence.mapdb" immediate="true" configuration-pid="org.eclipse.smarthome.persistence.mapdb" configuration-policy="optional">
-   <implementation class="org.eclipse.smarthome.persistence.mapdb.internal.MapDBPersistenceService"/>
+   <implementation class="org.eclipse.smarthome.persistence.mapdb.internal.MapDbPersistenceService"/>
    <service>
       <provide interface="org.eclipse.smarthome.core.persistence.PersistenceService"/>
    </service>

@@ -19,9 +19,9 @@ import org.slf4j.LoggerFactory;
  * @author Jens Viebig
  * @since 1.7.0
  */
-public final class MapDBPersistenceActivator implements BundleActivator {
+public final class MapDbPersistenceActivator implements BundleActivator {
 
-    private static Logger logger = LoggerFactory.getLogger(MapDBPersistenceActivator.class);
+    private static Logger logger = LoggerFactory.getLogger(MapDbPersistenceActivator.class);
 
     /**
      * Called whenever the OSGi framework starts our bundle

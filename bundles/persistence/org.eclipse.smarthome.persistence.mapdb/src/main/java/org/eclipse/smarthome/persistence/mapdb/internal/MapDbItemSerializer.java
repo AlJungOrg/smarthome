@@ -31,15 +31,15 @@ import org.mapdb.Serializer;
  * @since 1.7.0
  *
  */
-public class MapDBitemSerializer implements Serializer<MapDBItem>, Serializable {
+public class MapDbItemSerializer implements Serializer<MapDbItem>, Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    public MapDBitemSerializer() {
+    public MapDbItemSerializer() {
     }
 
     @Override
-    public void serialize(DataOutput out, MapDBItem item) throws IOException {
+    public void serialize(DataOutput out, MapDbItem item) throws IOException {
         out.writeUTF(item.getName());
         out.writeUTF(item.getState().getClass().getSimpleName());
         String stateStr = item.getState().toString();
@@ -48,7 +48,7 @@ public class MapDBitemSerializer implements Serializer<MapDBItem>, Serializable 
     }
 
     @Override
-    public MapDBItem deserialize(DataInput in, int available) throws IOException {
+    public MapDbItem deserialize(DataInput in, int available) throws IOException {
         String name = in.readUTF();
 
         String stateType = in.readUTF();
@@ -80,7 +80,7 @@ public class MapDBitemSerializer implements Serializer<MapDBItem>, Serializable 
 
         Date date = new Date(in.readLong());
 
-        MapDBItem item = new MapDBItem();
+        MapDbItem item = new MapDbItem();
         item.setName(name);
         item.setState(state);
         item.setTimestamp(date);
