@@ -12,8 +12,9 @@ import java.io.Serializable;
 import java.text.DateFormat;
 import java.util.Date;
 
-import org.openhab.core.persistence.HistoricItem;
-import org.openhab.core.types.State;
+import org.eclipse.smarthome.core.persistence.HistoricItem;
+import org.eclipse.smarthome.core.persistence.PersistenceItemInfo;
+import org.eclipse.smarthome.core.types.State;
 
 /**
  * This is a Java bean used to persist item states with timestamps in the
@@ -23,7 +24,7 @@ import org.openhab.core.types.State;
  * @since 1.7.0
  *
  */
-public class MapDBItem implements HistoricItem, Serializable {
+public class MapDBItem implements HistoricItem, PersistenceItemInfo, Serializable {
 
     private static final long serialVersionUID = 1L;
 
@@ -65,4 +66,18 @@ public class MapDBItem implements HistoricItem, Serializable {
         return DateFormat.getDateTimeInstance().format(timestamp) + ": " + name + " -> " + state.toString();
     }
 
+    @Override
+    public Integer getCount() {
+        return null;
+    }
+
+    @Override
+    public Date getEarliest() {
+        return null;
+    }
+
+    @Override
+    public Date getLatest() {
+        return null;
+    }
 }

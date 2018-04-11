@@ -17,25 +17,28 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang.StringUtils;
+import org.eclipse.smarthome.core.items.Item;
+import org.eclipse.smarthome.core.library.items.ColorItem;
+import org.eclipse.smarthome.core.library.items.DimmerItem;
+import org.eclipse.smarthome.core.library.items.RollershutterItem;
+import org.eclipse.smarthome.core.library.types.HSBType;
+import org.eclipse.smarthome.core.library.types.PercentType;
+import org.eclipse.smarthome.core.persistence.FilterCriteria;
+import org.eclipse.smarthome.core.persistence.HistoricItem;
+import org.eclipse.smarthome.core.persistence.PersistenceItemInfo;
+import org.eclipse.smarthome.core.persistence.PersistenceService;
+import org.eclipse.smarthome.core.persistence.QueryablePersistenceService;
+import org.eclipse.smarthome.core.types.State;
+import org.eclipse.smarthome.core.types.UnDefType;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 import org.mapdb.Serializer;
-import org.openhab.core.items.Item;
-import org.openhab.core.library.items.ColorItem;
-import org.openhab.core.library.items.DimmerItem;
-import org.openhab.core.library.items.RollershutterItem;
-import org.openhab.core.library.types.HSBType;
-import org.openhab.core.library.types.PercentType;
-import org.openhab.core.persistence.FilterCriteria;
-import org.openhab.core.persistence.HistoricItem;
-import org.openhab.core.persistence.PersistenceService;
-import org.openhab.core.persistence.QueryablePersistenceService;
-import org.openhab.core.types.State;
-import org.openhab.core.types.UnDefType;
 import org.osgi.framework.BundleContext;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
@@ -126,8 +129,18 @@ public class MapDBPersistenceService implements QueryablePersistenceService {
     }
 
     @Override
-    public String getName() {
+    public String getId() {
         return SERVICE_NAME;
+    }
+
+    @Override
+    public String getLabel(Locale locale) {
+        return SERVICE_NAME;
+    }
+
+    @Override
+    public Set<PersistenceItemInfo> getItemInfo() {
+        return map.values().stream().collect(Collectors.<PersistenceItemInfo>toSet());
     }
 
     @Override
@@ -259,5 +272,4 @@ public class MapDBPersistenceService implements QueryablePersistenceService {
             return "etc";
         }
     }
-
 }
