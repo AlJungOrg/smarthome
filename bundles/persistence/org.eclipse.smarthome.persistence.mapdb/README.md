@@ -19,7 +19,7 @@ This service can be configured in the file `services/mapdb.cfg`.
 
 All item and event related configuration is done in the file `persistence/mapdb.persist`.
 
-To configure this service as the default persistence service for openHAB 2, add or change the line
+To configure this service as the default persistence service for Eclipse SmartHome, add or change the line
 
 ```
 org.eclipse.smarthome.persistence:default=mapdb

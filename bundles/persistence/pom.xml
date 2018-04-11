@@ -16,7 +16,7 @@
   <name>Eclipse SmartHome Persistence</name>
 
   <modules>
-    <module>org.openhab.persistence.mapdb</module>
+    <module>org.eclipse.smarthome.persistence.mapdb</module>
   </modules>
 
 </project>
