@@ -85,7 +85,7 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
             .create();
 
     public void activate(final Map<String, Object> config) {
-        logger.debug("mapdb persistence service is being activated");
+        logger.debug("MapDB persistence service is being activated");
 
         if (config != null) {
             String commitIntervalString = (String) config.get("commitinterval");
@@ -119,11 +119,11 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
         db = DBMaker.newFileDB(dbFile).closeOnJvmShutdown().make();
         map = db.createTreeMap("itemStore").makeOrGet();
         scheduleJob();
-        logger.debug("mapdb persistence service is now activated");
+        logger.debug("MapDB persistence service is now activated");
     }
 
     public void deactivate() {
-        logger.debug("mapdb persistence service deactivated");
+        logger.debug("MapDB persistence service deactivated");
         if (db != null) {
             db.close();
         }
@@ -181,7 +181,7 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
                 }
             }
         }
-        logger.debug("Stored '{}' with state '{}' in mapdb database", alias, state.toString());
+        logger.debug("Stored '{}' with state '{}' in MapDB database", alias, state.toString());
     }
 
     @Override
