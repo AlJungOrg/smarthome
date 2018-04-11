@@ -8,7 +8,6 @@
  */
 package org.eclipse.smarthome.persistence.mapdb.internal;
 
-import java.io.Serializable;
 import java.text.DateFormat;
 import java.util.Date;
 
@@ -24,9 +23,7 @@ import org.eclipse.smarthome.core.types.State;
  * @since 1.7.0
  *
  */
-public class MapDbItem implements HistoricItem, PersistenceItemInfo, Serializable {
-
-    private static final long serialVersionUID = 1L;
+public class MapDbItem implements HistoricItem, PersistenceItemInfo {
 
     private String name;
 

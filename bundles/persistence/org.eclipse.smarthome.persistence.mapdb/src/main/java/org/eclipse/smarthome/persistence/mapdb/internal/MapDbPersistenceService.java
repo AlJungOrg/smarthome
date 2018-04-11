@@ -38,7 +38,6 @@ import org.eclipse.smarthome.core.types.State;
 import org.eclipse.smarthome.core.types.UnDefType;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
-import org.mapdb.Serializer;
 import org.osgi.framework.BundleContext;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
@@ -52,6 +51,9 @@ import org.quartz.SimpleTrigger;
 import org.quartz.impl.StdSchedulerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 /**
  * This is the implementation of the MapDB {@link PersistenceService}. To learn
@@ -81,7 +83,11 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
 
     /** holds the local instance of the MapDB database */
     private static DB db;
-    private static Map<String, MapDbItem> map;
+    private static Map<String, String> map;
+
+    private transient Gson mapper = new GsonBuilder()
+            .registerTypeAdapter(State.class, new StateTypeAdapter())
+            .create();
 
     public void activate(final BundleContext bundleContext, final Map<String, Object> config) {
         logger.debug("mapdb persistence service is being activated");
@@ -114,8 +120,7 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
 
         File dbFile = new File(DB_FOLDER_NAME, DB_FILE_NAME);
         db = DBMaker.newFileDB(dbFile).closeOnJvmShutdown().make();
-        Serializer<MapDbItem> serializer = new MapDbItemSerializer();
-        map = db.createTreeMap("itemStore").valueSerializer(serializer).makeOrGet();
+        map = db.createTreeMap("itemStore").makeOrGet();
         scheduleJob();
         logger.debug("mapdb persistence service is now activated");
     }
@@ -140,7 +145,9 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
 
     @Override
     public Set<PersistenceItemInfo> getItemInfo() {
-        return map.values().stream().collect(Collectors.<PersistenceItemInfo>toSet());
+        return map.values().stream()
+                .map(this::deserialize)
+                .collect(Collectors.<PersistenceItemInfo>toSet());
     }
 
     @Override
@@ -171,10 +178,12 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
         mItem.setName(alias);
         mItem.setState(state);
         mItem.setTimestamp(new Date());
-        MapDbItem oldItem = map.put(alias, mItem);
+        String json = serialize(mItem);
+        String oldJson = map.put(alias, json);
 
         if (!commitSameState) {
-            if (oldItem != null) {
+            if (oldJson != null) {
+                MapDbItem oldItem = deserialize(oldJson);
                 if (!oldItem.getState().toString().equals(state.toString())) {
                     needsCommit = true;
                 }
@@ -185,11 +194,20 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
 
     @Override
     public Iterable<HistoricItem> query(FilterCriteria filter) {
-        HistoricItem item = map.get(filter.getItemName());
-        if (item != null) {
-            return Collections.singletonList(item);
+        String json = map.get(filter.getItemName());
+        if (json == null) {
+            return Collections.emptyList();
         }
-        return Collections.emptyList();
+        MapDbItem item = deserialize(json);
+        return Collections.singletonList(item);
+    }
+
+    private String serialize(MapDbItem item) {
+        return mapper.toJson(item);
+    }
+
+    private MapDbItem deserialize(String json) {
+        return mapper.fromJson(json, MapDbItem.class);
     }
 
     /**
