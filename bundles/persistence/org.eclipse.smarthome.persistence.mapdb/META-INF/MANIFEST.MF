@@ -9,6 +9,7 @@ Bundle-Version: 0.10.0.qualifier
 Import-Package: com.google.gson,
  com.google.gson.stream,
  org.apache.commons.lang,
+ org.eclipse.smarthome.config.core,
  org.eclipse.smarthome.core.items,
  org.eclipse.smarthome.core.library.items,
  org.eclipse.smarthome.core.library.types,

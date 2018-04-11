@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang.StringUtils;
+import org.eclipse.smarthome.config.core.ConfigConstants;
 import org.eclipse.smarthome.core.items.Item;
 import org.eclipse.smarthome.core.persistence.FilterCriteria;
 import org.eclipse.smarthome.core.persistence.HistoricItem;
@@ -62,7 +63,7 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
 
     private static final String SERVICE_NAME = "mapdb";
 
-    protected final static String DB_FOLDER_NAME = getUserDataFolder() + File.separator + "mapdb";
+    protected final static String DB_FOLDER_NAME = ConfigConstants.getUserDataFolder() + File.separator + "persistence" + File.separator + "mapdb";
 
     private static final String DB_FILE_NAME = "storage.mapdb";
 
@@ -87,20 +88,22 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
     public void activate(final BundleContext bundleContext, final Map<String, Object> config) {
         logger.debug("mapdb persistence service is being activated");
 
-        String commitIntervalString = (String) config.get("commitinterval");
-        if (StringUtils.isNotBlank(commitIntervalString)) {
-            try {
-                commitInterval = Integer.valueOf(commitIntervalString);
-            } catch (IllegalArgumentException iae) {
-                logger.warn("couldn't parse '{}' to an integer");
+        if (config != null) {
+            String commitIntervalString = (String) config.get("commitinterval");
+            if (StringUtils.isNotBlank(commitIntervalString)) {
+                try {
+                    commitInterval = Integer.valueOf(commitIntervalString);
+                } catch (IllegalArgumentException iae) {
+                    logger.warn("couldn't parse '{}' to an integer");
+                }
             }
-        }
-        String commitSameStateString = (String) config.get("commitsamestate");
-        if (StringUtils.isNotBlank(commitSameStateString)) {
-            try {
-                commitSameState = Boolean.valueOf(commitSameStateString);
-            } catch (IllegalArgumentException iae) {
-                logger.warn("couldn't parse '{}' to an integer");
+            String commitSameStateString = (String) config.get("commitsamestate");
+            if (StringUtils.isNotBlank(commitSameStateString)) {
+                try {
+                    commitSameState = Boolean.valueOf(commitSameStateString);
+                } catch (IllegalArgumentException iae) {
+                    logger.warn("couldn't parse '{}' to an integer");
+                }
             }
         }
 
@@ -270,14 +273,5 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
             }
         }
 
-    }
-
-    private static String getUserDataFolder() {
-        String progArg = System.getProperty("smarthome.userdata");
-        if (progArg != null) {
-            return progArg + File.separator + "persistence";
-        } else {
-            return "etc";
-        }
     }
 }
