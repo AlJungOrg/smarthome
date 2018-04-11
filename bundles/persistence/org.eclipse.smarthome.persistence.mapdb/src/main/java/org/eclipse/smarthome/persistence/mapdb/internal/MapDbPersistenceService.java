@@ -24,11 +24,6 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.smarthome.core.items.Item;
-import org.eclipse.smarthome.core.library.items.ColorItem;
-import org.eclipse.smarthome.core.library.items.DimmerItem;
-import org.eclipse.smarthome.core.library.items.RollershutterItem;
-import org.eclipse.smarthome.core.library.types.HSBType;
-import org.eclipse.smarthome.core.library.types.PercentType;
 import org.eclipse.smarthome.core.persistence.FilterCriteria;
 import org.eclipse.smarthome.core.persistence.HistoricItem;
 import org.eclipse.smarthome.core.persistence.PersistenceItemInfo;
@@ -169,11 +164,6 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
         logger.debug("store called for {}", alias);
 
         State state = item.getState();
-        if (item instanceof ColorItem) {
-            state = item.getStateAs(HSBType.class);
-        } else if (item instanceof DimmerItem || item instanceof RollershutterItem) {
-            state = item.getStateAs(PercentType.class);
-        }
         MapDbItem mItem = new MapDbItem();
         mItem.setName(alias);
         mItem.setState(state);
