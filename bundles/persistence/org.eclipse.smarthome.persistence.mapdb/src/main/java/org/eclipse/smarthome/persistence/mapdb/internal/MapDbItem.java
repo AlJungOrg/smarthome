@@ -17,8 +17,7 @@ import org.eclipse.smarthome.core.persistence.PersistenceItemInfo;
 import org.eclipse.smarthome.core.types.State;
 
 /**
- * This is a Java bean used to persist item states with timestamps in the
- * database.
+ * This is a Java bean used to persist item states with timestamps in the database.
  *
  * @author Jens Viebig
  *
