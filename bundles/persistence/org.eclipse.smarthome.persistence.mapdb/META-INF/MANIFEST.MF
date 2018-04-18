@@ -23,4 +23,3 @@ Import-Package: com.google.gson,
  org.quartz.impl.matchers,
  org.slf4j
 Service-Component: OSGI-INF/*.xml
-Bundle-Activator: org.eclipse.smarthome.persistence.mapdb.internal.MapDbPersistenceActivator
