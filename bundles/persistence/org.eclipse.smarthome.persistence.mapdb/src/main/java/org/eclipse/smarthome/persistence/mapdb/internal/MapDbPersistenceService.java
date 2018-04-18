@@ -57,7 +57,6 @@ import com.google.gson.GsonBuilder;
  * href="http://www.mapdb.org/">website</a>.
  *
  * @author Jens Viebig
- * @since 1.7.0
  */
 public class MapDbPersistenceService implements QueryablePersistenceService {
 
@@ -242,7 +241,6 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
      * can be only one instance of a specific job type running at the same time.
      *
      * @author Jens Viebig
-     * @since 1.7.0
      */
     @DisallowConcurrentExecution
     public static class CommitJob implements Job {

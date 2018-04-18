@@ -21,7 +21,6 @@ import org.eclipse.smarthome.core.types.State;
  * database.
  *
  * @author Jens Viebig
- * @since 1.7.0
  *
  */
 public class MapDbItem implements HistoricItem, PersistenceItemInfo {

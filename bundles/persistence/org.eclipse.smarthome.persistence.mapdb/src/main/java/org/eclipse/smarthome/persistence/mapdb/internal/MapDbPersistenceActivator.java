@@ -17,7 +17,6 @@ import org.slf4j.LoggerFactory;
  * Extension of the default OSGi bundle activator
  *
  * @author Jens Viebig
- * @since 1.7.0
  */
 public final class MapDbPersistenceActivator implements BundleActivator {
 
