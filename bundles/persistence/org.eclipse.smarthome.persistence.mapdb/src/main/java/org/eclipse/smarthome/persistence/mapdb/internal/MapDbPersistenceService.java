@@ -35,6 +35,7 @@ import org.eclipse.smarthome.core.types.State;
 import org.eclipse.smarthome.core.types.UnDefType;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
+import org.osgi.service.component.annotations.Component;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
 import org.quartz.JobDetail;
@@ -58,6 +59,7 @@ import com.google.gson.GsonBuilder;
  *
  * @author Jens Viebig
  */
+@Component(service = PersistenceService.class)
 public class MapDbPersistenceService implements QueryablePersistenceService {
 
     private static final String SERVICE_NAME = "mapdb";
