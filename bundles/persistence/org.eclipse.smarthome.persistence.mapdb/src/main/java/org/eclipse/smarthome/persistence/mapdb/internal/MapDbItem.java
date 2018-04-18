@@ -11,6 +11,7 @@ package org.eclipse.smarthome.persistence.mapdb.internal;
 import java.text.DateFormat;
 import java.util.Date;
 
+import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.smarthome.core.persistence.HistoricItem;
 import org.eclipse.smarthome.core.persistence.PersistenceItemInfo;
 import org.eclipse.smarthome.core.types.State;
@@ -32,29 +33,29 @@ public class MapDbItem implements HistoricItem, PersistenceItemInfo {
     private Date timestamp;
 
     @Override
-    public String getName() {
+    public @NonNull String getName() {
         return name;
     }
 
-    public void setName(String name) {
+    public void setName(@NonNull String name) {
         this.name = name;
     }
 
     @Override
-    public State getState() {
+    public @NonNull State getState() {
         return state;
     }
 
-    public void setState(State state) {
+    public void setState(@NonNull State state) {
         this.state = state;
     }
 
     @Override
-    public Date getTimestamp() {
+    public @NonNull Date getTimestamp() {
         return timestamp;
     }
 
-    public void setTimestamp(Date timestamp) {
+    public void setTimestamp(@NonNull Date timestamp) {
         this.timestamp = timestamp;
     }
 

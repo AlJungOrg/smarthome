@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang.StringUtils;
+import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.smarthome.config.core.ConfigConstants;
 import org.eclipse.smarthome.core.items.Item;
 import org.eclipse.smarthome.core.persistence.FilterCriteria;
@@ -131,36 +132,32 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
     }
 
     @Override
-    public String getId() {
+    public @NonNull String getId() {
         return SERVICE_NAME;
     }
 
     @Override
-    public String getLabel(Locale locale) {
+    public @NonNull String getLabel(Locale locale) {
         return SERVICE_NAME;
     }
 
     @Override
-    public Set<PersistenceItemInfo> getItemInfo() {
+    public @NonNull Set<@NonNull PersistenceItemInfo> getItemInfo() {
         return map.values().stream()
                 .map(this::deserialize)
                 .collect(Collectors.<PersistenceItemInfo>toSet());
     }
 
     @Override
-    public void store(Item item) {
-        store(item, null);
+    public void store(@NonNull Item item) {
+        store(item, item.getName());
     }
 
     @Override
-    public void store(Item item, String alias) {
+    public void store(@NonNull Item item, @NonNull String alias) {
 
         if (item.getState() instanceof UnDefType) {
             return;
-        }
-
-        if (alias == null) {
-            alias = item.getName();
         }
 
         logger.debug("store called for {}", alias);
@@ -185,7 +182,7 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
     }
 
     @Override
-    public Iterable<HistoricItem> query(FilterCriteria filter) {
+    public @NonNull Iterable<@NonNull HistoricItem> query(FilterCriteria filter) {
         String json = map.get(filter.getItemName());
         if (json == null) {
             return Collections.emptyList();
