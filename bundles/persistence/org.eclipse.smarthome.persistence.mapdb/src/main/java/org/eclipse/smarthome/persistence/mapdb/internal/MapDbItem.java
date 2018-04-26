@@ -15,10 +15,12 @@ package org.eclipse.smarthome.persistence.mapdb.internal;
 import java.text.DateFormat;
 import java.util.Date;
 
-import org.eclipse.jdt.annotation.NonNull;
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.core.persistence.HistoricItem;
 import org.eclipse.smarthome.core.persistence.PersistenceItemInfo;
 import org.eclipse.smarthome.core.types.State;
+import org.eclipse.smarthome.core.types.UnDefType;
 
 /**
  * This is a Java bean used to persist item states with timestamps in the database.
@@ -26,38 +28,39 @@ import org.eclipse.smarthome.core.types.State;
  * @author Jens Viebig
  *
  */
+@NonNullByDefault
 public class MapDbItem implements HistoricItem, PersistenceItemInfo {
 
-    private String name;
+    private String name = "";
 
-    private State state;
+    private State state = UnDefType.NULL;
 
-    private Date timestamp;
+    private Date timestamp = new Date(0);
 
     @Override
-    public @NonNull String getName() {
+    public String getName() {
         return name;
     }
 
-    public void setName(@NonNull String name) {
+    public void setName(String name) {
         this.name = name;
     }
 
     @Override
-    public @NonNull State getState() {
+    public State getState() {
         return state;
     }
 
-    public void setState(@NonNull State state) {
+    public void setState(State state) {
         this.state = state;
     }
 
     @Override
-    public @NonNull Date getTimestamp() {
+    public Date getTimestamp() {
         return timestamp;
     }
 
-    public void setTimestamp(@NonNull Date timestamp) {
+    public void setTimestamp(Date timestamp) {
         this.timestamp = timestamp;
     }
 
@@ -67,17 +70,17 @@ public class MapDbItem implements HistoricItem, PersistenceItemInfo {
     }
 
     @Override
-    public Integer getCount() {
+    public @Nullable Integer getCount() {
         return null;
     }
 
     @Override
-    public Date getEarliest() {
+    public @Nullable Date getEarliest() {
         return null;
     }
 
     @Override
-    public Date getLatest() {
+    public @Nullable Date getLatest() {
         return null;
     }
 }
