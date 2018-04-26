@@ -25,7 +25,7 @@ import org.eclipse.smarthome.core.types.UnDefType;
 /**
  * This is a Java bean used to persist item states with timestamps in the database.
  *
- * @author Jens Viebig
+ * @author Jens Viebig - Initial contribution
  *
  */
 @NonNullByDefault

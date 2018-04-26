@@ -26,6 +26,11 @@ import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
 
+/**
+ * A GSON TypeAdapter for Eclipse SmartHome State values.
+ * 
+ * @author Martin Kühl - Initial contribution
+ */
 public class StateTypeAdapter extends TypeAdapter<State> {
     private static final String TYPE_SEPARATOR = "@@@";
 

@@ -62,7 +62,7 @@ import com.google.gson.GsonBuilder;
  * more about MapDB please visit their <a
  * href="http://www.mapdb.org/">website</a>.
  *
- * @author Jens Viebig
+ * @author Jens Viebig - Initial contribution
  */
 @Component(service = PersistenceService.class)
 public class MapDbPersistenceService implements QueryablePersistenceService {
