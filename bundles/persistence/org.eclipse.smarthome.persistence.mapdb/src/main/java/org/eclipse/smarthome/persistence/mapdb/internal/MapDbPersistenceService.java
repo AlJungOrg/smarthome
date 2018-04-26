@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -66,7 +67,7 @@ import com.google.gson.GsonBuilder;
 @Component(service = PersistenceService.class)
 public class MapDbPersistenceService implements QueryablePersistenceService {
 
-    private static final String SERVICE_NAME = "mapdb";
+    private static final @NonNull String SERVICE_NAME = "mapdb";
 
     protected final static String DB_FOLDER_NAME = ConfigConstants.getUserDataFolder() + File.separator + "persistence" + File.separator + "mapdb";
 
@@ -150,6 +151,7 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
     public @NonNull Set<@NonNull PersistenceItemInfo> getItemInfo() {
         return map.values().stream()
                 .map(this::deserialize)
+                .filter(Objects::nonNull)
                 .collect(Collectors.<PersistenceItemInfo>toSet());
     }
 
@@ -187,12 +189,15 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
     }
 
     @Override
-    public @NonNull Iterable<@NonNull HistoricItem> query(FilterCriteria filter) {
+    public @NonNull Iterable<@NonNull HistoricItem> query(@NonNull FilterCriteria filter) {
         String json = map.get(filter.getItemName());
         if (json == null) {
             return Collections.emptyList();
         }
         MapDbItem item = deserialize(json);
+        if (item == null) {
+            return Collections.emptyList();
+        }
         return Collections.singletonList(item);
     }
 
@@ -201,7 +206,12 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
     }
 
     private MapDbItem deserialize(String json) {
-        return mapper.fromJson(json, MapDbItem.class);
+        MapDbItem item = mapper.<MapDbItem>fromJson(json, MapDbItem.class);
+        if (item == null || !item.isValid()) {
+            logger.warn("Deserialized invalid item: {}", item);
+            return null;
+        }
+        return item;
     }
 
     /**

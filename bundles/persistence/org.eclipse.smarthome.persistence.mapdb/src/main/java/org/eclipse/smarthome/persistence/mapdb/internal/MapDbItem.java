@@ -83,4 +83,8 @@ public class MapDbItem implements HistoricItem, PersistenceItemInfo {
     public @Nullable Date getLatest() {
         return null;
     }
+
+    public boolean isValid() {
+        return name != null && state != null && timestamp != null;
+    }
 }
