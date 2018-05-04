@@ -12,13 +12,6 @@ Querying the mapdb persistence service for historic values other than the last v
 
 ## Configuration
 
-This service can be configured in the file `services/mapdb.cfg`.
-
-| Property | Default | Required | Description |
-|----------|---------|:--------:|-------------|
-| commitinterval | 5 |    No    | commit interval in seconds |
-| commitsamestate | false | No  | set to `true` to issue a commit even if the state did not change
-
 All item and event related configuration is done in the file `persistence/mapdb.persist`.
 
 To configure this service as the default persistence service for Eclipse SmartHome, add or change the line

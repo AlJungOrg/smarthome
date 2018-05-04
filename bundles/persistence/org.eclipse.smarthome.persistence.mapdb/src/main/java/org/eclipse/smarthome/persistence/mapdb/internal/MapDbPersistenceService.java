@@ -12,24 +12,20 @@
  */
 package org.eclipse.smarthome.persistence.mapdb.internal;
 
-import static org.quartz.JobBuilder.newJob;
-import static org.quartz.SimpleScheduleBuilder.repeatSecondlyForever;
-import static org.quartz.TriggerBuilder.newTrigger;
-import static org.quartz.impl.matchers.GroupMatcher.jobGroupEquals;
-
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang.StringUtils;
 import org.eclipse.jdt.annotation.NonNull;
+import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.smarthome.config.core.ConfigConstants;
+import org.eclipse.smarthome.core.common.ThreadPoolManager;
 import org.eclipse.smarthome.core.items.Item;
 import org.eclipse.smarthome.core.persistence.FilterCriteria;
 import org.eclipse.smarthome.core.persistence.HistoricItem;
@@ -41,16 +37,6 @@ import org.eclipse.smarthome.core.types.UnDefType;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 import org.osgi.service.component.annotations.Component;
-import org.quartz.DisallowConcurrentExecution;
-import org.quartz.Job;
-import org.quartz.JobDetail;
-import org.quartz.JobExecutionContext;
-import org.quartz.JobExecutionException;
-import org.quartz.JobKey;
-import org.quartz.Scheduler;
-import org.quartz.SchedulerException;
-import org.quartz.SimpleTrigger;
-import org.quartz.impl.StdSchedulerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,55 +49,34 @@ import com.google.gson.GsonBuilder;
  * href="http://www.mapdb.org/">website</a>.
  *
  * @author Jens Viebig - Initial contribution
+ * @author Martin Kühl - Port to Eclipse SmartHome
  */
 @Component(service = PersistenceService.class)
 public class MapDbPersistenceService implements QueryablePersistenceService {
 
     private static final @NonNull String SERVICE_NAME = "mapdb";
 
-    protected final static String DB_FOLDER_NAME = ConfigConstants.getUserDataFolder() + File.separator + "persistence" + File.separator + "mapdb";
+    private static final String DB_FOLDER_NAME = ConfigConstants.getUserDataFolder() + File.separator + "persistence" + File.separator + "mapdb";
 
     private static final String DB_FILE_NAME = "storage.mapdb";
 
-    private static final String SCHEDULER_GROUP = "MapDB_SchedulerGroup";
-
-    private static int commitInterval = 5;
-
-    private static boolean commitSameState = false;
-
-    private static boolean needsCommit = false;
-
     private static final Logger logger = LoggerFactory.getLogger(MapDbPersistenceService.class);
 
+    @NonNullByDefault({})
+    private ExecutorService threadPool;
+
     /** holds the local instance of the MapDB database */
-    private static DB db;
-    private static Map<String, String> map;
+    private DB db;
+    private Map<String, String> map;
 
     private transient Gson mapper = new GsonBuilder()
             .registerTypeAdapter(State.class, new StateTypeAdapter())
             .create();
 
-    public void activate(final Map<String, Object> config) {
+    public void activate() {
         logger.debug("MapDB persistence service is being activated");
 
-        if (config != null) {
-            String commitIntervalString = (String) config.get("commitinterval");
-            if (StringUtils.isNotBlank(commitIntervalString)) {
-                try {
-                    commitInterval = Integer.valueOf(commitIntervalString);
-                } catch (IllegalArgumentException iae) {
-                    logger.warn("couldn't parse '{}' to an integer");
-                }
-            }
-            String commitSameStateString = (String) config.get("commitsamestate");
-            if (StringUtils.isNotBlank(commitSameStateString)) {
-                try {
-                    commitSameState = Boolean.valueOf(commitSameStateString);
-                } catch (IllegalArgumentException iae) {
-                    logger.warn("couldn't parse '{}' to an integer");
-                }
-            }
-        }
+        threadPool = ThreadPoolManager.getPool(getClass().getSimpleName());
 
         File folder = new File(DB_FOLDER_NAME);
         if (!folder.exists()) {
@@ -125,7 +90,6 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
         File dbFile = new File(DB_FOLDER_NAME, DB_FILE_NAME);
         db = DBMaker.newFileDB(dbFile).closeOnJvmShutdown().make();
         map = db.createTreeMap("itemStore").makeOrGet();
-        scheduleJob();
         logger.debug("MapDB persistence service is now activated");
     }
 
@@ -134,7 +98,7 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
         if (db != null) {
             db.close();
         }
-        cancelAllJobs();
+        threadPool.shutdown();
     }
 
     @Override
@@ -175,16 +139,8 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
         mItem.setState(state);
         mItem.setTimestamp(new Date());
         String json = serialize(mItem);
-        String oldJson = map.put(alias, json);
-
-        if (!commitSameState) {
-            if (oldJson != null) {
-                MapDbItem oldItem = deserialize(oldJson);
-                if (!oldItem.getState().toString().equals(state.toString())) {
-                    needsCommit = true;
-                }
-            }
-        }
+        map.put(alias, json);
+        commit();
         logger.debug("Stored '{}' with state '{}' in MapDB database", alias, state.toString());
     }
 
@@ -214,74 +170,7 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
         return item;
     }
 
-    /**
-     * Schedules new quartz scheduler jobs for committing transactions and
-     * backing up the database
-     */
-    private void scheduleJob() {
-        try {
-            Scheduler sched = StdSchedulerFactory.getDefaultScheduler();
-
-            // schedule commit-job
-            JobDetail job = newJob(CommitJob.class).withIdentity("Commit_Transaction", SCHEDULER_GROUP).build();
-
-            SimpleTrigger trigger = newTrigger().withIdentity("Commit_Transaction", SCHEDULER_GROUP)
-                    .withSchedule(repeatSecondlyForever(commitInterval)).build();
-
-            sched.scheduleJob(job, trigger);
-            logger.debug("Scheduled Commit-Job with interval {}sec.", commitInterval);
-
-        } catch (SchedulerException e) {
-            logger.warn("Could not create Job: {}", e.getMessage());
-        }
-    }
-
-    /**
-     * Delete all quartz scheduler jobs of the group <code>Dropbox</code>.
-     */
-    private void cancelAllJobs() {
-        try {
-            Scheduler sched = StdSchedulerFactory.getDefaultScheduler();
-            Set<JobKey> jobKeys = sched.getJobKeys(jobGroupEquals(SCHEDULER_GROUP));
-            if (jobKeys.size() > 0) {
-                sched.deleteJobs(new ArrayList<JobKey>(jobKeys));
-                logger.debug("Found {} MapDB-Jobs to delete from DefaultScheduler (keys={})", jobKeys.size(), jobKeys);
-            }
-        } catch (SchedulerException e) {
-            logger.warn("Couldn't remove Commit-Job: {}", e.getMessage());
-        }
-    }
-
-    /**
-     * A quartz scheduler job to commit the mapdb transaction frequently. There
-     * can be only one instance of a specific job type running at the same time.
-     *
-     * @author Jens Viebig
-     */
-    @DisallowConcurrentExecution
-    public static class CommitJob implements Job {
-
-        @Override
-        public void execute(JobExecutionContext context) throws JobExecutionException {
-            long startTime = System.currentTimeMillis();
-            try {
-                if (!db.isClosed() && (needsCommit || commitSameState)) {
-                    needsCommit = false;
-                    db.commit();
-                    logger.trace("successfully commited mapdb transaction in {}ms",
-                            System.currentTimeMillis() - startTime);
-                }
-            } catch (Exception e) {
-                try {
-                    logger.warn("Error committing transaction : {}", e.getMessage());
-                    if (!db.isClosed()) {
-                        db.rollback();
-                    }
-                } catch (Exception re) {
-                    logger.debug("Rollback Exception: {}", e.getMessage());
-                }
-            }
-        }
-
+    private void commit() {
+        threadPool.submit(() -> db.commit());
     }
 }
