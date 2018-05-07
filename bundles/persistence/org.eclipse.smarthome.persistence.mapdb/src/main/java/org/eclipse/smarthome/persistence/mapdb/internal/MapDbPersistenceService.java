@@ -17,10 +17,11 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
@@ -119,7 +120,7 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
     public Set<PersistenceItemInfo> getItemInfo() {
         return map.values().stream()
                 .map(this::deserialize)
-                .filter(Objects::nonNull)
+                .flatMap(MapDbPersistenceService::streamOptional)
                 .collect(Collectors.<PersistenceItemInfo>toSet());
     }
 
@@ -154,27 +155,34 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
         if (json == null) {
             return Collections.emptyList();
         }
-        MapDbItem item = deserialize(json);
-        if (item == null) {
+        Optional<MapDbItem> item = deserialize(json);
+        if (!item.isPresent()) {
             return Collections.emptyList();
         }
-        return Collections.singletonList(item);
+        return Collections.singletonList(item.get());
     }
 
     private String serialize(MapDbItem item) {
         return mapper.toJson(item);
     }
 
-    private @Nullable MapDbItem deserialize(String json) {
+    private Optional<MapDbItem> deserialize(String json) {
         MapDbItem item = mapper.<MapDbItem>fromJson(json, MapDbItem.class);
         if (item == null || !item.isValid()) {
             logger.warn("Deserialized invalid item: {}", item);
-            return null;
+            return Optional.empty();
         }
-        return item;
+        return Optional.of(item);
     }
 
     private void commit() {
         threadPool.submit(() -> db.commit());
+    }
+
+    private static <T> Stream<T> streamOptional(Optional<T> opt) {
+        if (!opt.isPresent()) {
+            return Stream.empty();
+        }
+        return Stream.of(opt.get());
     }
 }
