@@ -22,8 +22,8 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
-import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.config.core.ConfigConstants;
 import org.eclipse.smarthome.core.common.ThreadPoolManager;
 import org.eclipse.smarthome.core.items.Item;
@@ -51,10 +51,11 @@ import com.google.gson.GsonBuilder;
  * @author Jens Viebig - Initial contribution
  * @author Martin Kühl - Port to Eclipse SmartHome
  */
+@NonNullByDefault
 @Component(service = PersistenceService.class)
 public class MapDbPersistenceService implements QueryablePersistenceService {
 
-    private static final @NonNull String SERVICE_NAME = "mapdb";
+    private static final String SERVICE_NAME = "mapdb";
 
     private static final String DB_FOLDER_NAME = ConfigConstants.getUserDataFolder() + File.separator + "persistence" + File.separator + "mapdb";
 
@@ -66,9 +67,12 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
     private ExecutorService threadPool;
 
     /** holds the local instance of the MapDB database */
+    @NonNullByDefault({})
     private DB db;
+    @NonNullByDefault({})
     private Map<String, String> map;
 
+    @NonNullByDefault({})
     private transient Gson mapper = new GsonBuilder()
             .registerTypeAdapter(State.class, new StateTypeAdapter())
             .create();
@@ -102,17 +106,17 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
     }
 
     @Override
-    public @NonNull String getId() {
+    public String getId() {
         return SERVICE_NAME;
     }
 
     @Override
-    public @NonNull String getLabel(Locale locale) {
+    public String getLabel(@Nullable Locale locale) {
         return SERVICE_NAME;
     }
 
     @Override
-    public @NonNull Set<@NonNull PersistenceItemInfo> getItemInfo() {
+    public Set<PersistenceItemInfo> getItemInfo() {
         return map.values().stream()
                 .map(this::deserialize)
                 .filter(Objects::nonNull)
@@ -120,12 +124,12 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
     }
 
     @Override
-    public void store(@NonNull Item item) {
+    public void store(Item item) {
         store(item, item.getName());
     }
 
     @Override
-    public void store(@NonNull Item item, @NonNull String alias) {
+    public void store(Item item, String alias) {
 
         if (item.getState() instanceof UnDefType) {
             return;
@@ -145,7 +149,7 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
     }
 
     @Override
-    public @NonNull Iterable<@NonNull HistoricItem> query(@NonNull FilterCriteria filter) {
+    public Iterable<HistoricItem> query(FilterCriteria filter) {
         String json = map.get(filter.getItemName());
         if (json == null) {
             return Collections.emptyList();
@@ -161,7 +165,7 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
         return mapper.toJson(item);
     }
 
-    private MapDbItem deserialize(String json) {
+    private @Nullable MapDbItem deserialize(String json) {
         MapDbItem item = mapper.<MapDbItem>fromJson(json, MapDbItem.class);
         if (item == null || !item.isValid()) {
             logger.warn("Deserialized invalid item: {}", item);
