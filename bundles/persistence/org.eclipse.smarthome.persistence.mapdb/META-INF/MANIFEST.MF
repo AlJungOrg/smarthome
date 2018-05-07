@@ -19,8 +19,5 @@ Import-Package: com.google.gson,
  org.eclipse.smarthome.core.types,
  org.mapdb,
  org.osgi.framework,
- org.quartz,
- org.quartz.impl,
- org.quartz.impl.matchers,
  org.slf4j
 Service-Component: OSGI-INF/*.xml
