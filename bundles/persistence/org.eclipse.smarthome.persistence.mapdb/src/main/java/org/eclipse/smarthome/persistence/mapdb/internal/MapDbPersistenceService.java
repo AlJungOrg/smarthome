@@ -85,9 +85,9 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
         File folder = new File(DB_FOLDER_NAME);
         if (!folder.exists()) {
             if (!folder.mkdirs()) {
-              logger.error("Failed to create one or more directories in the path '{}'", DB_FOLDER_NAME);
-              logger.error("MapDB persistence service activation has failed.");
-              return;
+                logger.warn("Failed to create one or more directories in the path '{}'", DB_FOLDER_NAME);
+                logger.warn("MapDB persistence service activation has failed.");
+                return;
             }
         }
 
