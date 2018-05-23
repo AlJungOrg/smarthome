@@ -53,7 +53,7 @@ import com.google.gson.GsonBuilder;
  * @author Martin Kühl - Port to Eclipse SmartHome
  */
 @NonNullByDefault
-@Component(service = PersistenceService.class)
+@Component(service = QueryablePersistenceService.class)
 public class MapDbPersistenceService implements QueryablePersistenceService {
 
     private static final String SERVICE_NAME = "mapdb";
