@@ -62,7 +62,7 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
 
     private static final String DB_FILE_NAME = "storage.mapdb";
 
-    private static final Logger logger = LoggerFactory.getLogger(MapDbPersistenceService.class);
+    private final Logger logger = LoggerFactory.getLogger(MapDbPersistenceService.class);
 
     @NonNullByDefault({})
     private ExecutorService threadPool;
@@ -130,7 +130,6 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
 
     @Override
     public void store(Item item, String alias) {
-
         if (item.getState() instanceof UnDefType) {
             return;
         }
