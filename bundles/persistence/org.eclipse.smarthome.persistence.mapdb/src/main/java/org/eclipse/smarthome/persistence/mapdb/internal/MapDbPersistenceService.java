@@ -74,7 +74,7 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
     private Map<String, String> map;
 
     private transient Gson mapper = new GsonBuilder()
-            .registerTypeAdapter(State.class, new StateTypeAdapter())
+            .registerTypeHierarchyAdapter(State.class, new StateTypeAdapter())
             .create();
 
     public void activate() {
