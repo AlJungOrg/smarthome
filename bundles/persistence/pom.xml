@@ -17,6 +17,7 @@
 
   <modules>
     <module>org.eclipse.smarthome.persistence.mapdb</module>
+    <module>org.eclipse.smarthome.persistence.mapdb.test</module>
   </modules>
 
 </project>
