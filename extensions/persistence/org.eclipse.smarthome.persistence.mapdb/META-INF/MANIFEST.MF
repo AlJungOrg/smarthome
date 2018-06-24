@@ -1,7 +1,7 @@
 Manifest-Version: 1.0
 Bundle-ClassPath: .
 Bundle-ManifestVersion: 2
-Bundle-Name: Eclipse SmartHome MapDB Persistence Bundle
+Bundle-Name: Eclipse SmartHome MapDB Persistence Extension
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Bundle-SymbolicName: org.eclipse.smarthome.persistence.mapdb
 Bundle-Vendor: Eclipse.org/SmartHome

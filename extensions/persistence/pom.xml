@@ -4,12 +4,12 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <artifactId>bundles</artifactId>
-    <groupId>org.eclipse.smarthome</groupId>
+    <artifactId>pom</artifactId>
+    <groupId>org.eclipse.smarthome.extension</groupId>
     <version>0.10.0-SNAPSHOT</version>
   </parent>
-  <groupId>org.eclipse.smarthome.bundles</groupId>
-  <artifactId>persistence</artifactId>
+  <groupId>org.eclipse.smarthome.persistence</groupId>
+  <artifactId>pom</artifactId>
 
   <packaging>pom</packaging>
 

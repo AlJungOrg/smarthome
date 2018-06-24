@@ -26,7 +26,6 @@
     <module>model</module>
     <module>ui</module>
     <module>storage</module>
-    <module>persistence</module>
   </modules>
 
   <build>
