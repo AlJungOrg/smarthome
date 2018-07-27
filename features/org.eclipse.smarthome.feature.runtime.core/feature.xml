@@ -200,6 +200,13 @@
          unpack="false"/>
 
    <plugin
+         id="org.eclipse.smarthome.persistence.mapdb"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+   <plugin
          id="org.eclipse.smarthome.storage.json"
          download-size="0"
          install-size="0"
