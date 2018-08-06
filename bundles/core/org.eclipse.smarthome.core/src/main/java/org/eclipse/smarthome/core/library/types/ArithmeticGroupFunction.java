@@ -511,4 +511,69 @@ public interface ArithmeticGroupFunction extends GroupFunction {
         }
     }
 
+    /**
+     * This does a threshold operation. If at least one item is over 'upperLimit',
+     * the 'upperState' is returned. Only if all items are under 'lowerLimit',
+     * the 'lowerState' is returned, otherwise nothing (null) is returned.
+     */
+    static class Threshold implements GroupFunction {
+
+        protected final State activeState;
+        protected final State passiveState;
+        protected final DecimalType upperLimit;
+        protected final DecimalType lowerLimit;
+
+        public Threshold(State activeValue, State passiveValue, DecimalType upperLimit, DecimalType lowerLimit) {
+            if (activeValue == null || passiveValue == null || upperLimit == null || lowerLimit == null) {
+                throw new IllegalArgumentException("Parameters must not be null!");
+            }
+            if (upperLimit.compareTo(lowerLimit) < 0) {
+                throw new IllegalArgumentException("Parameter upperLimit must not be lower then lowerLimit!");
+            }
+            this.activeState = activeValue;
+            this.passiveState = passiveValue;
+            this.upperLimit = upperLimit;
+            this.lowerLimit = lowerLimit;
+        }
+
+        @Override
+        public State calculate(Set<Item> items) {
+
+            if (items != null && items.size() > 0) {
+                // TODO Auto-generated method stub
+                boolean isLower = true;
+                for (Item item : items) {
+                    if (upperLimit.compareTo((DecimalType)item.getStateAs(upperLimit.getClass())) < 0) {
+                        return activeState;
+                    } else if (!(lowerLimit.compareTo((DecimalType)item.getStateAs(lowerLimit.getClass())) > 0)) {
+                        isLower = false;
+                    }
+                }
+                if(isLower) {
+                    return passiveState;
+                }
+                return null;
+            } else {
+                // if we do not have any items, we return the passive state
+                return passiveState;
+            }
+        }
+
+        @Override
+        public State getStateAs(Set<Item> items, Class<? extends State> stateClass) {
+            State state = calculate(items);
+            if (stateClass.isInstance(state)) {
+                return state;
+            } else {
+                return null;
+            }
+        }
+
+        @Override
+        public State[] getParameters() {
+            return new State[] { activeState, passiveState, upperLimit, lowerLimit };
+        }
+    }
+
+
 }

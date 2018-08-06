@@ -23,6 +23,7 @@ import org.eclipse.smarthome.core.items.GroupItem;
 import org.eclipse.smarthome.core.items.Item;
 import org.eclipse.smarthome.core.items.ItemFactory;
 import org.eclipse.smarthome.core.library.types.ArithmeticGroupFunction;
+import org.eclipse.smarthome.core.library.types.DecimalType;
 import org.eclipse.smarthome.core.library.types.StringType;
 import org.eclipse.smarthome.core.types.State;
 import org.eclipse.smarthome.core.types.TypeParser;
@@ -159,6 +160,19 @@ public class ItemDTOMapper {
                 break;
             case "EQUAL":
                 groupFunction = new GroupFunction.Equality();
+                break;
+            case "THRESHOLD":
+                args = parseStates(baseItem, function.params);
+                if (function.params != null && function.params.length == 4) {
+                    State active = TypeParser.parseState(baseItem.getAcceptedDataTypes(), function.params[0]);
+                    State passive = TypeParser.parseState(baseItem.getAcceptedDataTypes(), function.params[1]);
+                    DecimalType upper = new DecimalType(function.params[2]);
+                    DecimalType lower = new DecimalType(function.params[3]);
+                    groupFunction = new ArithmeticGroupFunction.Threshold(active, passive, upper, lower);
+                } else {
+                    LoggerFactory.getLogger(ItemDTOMapper.class)
+                            .error("Group function 'THRESHOLD' requires four arguments. Using Equality instead.");
+                }
                 break;
             default:
                 LoggerFactory.getLogger(ItemDTOMapper.class)
