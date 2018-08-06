@@ -162,7 +162,6 @@ public class ItemDTOMapper {
                 groupFunction = new GroupFunction.Equality();
                 break;
             case "THRESHOLD":
-                args = parseStates(baseItem, function.params);
                 if (function.params != null && function.params.length == 4) {
                     State active = TypeParser.parseState(baseItem.getAcceptedDataTypes(), function.params[0]);
                     State passive = TypeParser.parseState(baseItem.getAcceptedDataTypes(), function.params[1]);
