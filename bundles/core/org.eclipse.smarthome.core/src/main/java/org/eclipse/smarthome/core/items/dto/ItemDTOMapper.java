@@ -23,6 +23,7 @@ import org.eclipse.smarthome.core.items.GroupItem;
 import org.eclipse.smarthome.core.items.Item;
 import org.eclipse.smarthome.core.items.ItemFactory;
 import org.eclipse.smarthome.core.library.types.ArithmeticGroupFunction;
+import org.eclipse.smarthome.core.library.types.DecimalType;
 import org.eclipse.smarthome.core.library.types.StringType;
 import org.eclipse.smarthome.core.types.State;
 import org.eclipse.smarthome.core.types.TypeParser;
@@ -159,6 +160,29 @@ public class ItemDTOMapper {
                 break;
             case "EQUAL":
                 groupFunction = new GroupFunction.Equality();
+                break;
+            case "THRESHOLD":
+                if (function.params != null && function.params.length == 4) {
+                    State active = TypeParser.parseState(baseItem.getAcceptedDataTypes(), function.params[0]);
+                    State passive = TypeParser.parseState(baseItem.getAcceptedDataTypes(), function.params[1]);
+                    DecimalType upper = null;
+                    DecimalType lower = null;
+                    try {
+                        upper = new DecimalType(function.params[2]);
+                        lower = new DecimalType(function.params[3]);
+                    } catch (NullPointerException e) {
+                    } catch (NumberFormatException e) {
+                    }
+                    if (active != null && passive != null && upper != null && lower != null) {
+                        groupFunction = new ArithmeticGroupFunction.Threshold(active, passive, upper, lower);
+                    } else {
+                        LoggerFactory.getLogger(ItemDTOMapper.class)
+                            .error("States are not valid for a group item with base type '{}'", baseItem.getType());
+                    }
+                } else {
+                    LoggerFactory.getLogger(ItemDTOMapper.class)
+                            .error("Group function 'THRESHOLD' requires four arguments. Using Equality instead.");
+                }
                 break;
             default:
                 LoggerFactory.getLogger(ItemDTOMapper.class)
