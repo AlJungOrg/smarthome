@@ -518,20 +518,20 @@ public interface ArithmeticGroupFunction extends GroupFunction {
      */
     static class Threshold implements GroupFunction {
 
-        protected final State activeState;
-        protected final State passiveState;
+        protected final State upperState;
+        protected final State lowerState;
         protected final DecimalType upperLimit;
         protected final DecimalType lowerLimit;
 
-        public Threshold(State activeValue, State passiveValue, DecimalType upperLimit, DecimalType lowerLimit) {
-            if (activeValue == null || passiveValue == null || upperLimit == null || lowerLimit == null) {
+        public Threshold(State upperValue, State lowerValue, DecimalType upperLimit, DecimalType lowerLimit) {
+            if (upperValue == null || lowerValue == null || upperLimit == null || lowerLimit == null) {
                 throw new IllegalArgumentException("Parameters must not be null!");
             }
             if (upperLimit.compareTo(lowerLimit) < 0) {
                 throw new IllegalArgumentException("Parameter upperLimit must not be lower then lowerLimit!");
             }
-            this.activeState = activeValue;
-            this.passiveState = passiveValue;
+            this.upperState = upperValue;
+            this.lowerState = lowerValue;
             this.upperLimit = upperLimit;
             this.lowerLimit = lowerLimit;
         }
@@ -540,22 +540,22 @@ public interface ArithmeticGroupFunction extends GroupFunction {
         public State calculate(Set<Item> items) {
 
             if (items != null && items.size() > 0) {
-                // TODO Auto-generated method stub
                 boolean isLower = true;
                 for (Item item : items) {
-                    if (upperLimit.compareTo((DecimalType)item.getStateAs(upperLimit.getClass())) < 0) {
-                        return activeState;
-                    } else if (!(lowerLimit.compareTo((DecimalType)item.getStateAs(lowerLimit.getClass())) > 0)) {
+                    DecimalType itemState = (DecimalType) item.getStateAs(DecimalType.class);
+                    if (upperLimit.compareTo(itemState) < 0) {
+                        return upperState;
+                    } else if (lowerLimit.compareTo(itemState) <= 0) {
                         isLower = false;
                     }
                 }
                 if(isLower) {
-                    return passiveState;
+                    return lowerState;
                 }
                 return null;
             } else {
                 // if we do not have any items, we return the passive state
-                return passiveState;
+                return lowerState;
             }
         }
 
@@ -571,7 +571,7 @@ public interface ArithmeticGroupFunction extends GroupFunction {
 
         @Override
         public State[] getParameters() {
-            return new State[] { activeState, passiveState, upperLimit, lowerLimit };
+            return new State[] { upperState, lowerState, upperLimit, lowerLimit };
         }
     }
 

@@ -165,9 +165,20 @@ public class ItemDTOMapper {
                 if (function.params != null && function.params.length == 4) {
                     State active = TypeParser.parseState(baseItem.getAcceptedDataTypes(), function.params[0]);
                     State passive = TypeParser.parseState(baseItem.getAcceptedDataTypes(), function.params[1]);
-                    DecimalType upper = new DecimalType(function.params[2]);
-                    DecimalType lower = new DecimalType(function.params[3]);
-                    groupFunction = new ArithmeticGroupFunction.Threshold(active, passive, upper, lower);
+                    DecimalType upper = null;
+                    DecimalType lower = null;
+                    try {
+                        upper = new DecimalType(function.params[2]);
+                        lower = new DecimalType(function.params[3]);
+                    } catch (NullPointerException e) {
+                    } catch (NumberFormatException e) {
+                    }
+                    if (active != null && passive != null && upper != null && lower != null) {
+                        groupFunction = new ArithmeticGroupFunction.Threshold(active, passive, upper, lower);
+                    } else {
+                        LoggerFactory.getLogger(ItemDTOMapper.class)
+                            .error("States are not valid for a group item with base type '{}'", baseItem.getType());
+                    }
                 } else {
                     LoggerFactory.getLogger(ItemDTOMapper.class)
                             .error("Group function 'THRESHOLD' requires four arguments. Using Equality instead.");
