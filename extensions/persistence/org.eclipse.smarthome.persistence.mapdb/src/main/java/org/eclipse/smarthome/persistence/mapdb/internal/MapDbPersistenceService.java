@@ -134,6 +134,10 @@ public class MapDbPersistenceService implements QueryablePersistenceService {
             return;
         }
 
+        // PersistenceManager passes SimpleItemConfiguration.alias which can be null
+        if (alias == null) {
+            alias = item.getName();
+        }
         logger.debug("store called for {}", alias);
 
         State state = item.getState();
