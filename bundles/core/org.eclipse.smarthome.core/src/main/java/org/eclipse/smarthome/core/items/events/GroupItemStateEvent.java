@@ -1,6 +1,5 @@
 package org.eclipse.smarthome.core.items.events;
 
-import org.eclipse.smarthome.core.events.AbstractEvent;
 import org.eclipse.smarthome.core.types.State;
 
 /**
@@ -10,13 +9,11 @@ import org.eclipse.smarthome.core.types.State;
  * @author MAW
  *
  */
-public class GroupItemStateEvent extends AbstractEvent {
+public class GroupItemStateEvent extends ItemStateEvent {
 
     public final static String TYPE = GroupItemStateEvent.class.getSimpleName();
 
-    private final String itemName;
-
-    private final State itemState;
+    private final String memberName;
 
     /**
      * Constructs a new groupitem state event.
@@ -27,37 +24,20 @@ public class GroupItemStateEvent extends AbstractEvent {
      * @param itemState the item state
      * @param source the source, can be null
      */
-    protected GroupItemStateEvent(String topic, String payload, String itemName, State itemState, String source) {
-        super(topic, payload, source);
-        this.itemName = itemName;
-        this.itemState = itemState;
+    protected GroupItemStateEvent(String topic, String payload, String itemName, String memberName, State itemState, String source) {
+        super(topic, payload, itemName, itemState, source);
+        this.memberName = memberName;
+    }
+
+    /**
+     * @return the name of the changed group member
+     */
+    public String getMemberName() {
+        return this.memberName;
     }
 
     @Override
     public String getType() {
         return TYPE;
-    }
-
-    /**
-     * Gets the item name.
-     *
-     * @return the item name
-     */
-    public String getItemName() {
-        return itemName;
-    }
-
-    /**
-     * Gets the item state.
-     *
-     * @return the item state
-     */
-    public State getItemState() {
-        return itemState;
-    }
-
-    @Override
-    public String toString() {
-        return String.format("%s updated to %s", itemName, itemState);
     }
 }

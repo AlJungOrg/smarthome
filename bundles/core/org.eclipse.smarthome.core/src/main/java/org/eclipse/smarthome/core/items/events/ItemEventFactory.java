@@ -302,7 +302,7 @@ public class ItemEventFactory extends AbstractEventFactory {
         String topic = buildGroupTopic(GROUPITEM_STATE_EVENT_TOPIC, itemName, memberName);
         ItemEventPayloadBean bean = new ItemEventPayloadBean(getStateType(state), state.toFullString());
         String payload = serializePayload(bean);
-        return new GroupItemStateEvent(topic, payload, itemName, state, source);
+        return new GroupItemStateEvent(topic, payload, itemName, memberName, state, source);
     }
 
     /**
