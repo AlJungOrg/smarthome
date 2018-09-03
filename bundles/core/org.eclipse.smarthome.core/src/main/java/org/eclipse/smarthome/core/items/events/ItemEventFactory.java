@@ -88,8 +88,18 @@ public class ItemEventFactory extends AbstractEventFactory {
             event = createRemovedEvent(topic, payload);
         } else if (eventType.equals(GroupItemStateChangedEvent.TYPE)) {
             event = createGroupStateChangedEvent(topic, payload);
+        } else if (eventType.equals(GroupItemStateEvent.TYPE)) {
+            event = createGroupStateEvent(topic, payload, source);
         }
         return event;
+    }
+
+    private Event createGroupStateEvent(String topic, String payload, String source) {
+        String itemName = getItemName(topic);
+        String memberName = getMemberName(topic);
+        ItemEventPayloadBean bean = deserializePayload(payload, ItemEventPayloadBean.class);
+        State state = getState(bean.getType(), bean.getValue());
+        return new GroupItemStateEvent(topic, payload, itemName, memberName, state, source);
     }
 
     private Event createGroupStateChangedEvent(String topic, String payload) {
