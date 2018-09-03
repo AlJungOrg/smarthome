@@ -68,7 +68,7 @@ public class ItemEventFactory extends AbstractEventFactory {
      */
     public ItemEventFactory() {
         super(Sets.newHashSet(ItemCommandEvent.TYPE, ItemStateEvent.TYPE, ItemStateChangedEvent.TYPE,
-                ItemAddedEvent.TYPE, ItemUpdatedEvent.TYPE, ItemRemovedEvent.TYPE, GroupItemStateChangedEvent.TYPE));
+                ItemAddedEvent.TYPE, ItemUpdatedEvent.TYPE, ItemRemovedEvent.TYPE, GroupItemStateChangedEvent.TYPE, GroupItemStateEvent.TYPE));
     }
 
     @Override
@@ -88,8 +88,18 @@ public class ItemEventFactory extends AbstractEventFactory {
             event = createRemovedEvent(topic, payload);
         } else if (eventType.equals(GroupItemStateChangedEvent.TYPE)) {
             event = createGroupStateChangedEvent(topic, payload);
+        } else if (eventType.equals(GroupItemStateEvent.TYPE)) {
+            event = createGroupStateEvent(topic, payload, source);
         }
         return event;
+    }
+
+    private Event createGroupStateEvent(String topic, String payload, String source) {
+        String itemName = getItemName(topic);
+        String memberName = getMemberName(topic);
+        ItemEventPayloadBean bean = deserializePayload(payload, ItemEventPayloadBean.class);
+        State state = getState(bean.getType(), bean.getValue());
+        return new GroupItemStateEvent(topic, payload, itemName, memberName, state, source);
     }
 
     private Event createGroupStateChangedEvent(String topic, String payload) {
@@ -302,7 +312,7 @@ public class ItemEventFactory extends AbstractEventFactory {
         String topic = buildGroupTopic(GROUPITEM_STATE_EVENT_TOPIC, itemName, memberName);
         ItemEventPayloadBean bean = new ItemEventPayloadBean(getStateType(state), state.toFullString());
         String payload = serializePayload(bean);
-        return new GroupItemStateEvent(topic, payload, itemName, state, source);
+        return new GroupItemStateEvent(topic, payload, itemName, memberName, state, source);
     }
 
     /**
