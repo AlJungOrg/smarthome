@@ -12,7 +12,7 @@ import org.eclipse.smarthome.core.types.State;
  */
 public class GroupItemStateEvent extends AbstractEvent {
 
-    public final static String TYPE = ItemStateEvent.class.getSimpleName();
+    public final static String TYPE = GroupItemStateEvent.class.getSimpleName();
 
     private final String itemName;
 
