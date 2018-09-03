@@ -68,7 +68,7 @@ public class ItemEventFactory extends AbstractEventFactory {
      */
     public ItemEventFactory() {
         super(Sets.newHashSet(ItemCommandEvent.TYPE, ItemStateEvent.TYPE, ItemStateChangedEvent.TYPE,
-                ItemAddedEvent.TYPE, ItemUpdatedEvent.TYPE, ItemRemovedEvent.TYPE, GroupItemStateChangedEvent.TYPE));
+                ItemAddedEvent.TYPE, ItemUpdatedEvent.TYPE, ItemRemovedEvent.TYPE, GroupItemStateChangedEvent.TYPE, GroupItemStateEvent.TYPE));
     }
 
     @Override
