@@ -12,6 +12,7 @@
  */
 package org.eclipse.smarthome.core.items.dto;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -162,7 +163,7 @@ public class ItemDTOMapper {
                 groupFunction = new GroupFunction.Equality();
                 break;
             case "THRESHOLD":
-                if (function.params != null && function.params.length == 4) {
+                if (function.params != null && (function.params.length == 4 || function.params.length == 5)) {
                     State active = TypeParser.parseState(baseItem.getAcceptedDataTypes(), function.params[0]);
                     State passive = TypeParser.parseState(baseItem.getAcceptedDataTypes(), function.params[1]);
                     DecimalType upper = null;
@@ -173,8 +174,14 @@ public class ItemDTOMapper {
                     } catch (NullPointerException e) {
                     } catch (NumberFormatException e) {
                     }
+                    BigDecimal factor = BigDecimal.ONE;
+                    try {
+                        factor = new BigDecimal(function.params[4]);
+                    } catch (ArrayIndexOutOfBoundsException | NullPointerException | NumberFormatException e) {
+                        // ignore
+                    }
                     if (active != null && passive != null && upper != null && lower != null) {
-                        groupFunction = new ArithmeticGroupFunction.Threshold(active, passive, upper, lower);
+                        groupFunction = new ArithmeticGroupFunction.Threshold(active, passive, upper, lower, factor);
                     } else {
                         LoggerFactory.getLogger(ItemDTOMapper.class)
                             .error("States are not valid for a group item with base type '{}'", baseItem.getType());
