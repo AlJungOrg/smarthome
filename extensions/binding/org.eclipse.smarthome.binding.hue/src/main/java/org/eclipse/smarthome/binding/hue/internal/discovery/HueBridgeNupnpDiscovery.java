@@ -99,31 +99,36 @@ public class HueBridgeNupnpDiscovery extends AbstractDiscoveryService {
         }
     }
 
+    /**
+     * Add a manual discovery into the discovery inbox.
+     * @param ip
+     * @return DiscoveryResult
+     */
     public DiscoveryResult addDiscovery(String ip) {
-		BridgeJsonParameters bridge;
-		try {
-			String json = doGetRequest("http://" + ip + "/api/config");
-			Gson gson = new Gson();
-			ManualBridgeJsonParameters manualBridge = gson.fromJson(json, new TypeToken<ManualBridgeJsonParameters>() {
-	        }.getType());
-	        String lowerCaseId = manualBridge.getBridgeId().toLowerCase();
-	        bridge = new BridgeJsonParameters(lowerCaseId, ip, manualBridge.getMac() , manualBridge.getName());
-	        if (isReachableAndValidHueBridge(bridge)) {
-		        String host = ip;
-		        String serialNumber = bridge.getId().substring(0, 6) + bridge.getId().substring(10);
-		        ThingUID uid = new ThingUID(THING_TYPE_BRIDGE, serialNumber);
-		        DiscoveryResult result = DiscoveryResultBuilder.create(uid)
-		                .withProperties(buildProperties(host, serialNumber))
-		                .withLabel(LABEL_PATTERN.replace("IP", host)).withRepresentationProperty(SERIAL_NUMBER).build();
-		        thingDiscovered(result);
-		        return result;
-	        }
-	    } catch (IOException e) {
-	        logger.debug("Philips Hue Bridge config not reachable. Can't discover manual bridge");
-	    } catch (JsonParseException je) {
-	        logger.debug("Invalid json response from Hue Bridge. Can't discover manual bridge");
-	    }
-		return null;
+        BridgeJsonParameters bridge;
+        try {
+            String json = doGetRequest("http://" + ip + "/api/config");
+            Gson gson = new Gson();
+            ManualBridgeJsonParameters manualBridge = gson.fromJson(json, new TypeToken<ManualBridgeJsonParameters>() {
+            }.getType());
+            String lowerCaseId = manualBridge.getBridgeId().toLowerCase();
+            bridge = new BridgeJsonParameters(lowerCaseId, ip, manualBridge.getMac() , manualBridge.getName());
+            if (isReachableAndValidHueBridge(bridge)) {
+                String host = ip;
+                String serialNumber = bridge.getId().substring(0, 6) + bridge.getId().substring(10);
+                ThingUID uid = new ThingUID(THING_TYPE_BRIDGE, serialNumber);
+                DiscoveryResult result = DiscoveryResultBuilder.create(uid)
+                    .withProperties(buildProperties(host, serialNumber))
+                    .withLabel(LABEL_PATTERN.replace("IP", host)).withRepresentationProperty(SERIAL_NUMBER).build();
+                thingDiscovered(result);
+                return result;
+            }
+        } catch (IOException e) {
+            logger.debug("Philips Hue Bridge config not reachable. Can't discover manual bridge");
+        } catch (JsonParseException je) {
+            logger.debug("Invalid json response from Hue Bridge. Can't discover manual bridge");
+        }
+        return null;
     }
 
     /**

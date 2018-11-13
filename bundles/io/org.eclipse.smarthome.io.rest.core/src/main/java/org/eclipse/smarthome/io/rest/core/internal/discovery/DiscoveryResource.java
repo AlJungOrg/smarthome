@@ -28,7 +28,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriInfo;
 
-import org.eclipse.smarthome.binding.hue.internal.discovery.HueBridgeNupnpDiscovery;
+import org.eclipse.smarthome.binding.hue.handler.HueBridgeDiscoveryHandler;
 import org.eclipse.smarthome.config.discovery.DiscoveryResult;
 import org.eclipse.smarthome.config.discovery.DiscoveryServiceRegistry;
 import org.eclipse.smarthome.config.discovery.ScanListener;
@@ -71,7 +71,7 @@ public class DiscoveryResource implements RESTResource {
 
     private DiscoveryServiceRegistry discoveryServiceRegistry;
 
-	private HueBridgeNupnpDiscovery hueBridgeNupnpDiscovery;
+    private HueBridgeDiscoveryHandler hueBridgeDiscoveryHandler;
 
     @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
     protected void setDiscoveryServiceRegistry(DiscoveryServiceRegistry discoveryServiceRegistry) {
@@ -82,14 +82,14 @@ public class DiscoveryResource implements RESTResource {
         this.discoveryServiceRegistry = null;
     }
 
-	@Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
-	protected void setHueBridgeNupnpDiscovery(HueBridgeNupnpDiscovery hueBridgeNupnpDiscovery) {
-		this.hueBridgeNupnpDiscovery = hueBridgeNupnpDiscovery;
-	}
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
+    protected void setHueBridgeDiscoveryHandler(HueBridgeDiscoveryHandler hueBridgeDiscoveryHandler) {
+        this.hueBridgeDiscoveryHandler = hueBridgeDiscoveryHandler;
+    }
 
-	protected void unsetHueBridgeNupnpDiscovery(HueBridgeNupnpDiscovery hueBridgeNupnpDiscovery) {
-		this.hueBridgeNupnpDiscovery = null;
-	}
+    protected void unsetHueBridgeDiscoveryHandler(HueBridgeDiscoveryHandler hueBridgeDiscoveryHandler) {
+        this.hueBridgeDiscoveryHandler = null;
+    }
 
     @Context
     private UriInfo uriInfo;
@@ -126,23 +126,23 @@ public class DiscoveryResource implements RESTResource {
         return Response.ok(discoveryServiceRegistry.getMaxScanTimeout(bindingId)).build();
     }
 
-	@PUT
-	@Path("/{ip}")
-	@Produces(MediaType.APPLICATION_JSON)
-	@ApiOperation(value = "Adds a discovery.", response = String.class)
-	@ApiResponses(value = {
-			@ApiResponse(code = 200, message = "OK", response = String.class) })
-	public Response putDiscovery(@PathParam("ip") @ApiParam(value = "ip") final String ip) {
-		DiscoveryResult bridge = this.hueBridgeNupnpDiscovery.addDiscovery(ip);
-		if (bridge == null) {
-			return JSONResponse.createErrorResponse(Status.NOT_FOUND, "Bridge not found");
-		}
-		return Response.ok(bridge).build();
-	}
+    @PUT
+    @Path("/{ip}")
+    @Produces(MediaType.APPLICATION_JSON)
+    @ApiOperation(value = "Adds a discovery.", response = String.class)
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "OK", response = String.class) })
+    public Response putDiscovery(@PathParam("ip") @ApiParam(value = "ip") final String ip) {
+        DiscoveryResult bridge = this.hueBridgeDiscoveryHandler.addDiscovery(ip);
+        if (bridge == null) {
+            return JSONResponse.createErrorResponse(Status.NOT_FOUND, "Bridge not found");
+        }
+        return Response.ok(bridge).build();
+    }
 
     @Override
     public boolean isSatisfied() {
-        return discoveryServiceRegistry != null && hueBridgeNupnpDiscovery != null;
+        return discoveryServiceRegistry != null && hueBridgeDiscoveryHandler != null;
     }
 
 }

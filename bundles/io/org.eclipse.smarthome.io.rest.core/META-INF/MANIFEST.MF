@@ -25,7 +25,7 @@ Import-Package:
  javax.ws.rs.ext,
  org.apache.commons.lang,
  org.eclipse.jdt.annotation;resolution:=optional,
- org.eclipse.smarthome.binding.hue.internal.discovery,
+ org.eclipse.smarthome.binding.hue.handler,
  org.eclipse.smarthome.config.core,
  org.eclipse.smarthome.config.core.dto,
  org.eclipse.smarthome.config.core.status,
