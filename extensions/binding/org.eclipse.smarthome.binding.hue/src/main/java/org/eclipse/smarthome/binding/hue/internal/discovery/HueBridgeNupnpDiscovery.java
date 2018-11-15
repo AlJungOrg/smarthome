@@ -52,7 +52,9 @@ public class HueBridgeNupnpDiscovery extends AbstractDiscoveryService {
 
     protected static final String BRIDGE_INDICATOR = "fffe";
 
-    private static final String DISCOVERY_URL = "https://www.meethue.com/api/nupnp";
+    protected static final String PHOSCON_GW_INDICATOR = "FFFF";
+
+    private static final String[] DISCOVERY_URLS = {"https://www.meethue.com/api/nupnp", "http://dresden-light.appspot.com/discover"};
 
     protected static final String LABEL_PATTERN = "Philips hue (IP)";
 
@@ -134,7 +136,7 @@ public class HueBridgeNupnpDiscovery extends AbstractDiscoveryService {
             logger.debug("Bridge not discovered: id {} is shorter then 10.", id);
             return false;
         }
-        if (!id.substring(6, 10).equals(BRIDGE_INDICATOR)) {
+        if (!id.substring(6, 10).equals(BRIDGE_INDICATOR) && !id.substring(6, 10).equals(PHOSCON_GW_INDICATOR)) {
             logger.debug(
                     "Bridge not discovered: id {} does not contain bridge indicator {} or its at the wrong position.",
                     id, BRIDGE_INDICATOR);
@@ -154,16 +156,23 @@ public class HueBridgeNupnpDiscovery extends AbstractDiscoveryService {
     }
 
     /**
-     * Use the Philips Hue NUPnP service to find Hue Bridges in local Network.
+     * Use the Philips Hue NUPnP service and the Dresden-Light Discovery to find Hue Bridges and Phoscon Gateways in local Network.
      *
      * @return a list of available Hue Bridges
      */
     private List<BridgeJsonParameters> getBridgeList() {
         try {
             Gson gson = new Gson();
-            String json = doGetRequest(DISCOVERY_URL);
-            return gson.fromJson(json, new TypeToken<List<BridgeJsonParameters>>() {
-            }.getType());
+            List<BridgeJsonParameters> bridgeList = new ArrayList<BridgeJsonParameters>();
+            for (String discovery_url : DISCOVERY_URLS) {
+                List<BridgeJsonParameters> bridgeListPart = gson.fromJson(doGetRequest(discovery_url), new TypeToken<List<BridgeJsonParameters>>() {
+                }.getType());
+                for (BridgeJsonParameters bridgeJsonParams : bridgeListPart) {
+                    bridgeList.add(bridgeJsonParams);
+                }
+            }
+            return bridgeList;
+
         } catch (IOException e) {
             logger.debug("Philips Hue NUPnP service not reachable. Can't discover bridges");
         } catch (JsonParseException je) {
