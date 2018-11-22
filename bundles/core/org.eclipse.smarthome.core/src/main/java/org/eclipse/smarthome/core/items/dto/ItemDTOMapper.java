@@ -174,9 +174,9 @@ public class ItemDTOMapper {
                     } catch (NullPointerException e) {
                     } catch (NumberFormatException e) {
                     }
-                    BigDecimal factor = BigDecimal.ONE;
+                    DecimalType factor = new DecimalType(BigDecimal.ONE);
                     try {
-                        factor = new BigDecimal(function.params[4]);
+                        factor = new DecimalType(function.params[4]);
                     } catch (ArrayIndexOutOfBoundsException | NullPointerException | NumberFormatException e) {
                         // ignore
                     }

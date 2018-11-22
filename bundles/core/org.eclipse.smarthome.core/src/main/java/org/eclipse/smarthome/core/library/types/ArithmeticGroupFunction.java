@@ -522,9 +522,9 @@ public interface ArithmeticGroupFunction extends GroupFunction {
         protected final State lowerState;
         protected final DecimalType upperLimit;
         protected final DecimalType lowerLimit;
-        protected final BigDecimal factor;
+        protected final DecimalType factor;
 
-        public Threshold(State upperValue, State lowerValue, DecimalType upperLimit, DecimalType lowerLimit, BigDecimal factor) {
+        public Threshold(State upperValue, State lowerValue, DecimalType upperLimit, DecimalType lowerLimit, DecimalType factor) {
             if (upperValue == null || lowerValue == null || upperLimit == null || lowerLimit == null) {
                 throw new IllegalArgumentException("Parameters must not be null!");
             }
@@ -544,7 +544,7 @@ public interface ArithmeticGroupFunction extends GroupFunction {
                 boolean isLower = true;
                 for (Item item : items) {
                     DecimalType itemState = (DecimalType) item.getStateAs(DecimalType.class);
-                    itemState = new DecimalType(itemState.toBigDecimal().multiply(factor));
+                    itemState = new DecimalType(itemState.toBigDecimal().multiply(factor.toBigDecimal()));
                     if (upperLimit.compareTo(itemState) < 0) {
                         return upperState;
                     } else if (lowerLimit.compareTo(itemState) <= 0) {
@@ -573,7 +573,7 @@ public interface ArithmeticGroupFunction extends GroupFunction {
 
         @Override
         public State[] getParameters() {
-            return new State[] { upperState, lowerState, upperLimit, lowerLimit };
+            return new State[] { upperState, lowerState, upperLimit, lowerLimit, factor };
         }
     }
 
