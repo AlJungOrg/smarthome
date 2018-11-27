@@ -111,8 +111,14 @@ public class HueBridgeNupnpDiscovery extends AbstractDiscoveryService {
             Gson gson = new Gson();
             ManualBridgeJsonParameters manualBridge = gson.fromJson(json, new TypeToken<ManualBridgeJsonParameters>() {
             }.getType());
-            String lowerCaseId = manualBridge.getBridgeId().toLowerCase();
-            bridge = new BridgeJsonParameters(lowerCaseId, ip, manualBridge.getMac() , manualBridge.getName());
+            // The requested json data has always uppercase id for a hue or phoscon bridge. Since in discovery a
+            // hue bridge has an lowercase id and a phoscon bridge has an uppercase id, this issue is addressed
+            // here. The desired case, if lower or upper, is determined by the discovery mapping and then adapted
+            // for in the manual discovery and validly checks.
+            String correctedId = manualBridge.getBridgeId().substring(6, 10).equals(PHOSCON_GW_INDICATOR) ?
+                manualBridge.getBridgeId() :
+                manualBridge.getBridgeId().toLowerCase();
+            bridge = new BridgeJsonParameters(correctedId, ip, manualBridge.getMac() , manualBridge.getName());
             if (isReachableAndValidHueBridge(bridge)) {
                 String host = ip;
                 String serialNumber = bridge.getId().substring(0, 6) + bridge.getId().substring(10);
