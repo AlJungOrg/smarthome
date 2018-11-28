@@ -100,6 +100,44 @@ public class HueBridgeNupnpDiscovery extends AbstractDiscoveryService {
     }
 
     /**
+     * Add a manual discovery into the discovery inbox.
+     * @param ip
+     * @return DiscoveryResult
+     */
+    public DiscoveryResult addDiscovery(String ip) {
+        BridgeJsonParameters bridge;
+        try {
+            String json = doGetRequest("http://" + ip + "/api/config");
+            Gson gson = new Gson();
+            ManualBridgeJsonParameters manualBridge = gson.fromJson(json, new TypeToken<ManualBridgeJsonParameters>() {
+            }.getType());
+            // The requested json data has always uppercase id for a hue or phoscon bridge. Since in discovery a
+            // hue bridge has an lowercase id and a phoscon bridge has an uppercase id, this issue is addressed
+            // here. The desired case, if lower or upper, is determined by the discovery mapping and then adapted
+            // for in the manual discovery and validly checks.
+            String correctedId = manualBridge.getBridgeId().substring(6, 10).equals(PHOSCON_GW_INDICATOR) ?
+                manualBridge.getBridgeId() :
+                manualBridge.getBridgeId().toLowerCase();
+            bridge = new BridgeJsonParameters(correctedId, ip, manualBridge.getMac() , manualBridge.getName());
+            if (isReachableAndValidHueBridge(bridge)) {
+                String host = ip;
+                String serialNumber = bridge.getId().substring(0, 6) + bridge.getId().substring(10);
+                ThingUID uid = new ThingUID(THING_TYPE_BRIDGE, serialNumber);
+                DiscoveryResult result = DiscoveryResultBuilder.create(uid)
+                    .withProperties(buildProperties(host, serialNumber))
+                    .withLabel(LABEL_PATTERN.replace("IP", host)).withRepresentationProperty(SERIAL_NUMBER).build();
+                thingDiscovered(result);
+                return result;
+            }
+        } catch (IOException e) {
+            logger.debug("Philips Hue Bridge config not reachable. Can't discover manual bridge");
+        } catch (JsonParseException je) {
+            logger.debug("Invalid json response from Hue Bridge. Can't discover manual bridge");
+        }
+        return null;
+    }
+
+    /**
      * Builds the bridge properties.
      *
      * @param host the ip of the bridge
