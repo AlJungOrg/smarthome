@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -78,7 +78,6 @@ public class BlockingAsyncContextDelegateProvider implements AsyncContextDelegat
                             outputStream.write('\n');
                             response.flushBuffer();
                         } catch (Exception exception) {
-
                             // If an exception has occurred during write and
                             // flush we consider the connection closed, attempt
                             // to close the outputstream and stop blocking.

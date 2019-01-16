@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<thing:thing-descriptions bindingId="astro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<thing:thing-descriptions bindingId="astro"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xmlns:thing="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0"
 	xsi:schemaLocation="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0 http://eclipse.org/smarthome/schemas/thing-description-1.0.0.xsd">
 
@@ -10,6 +11,7 @@
 		<channels>
 			<channel id="azimuth" typeId="azimuth" />
 			<channel id="elevation" typeId="elevation" />
+			<channel id="shadeLength" typeId="shadeLength" />
 		</channels>
 	</channel-group-type>
 
@@ -24,38 +26,45 @@
 	</channel-group-type>
 
 	<channel-type id="azimuth">
-		<item-type>Number</item-type>
+		<item-type>Number:Angle</item-type>
 		<label>Azimuth</label>
 		<description>The azimuth of the planet</description>
-		<state readOnly="true" pattern="%.2f °" />
+		<state readOnly="true" pattern="%.2f %unit%" />
 	</channel-type>
 
 	<channel-type id="elevation">
-		<item-type>Number</item-type>
+		<item-type>Number:Angle</item-type>
 		<label>Elevation</label>
 		<description>The elevation of the planet</description>
-		<state readOnly="true" pattern="%.2f °" />
+		<state readOnly="true" pattern="%.2f %unit%" />
+	</channel-type>
+
+	<channel-type id="shadeLength">
+		<item-type>Number</item-type>
+		<label>Shade Length Ratio</label>
+		<description>Projected shade length ratio (derived from Elevation)</description>
+		<state readOnly="true" pattern="%.2f" />
 	</channel-type>
 
 	<channel-type id="directRadiation">
-		<item-type>Number</item-type>
+		<item-type>Number:Intensity</item-type>
 		<label>Direct Radiation</label>
 		<description>Level of radiation after penetration of the atmospheric layer</description>
-		<state readOnly="true" pattern="%.2f W/m²" />
+		<state readOnly="true" pattern="%.2f %unit%" />
 	</channel-type>
 
 	<channel-type id="diffuseRadiation">
-		<item-type>Number</item-type>
+		<item-type>Number:Intensity</item-type>
 		<label>Diffuse Radiation</label>
 		<description>Level of radiation diffracted by clouds and atmosphere</description>
-		<state readOnly="true" pattern="%.2f W/m²" />
+		<state readOnly="true" pattern="%.2f %unit%" />
 	</channel-type>
 
 	<channel-type id="totalRadiation">
-		<item-type>Number</item-type>
+		<item-type>Number:Intensity</item-type>
 		<label>Total Radiation</label>
 		<description>Total quantity of radiation on the ground</description>
-		<state readOnly="true" pattern="%.2f W/m²" />
+		<state readOnly="true" pattern="%.2f %unit%" />
 	</channel-type>
 
 	<!-- sun range -->
@@ -82,7 +91,7 @@
 
 	<channel-type id="start">
 		<item-type>DateTime</item-type>
-		<label>Start time</label>
+		<label>Start Time</label>
 		<description>The start time of the event</description>
 		<state readOnly="true" pattern="%1$tF %1$tR" />
 		<config-description-ref uri="channel-type:astro:config" />
@@ -90,22 +99,22 @@
 
 	<channel-type id="end">
 		<item-type>DateTime</item-type>
-		<label>End time</label>
+		<label>End Time</label>
 		<description>The end time of the event</description>
 		<state readOnly="true" pattern="%1$tF %1$tR" />
 		<config-description-ref uri="channel-type:astro:config" />
 	</channel-type>
 
 	<channel-type id="duration">
-		<item-type>Number</item-type>
+		<item-type>Number:Time</item-type>
 		<label>Duration</label>
-		<description>The duration time in minutes of the event</description>
-		<state readOnly="true" pattern="%d min"/>
+		<description>The duration of the event</description>
+		<state readOnly="true" pattern="%d %unit%" />
 	</channel-type>
 
 	<channel-type id="rangeEvent">
 		<kind>trigger</kind>
-		<label>Range event</label>
+		<label>Range Event</label>
 		<description>Range event</description>
 		<event>
 			<options>
@@ -119,7 +128,7 @@
 	<!-- sunZodiac -->
 	<channel-group-type id="sunZodiac">
 		<label>Zodiac</label>
-		<description>The Zodiac of the sun</description>
+		<description>The zodiac of the sun</description>
 		<channels>
 			<channel id="start" typeId="start" />
 			<channel id="end" typeId="end" />
@@ -164,7 +173,7 @@
 
 	<channel-type id="seasonName">
 		<item-type>String</item-type>
-		<label>Season name</label>
+		<label>Season Name</label>
 		<description>The name of the current season</description>
 		<state readOnly="true">
 			<options>
@@ -218,28 +227,28 @@
 
 	<channel-type id="total">
 		<item-type>DateTime</item-type>
-		<label>Total eclipse</label>
+		<label>Total Eclipse</label>
 		<description>The DateTime of the next total eclipse</description>
 		<state readOnly="true" pattern="%1$tF %1$tR" />
 	</channel-type>
 
 	<channel-type id="partial">
 		<item-type>DateTime</item-type>
-		<label>Partial eclipse</label>
+		<label>Partial Eclipse</label>
 		<description>The DateTime of the next partial eclipse</description>
 		<state readOnly="true" pattern="%1$tF %1$tR" />
 	</channel-type>
 
 	<channel-type id="ring">
 		<item-type>DateTime</item-type>
-		<label>Ring eclipse</label>
+		<label>Ring Eclipse</label>
 		<description>The DateTime of the next ring eclipse</description>
 		<state readOnly="true" pattern="%1$tF %1$tR" />
 	</channel-type>
 
 	<channel-type id="sunEclipseEvent">
 		<kind>trigger</kind>
-		<label>Sun eclipse event</label>
+		<label>Sun Eclipse Event</label>
 		<description>Sun eclipse event</description>
 		<event>
 			<options>
@@ -253,8 +262,8 @@
 
 	<!-- sunphase -->
 	<channel-group-type id="sunPhase">
-		<label>Sunphases</label>
-		<description>Sunphases</description>
+		<label>Sun Phase</label>
+		<description>The details of the current sun phase</description>
 		<channels>
 			<channel id="name" typeId="sunPhaseName" />
 		</channels>
@@ -262,7 +271,7 @@
 
 	<channel-type id="sunPhaseName">
 		<item-type>String</item-type>
-		<label>The current sun phase</label>
+		<label>Sun Phase Name</label>
 		<description>The name of the current sun phase</description>
 		<state readOnly="true">
 			<options>
@@ -283,14 +292,16 @@
 
 	<!-- moonphase -->
 	<channel-group-type id="moonPhase">
-		<label>Moonphases</label>
-		<description>Moonphases</description>
+		<label>Moon Phase</label>
+		<description>The details of the current and next moon phases</description>
 		<channels>
 			<channel id="firstQuarter" typeId="firstQuarter" />
 			<channel id="thirdQuarter" typeId="thirdQuarter" />
 			<channel id="full" typeId="fullMoon" />
 			<channel id="new" typeId="newMoon" />
 			<channel id="age" typeId="age" />
+			<channel id="ageDegree" typeId="ageDegree" />
+			<channel id="agePercent" typeId="agePercent" />
 			<channel id="illumination" typeId="illumination" />
 			<channel id="name" typeId="phaseName" />
 			<channel id="event" typeId="phaseEvent" />
@@ -299,49 +310,63 @@
 
 	<channel-type id="firstQuarter">
 		<item-type>DateTime</item-type>
-		<label>First quarter</label>
+		<label>First Quarter</label>
 		<description>The DateTime the moon is in the first quarter</description>
 		<state readOnly="true" pattern="%1$tF %1$tR" />
 	</channel-type>
 
 	<channel-type id="thirdQuarter">
 		<item-type>DateTime</item-type>
-		<label>Third quarter</label>
+		<label>Third Quarter</label>
 		<description>The DateTime the moon is in the third quarter</description>
 		<state readOnly="true" pattern="%1$tF %1$tR" />
 	</channel-type>
 
 	<channel-type id="fullMoon">
 		<item-type>DateTime</item-type>
-		<label>Full moon</label>
+		<label>Full Moon</label>
 		<description>The DateTime for full moon</description>
 		<state readOnly="true" pattern="%1$tF %1$tR" />
 	</channel-type>
 
 	<channel-type id="newMoon">
 		<item-type>DateTime</item-type>
-		<label>New moon</label>
+		<label>New Moon</label>
 		<description>The DateTime for new moon</description>
 		<state readOnly="true" pattern="%1$tF %1$tR" />
 	</channel-type>
 
 	<channel-type id="age">
-		<item-type>Number</item-type>
-		<label>Moon age</label>
+		<item-type>Number:Time</item-type>
+		<label>Moon Age</label>
 		<description>The age of the moon in days</description>
-		<state readOnly="true" pattern="%d d" />
+		<state readOnly="true" pattern="%d %unit%" />
+	</channel-type>
+
+	<channel-type id="ageDegree">
+		<item-type>Number:Angle</item-type>
+		<label>Moon Age</label>
+		<description>The age of the moon</description>
+		<state readOnly="true" pattern="%.2f %unit%" />
+	</channel-type>
+
+	<channel-type id="agePercent">
+		<item-type>Number:Dimensionless</item-type>
+		<label>Moon Age</label>
+		<description>The age of the moon</description>
+		<state readOnly="true" pattern="%.2f %unit%" />
 	</channel-type>
 
 	<channel-type id="illumination">
-		<item-type>Number</item-type>
-		<label>Moon illumination</label>
-		<description>The illumination of the moon in %</description>
-		<state readOnly="true" pattern="%.0f %%"  />
+		<item-type>Number:Dimensionless</item-type>
+		<label>Moon Illumination</label>
+		<description>The illumination of the moon</description>
+		<state readOnly="true" pattern="%.0f %unit%" />
 	</channel-type>
 
 	<channel-type id="phaseName">
 		<item-type>String</item-type>
-		<label>Moonphase name</label>
+		<label>Moon Phase Name</label>
 		<description>The name of the current moon phase</description>
 		<state readOnly="true">
 			<options>
@@ -359,7 +384,7 @@
 
 	<channel-type id="phaseEvent">
 		<kind>trigger</kind>
-		<label>Moon phase event</label>
+		<label>Moon Phase Event</label>
 		<description>Moon phase event</description>
 		<event>
 			<options>
@@ -386,7 +411,7 @@
 
 	<channel-type id="moonEclipseEvent">
 		<kind>trigger</kind>
-		<label>Moon eclipse event</label>
+		<label>Moon Eclipse Event</label>
 		<description>Moon eclipse event</description>
 		<event>
 			<options>
@@ -403,8 +428,7 @@
 		<description>Distance data</description>
 		<channels>
 			<channel id="date" typeId="distanceDate" />
-			<channel id="miles" typeId="miles" />
-			<channel id="kilometer" typeId="kilometer" />
+			<channel id="distance" typeId="distance" />
 			<channel id="event" typeId="distanceEvent" />
 		</channels>
 	</channel-group-type>
@@ -416,23 +440,16 @@
 		<state readOnly="true" pattern="%1$tF %1$tR" />
 	</channel-type>
 
-	<channel-type id="miles">
-		<item-type>Number</item-type>
-		<label>Miles</label>
-		<description>The distance in miles</description>
-		<state readOnly="true" pattern="%.1f miles" />
-	</channel-type>
-
-	<channel-type id="kilometer">
-		<item-type>Number</item-type>
-		<label>Kilometer</label>
-		<description>The distance in kilometers</description>
-		<state readOnly="true" pattern="%.1f km" />
+	<channel-type id="distance">
+		<item-type>Number:Length</item-type>
+		<label>Distance</label>
+		<description>The distance of the object</description>
+		<state readOnly="true" pattern="%.1f %unit%" />
 	</channel-type>
 
 	<channel-type id="distanceEvent">
 		<kind>trigger</kind>
-		<label>Moon distance event</label>
+		<label>Moon Distance Event</label>
 		<description>Moon distance event</description>
 		<event>
 			<options>
@@ -446,7 +463,7 @@
 	<!-- moonZodiac -->
 	<channel-group-type id="moonZodiac">
 		<label>Zodiac</label>
-		<description>The Zodiac of the moon</description>
+		<description>The zodiac of the moon</description>
 		<channels>
 			<channel id="sign" typeId="sign" />
 		</channels>

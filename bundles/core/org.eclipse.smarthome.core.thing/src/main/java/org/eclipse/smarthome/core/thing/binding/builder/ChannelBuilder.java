@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,6 +21,7 @@ import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.config.core.Configuration;
 import org.eclipse.smarthome.core.thing.Channel;
 import org.eclipse.smarthome.core.thing.ChannelUID;
+import org.eclipse.smarthome.core.thing.type.AutoUpdatePolicy;
 import org.eclipse.smarthome.core.thing.type.ChannelKind;
 import org.eclipse.smarthome.core.thing.type.ChannelType;
 import org.eclipse.smarthome.core.thing.type.ChannelTypeUID;
@@ -35,8 +36,8 @@ import org.eclipse.smarthome.core.thing.type.ChannelTypeUID;
 @NonNullByDefault
 public class ChannelBuilder {
 
-    private ChannelUID channelUID;
-    private @Nullable String acceptedItemType;
+    private final ChannelUID channelUID;
+    private @Nullable final String acceptedItemType;
     private ChannelKind kind;
     private @Nullable Configuration configuration;
     private Set<String> defaultTags;
@@ -44,6 +45,7 @@ public class ChannelBuilder {
     private @Nullable String label;
     private @Nullable String description;
     private @Nullable ChannelTypeUID channelTypeUID;
+    private @Nullable AutoUpdatePolicy autoUpdatePolicy;
 
     private ChannelBuilder(ChannelUID channelUID, @Nullable String acceptedItemType, Set<String> defaultTags) {
         this.channelUID = channelUID;
@@ -55,14 +57,34 @@ public class ChannelBuilder {
     /**
      * Creates a channel builder for the given channel UID and item type.
      *
-     * @param channelUID
-     *            channel UID
-     * @param acceptedItemType
-     *            item type that is accepted by this channel
+     * @param channelUID channel UID
+     * @param acceptedItemType item type that is accepted by this channel
      * @return channel builder
      */
     public static ChannelBuilder create(ChannelUID channelUID, @Nullable String acceptedItemType) {
         return new ChannelBuilder(channelUID, acceptedItemType, new HashSet<String>());
+    }
+
+    /**
+     * Creates a channel builder from the given channel.
+     *
+     * @param channel the channel to be changed
+     * @return channel builder
+     */
+    public static ChannelBuilder create(Channel channel) {
+        ChannelBuilder channelBuilder = create(channel.getUID(), channel.getAcceptedItemType())
+                .withConfiguration(channel.getConfiguration()).withDefaultTags(channel.getDefaultTags())
+                .withKind(channel.getKind()).withProperties(channel.getProperties())
+                .withType(channel.getChannelTypeUID());
+        String label = channel.getLabel();
+        if (label != null) {
+            channelBuilder.withLabel(label);
+        }
+        String description = channel.getDescription();
+        if (description != null) {
+            channelBuilder.withDescription(description);
+        }
+        return channelBuilder;
     }
 
     /**
@@ -79,8 +101,7 @@ public class ChannelBuilder {
     /**
      * Appends a configuration to the channel to build.
      *
-     * @param configuration
-     *            configuration
+     * @param configuration configuration
      * @return channel builder
      */
     public ChannelBuilder withConfiguration(Configuration configuration) {
@@ -124,8 +145,7 @@ public class ChannelBuilder {
     /**
      * Appends default tags to the channel to build.
      *
-     * @param defaultTags
-     *            default tags
+     * @param defaultTags default tags
      * @return channel builder
      */
     public ChannelBuilder withDefaultTags(Set<String> defaultTags) {
@@ -149,12 +169,24 @@ public class ChannelBuilder {
     }
 
     /**
+     * Sets the auto update policy. See {@link AutoUpdatePolicy} for details.
+     *
+     * @param policy the auto update policy to use
+     * @return channel builder
+     */
+    public ChannelBuilder withAutoUpdatePolicy(@Nullable AutoUpdatePolicy policy) {
+        this.autoUpdatePolicy = policy;
+        return this;
+    }
+
+    /**
      * Builds and returns the channel.
      *
      * @return channel
      */
     public Channel build() {
         return new Channel(channelUID, channelTypeUID, acceptedItemType, kind, configuration, defaultTags, properties,
-                label, description);
+                label, description, autoUpdatePolicy);
     }
+
 }

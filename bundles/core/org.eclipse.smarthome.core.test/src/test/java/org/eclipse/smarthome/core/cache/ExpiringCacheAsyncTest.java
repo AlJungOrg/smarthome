@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -43,7 +43,7 @@ public class ExpiringCacheAsyncTest {
         assertNull(t.getLastKnownValue());
 
         // Define a supplier which returns a future that is immediately completed.
-        @SuppressWarnings({ "unchecked", "null" })
+        @SuppressWarnings({ "unchecked" })
         Supplier<CompletableFuture<Double>> s = mock(Supplier.class);
         when(s.get()).thenReturn(CompletableFuture.completedFuture(10.0));
 

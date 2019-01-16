@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,9 +13,8 @@
 package org.eclipse.smarthome.io.transport.mqtt;
 
 /**
- * Thrown if an error occurs communicating with the server.
- * The exception contains a reason code. The semantic of the reason
- * code depends on the underlying implementation.
+ * Thrown if an error occurs communicating with the server. The exception contains a reason code. The semantic of the
+ * reason code depends on the underlying implementation.
  *
  * @author David Graeff - Initial contribution
  */

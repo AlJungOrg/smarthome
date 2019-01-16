@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -37,7 +37,7 @@ public class ClassicIconProvider extends AbstractResourceIconProvider implements
 
     private final Logger logger = LoggerFactory.getLogger(ClassicIconProvider.class);
 
-    static String ICONSET_ID = "classic";
+    static final String ICONSET_ID = "classic";
 
     @Override
     public Set<IconSet> getIconSets(Locale locale) {
@@ -53,7 +53,7 @@ public class ClassicIconProvider extends AbstractResourceIconProvider implements
 
     @Override
     protected InputStream getResource(String iconSetId, String resourceName) {
-        if (ICONSET_ID.equals(iconSetId)) {
+        if (ClassicIconProvider.ICONSET_ID.equals(iconSetId)) {
             URL iconResource = context.getBundle().getEntry("icons/" + resourceName);
             try {
                 return iconResource.openStream();
@@ -68,7 +68,7 @@ public class ClassicIconProvider extends AbstractResourceIconProvider implements
 
     @Override
     protected boolean hasResource(String iconSetId, String resourceName) {
-        if (ICONSET_ID.equals(iconSetId)) {
+        if (ClassicIconProvider.ICONSET_ID.equals(iconSetId)) {
             URL iconResource = context.getBundle().getEntry("icons/" + resourceName);
             return iconResource != null;
         } else {

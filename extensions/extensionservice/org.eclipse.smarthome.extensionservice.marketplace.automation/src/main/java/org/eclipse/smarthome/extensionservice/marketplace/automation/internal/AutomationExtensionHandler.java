@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,6 +21,8 @@ import org.eclipse.smarthome.core.storage.Storage;
 import org.eclipse.smarthome.extensionservice.marketplace.MarketplaceExtension;
 import org.eclipse.smarthome.extensionservice.marketplace.MarketplaceExtensionHandler;
 import org.eclipse.smarthome.extensionservice.marketplace.MarketplaceHandlerException;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,12 +34,14 @@ import org.slf4j.LoggerFactory;
  * @author Kai Kreuzer - Initial contribution and API
  *
  */
+@Component
 public class AutomationExtensionHandler implements MarketplaceExtensionHandler {
 
     private final Logger logger = LoggerFactory.getLogger(AutomationExtensionHandler.class);
 
     private MarketplaceRuleTemplateProvider marketplaceRuleTemplateProvider;
 
+    @Reference
     protected void setMarketplaceRuleTemplateProvider(MarketplaceRuleTemplateProvider marketplaceRuleTemplateProvider) {
         this.marketplaceRuleTemplateProvider = marketplaceRuleTemplateProvider;
     }

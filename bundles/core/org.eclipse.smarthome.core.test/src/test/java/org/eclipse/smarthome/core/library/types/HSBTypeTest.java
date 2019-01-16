@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,6 +12,7 @@
  */
 package org.eclipse.smarthome.core.library.types;
 
+import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
 
 import java.math.BigDecimal;
@@ -40,7 +41,6 @@ public class HSBTypeTest {
     @Test
     public void testHsbToRgbConversion() {
         compareHsbToRgbValues("0,100,100", 255, 0, 0); // red
-        compareHsbToRgbValues("360,100,100", 255, 0, 0); // red
         compareHsbToRgbValues("0,0,0", 0, 0, 0); // black
         compareHsbToRgbValues("0,0,100", 255, 255, 255); // white
         compareHsbToRgbValues("120,100,100", 0, 255, 0); // green
@@ -113,4 +113,83 @@ public class HSBTypeTest {
         assertEquals(null, new HSBType("100,100,100").as(PointType.class));
     }
 
+    @Test
+    public void testConversionToXY() {
+        HSBType hsb = new HSBType("220,90,50");
+        PercentType[] xy = hsb.toXY();
+        assertEquals(new PercentType("16.969364"), xy[0]);
+        assertEquals(new PercentType("12.379659"), xy[1]);
+    }
+
+    @Test
+    public void testCreateFromXY() {
+        HSBType hsb = HSBType.fromXY(5f, 3f);
+        assertEquals(new HSBType("11,100,100"), hsb);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testConstructorWithString1() {
+        new HSBType("");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testConstructorWithString2() {
+        new HSBType("1,2");
+    }
+
+    @Test
+    public void testConstructorWithString3() {
+        HSBType hsb = new HSBType("1,2,3");
+        assertNotNull(hsb);
+        assertThat(hsb.getHue(), is(new DecimalType(1)));
+        assertThat(hsb.getSaturation(), is(new PercentType(2)));
+        assertThat(hsb.getBrightness(), is(new PercentType(3)));
+    }
+
+    @Test
+    public void testConstructorWithString4() {
+        HSBType hsb = new HSBType("1, 2, 3");
+        assertNotNull(hsb);
+        assertThat(hsb.getHue(), is(new DecimalType(1)));
+        assertThat(hsb.getSaturation(), is(new PercentType(2)));
+        assertThat(hsb.getBrightness(), is(new PercentType(3)));
+    }
+
+    @Test
+    public void testConstructorWithString5() {
+        HSBType hsb = new HSBType("  1,    2, 3    ");
+        assertNotNull(hsb);
+        assertThat(hsb.getHue(), is(new DecimalType(1)));
+        assertThat(hsb.getSaturation(), is(new PercentType(2)));
+        assertThat(hsb.getBrightness(), is(new PercentType(3)));
+    }
+
+    @Test
+    public void testConstructorWithString6() {
+        HSBType hsb = new HSBType("1  , 2  , 3   ");
+        assertNotNull(hsb);
+        assertThat(hsb.getHue(), is(new DecimalType(1)));
+        assertThat(hsb.getSaturation(), is(new PercentType(2)));
+        assertThat(hsb.getBrightness(), is(new PercentType(3)));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testConstructorWithIllegalHueValue() {
+        new HSBType("-13,85,51");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testConstructorWithIllegalHueValue2() {
+        new HSBType("360,85,51");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testConstructorWithIllegalSaturationValue() {
+        new HSBType("5,-85,51");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testConstructorWithIllegalBrightnessValue() {
+        new HSBType("5,85,151");
+    }
 }

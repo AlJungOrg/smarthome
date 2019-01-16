@@ -1,7 +1,7 @@
 {
   "name": "org.eclipse.smarthome.ui.basic",
   "version": "0.10.0",
-  "description": "Eclipse Smarthome Basic UI",
+  "description": "Eclipse SmartHome Basic UI",
   "scripts": {
     "build": "gulp default"
   },
@@ -9,6 +9,8 @@
     "gulp": "^3.9.0",
     "gulp-eslint": "^4.0.0",
     "gulp-sass": "^3.1.0",
-    "gulp-uglify": "^1.5.1"
+    "gulp-uglify": "^1.5.1",
+    "material-design-icons": "2.0.0",
+    "roboto-fontface": "0.4.3"
   }
 }

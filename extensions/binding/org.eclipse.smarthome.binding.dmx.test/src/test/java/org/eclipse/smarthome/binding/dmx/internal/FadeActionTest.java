@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -34,7 +34,7 @@ public class FadeActionTest {
     @Test
     public void checkWithFadingWithoutHold() {
         FadeAction fadeAction = new FadeAction(testFadeTime, testValue, 0);
-        DmxChannel testChannel = new DmxChannel(0, 1);
+        DmxChannel testChannel = new DmxChannel(0, 1, 0);
         testChannel.setValue(0);
 
         long startTime = System.currentTimeMillis();
@@ -53,7 +53,7 @@ public class FadeActionTest {
     @Test
     public void checkWithFadingWithHold() {
         FadeAction fadeAction = new FadeAction(testFadeTime, testValue, testHoldTime);
-        DmxChannel testChannel = new DmxChannel(0, 1);
+        DmxChannel testChannel = new DmxChannel(0, 1, 0);
         testChannel.setValue(0);
 
         long startTime = System.currentTimeMillis();
@@ -77,7 +77,7 @@ public class FadeActionTest {
     @Test
     public void checkWithFadingWithInfiniteHold() {
         FadeAction fadeAction = new FadeAction(testFadeTime, testValue, -1);
-        DmxChannel testChannel = new DmxChannel(0, 1);
+        DmxChannel testChannel = new DmxChannel(0, 1, 0);
         testChannel.setValue(0);
 
         long startTime = System.currentTimeMillis();
@@ -96,7 +96,7 @@ public class FadeActionTest {
     @Test
     public void checkWithoutFadingWithHold() {
         FadeAction fadeAction = new FadeAction(0, testValue, testHoldTime);
-        DmxChannel testChannel = new DmxChannel(0, 1);
+        DmxChannel testChannel = new DmxChannel(0, 1, 0);
         testChannel.setValue(0);
 
         long startTime = System.currentTimeMillis();
@@ -116,7 +116,7 @@ public class FadeActionTest {
     @Test
     public void checkWithoutFadingWithoutHold() {
         FadeAction fadeAction = new FadeAction(0, testValue, 0);
-        DmxChannel testChannel = new DmxChannel(0, 1);
+        DmxChannel testChannel = new DmxChannel(0, 1, 0);
         testChannel.setValue(0);
 
         long startTime = System.currentTimeMillis();
@@ -132,7 +132,7 @@ public class FadeActionTest {
     @Test
     public void checkWithoutFadingWithInfiniteHold() {
         FadeAction fadeAction = new FadeAction(0, testValue, -1);
-        DmxChannel testChannel = new DmxChannel(0, 1);
+        DmxChannel testChannel = new DmxChannel(0, 1, 0);
         testChannel.setValue(0);
 
         long startTime = System.currentTimeMillis();

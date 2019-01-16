@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,7 +25,7 @@ public class ItemAddedEvent extends AbstractItemRegistryEvent {
     /**
      * The item added event type.
      */
-    public final static String TYPE = ItemAddedEvent.class.getSimpleName();
+    public static final String TYPE = ItemAddedEvent.class.getSimpleName();
 
     /**
      * Constructs a new item added event object.

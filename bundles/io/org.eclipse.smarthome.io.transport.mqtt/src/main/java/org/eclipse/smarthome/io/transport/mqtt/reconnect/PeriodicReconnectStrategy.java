@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,9 +17,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-import javax.naming.ConfigurationException;
-
-import org.eclipse.smarthome.io.transport.mqtt.MqttException;
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
+import org.eclipse.smarthome.io.transport.mqtt.MqttBrokerConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,13 +30,14 @@ import org.slf4j.LoggerFactory;
  *
  * @author David Graeff - Initial contribution
  */
+@NonNullByDefault
 public class PeriodicReconnectStrategy extends AbstractReconnectStrategy {
     private final Logger logger = LoggerFactory.getLogger(PeriodicReconnectStrategy.class);
     private final int reconnectFrequency;
     private final int firstReconnectAfter;
 
-    private ScheduledExecutorService scheduler = null;
-    private ScheduledFuture<?> scheduledTask;
+    private @Nullable ScheduledExecutorService scheduler = null;
+    private @Nullable ScheduledFuture<?> scheduledTask;
 
     /**
      * Use a default 60s reconnect frequency and try the first reconnect after 10s.
@@ -94,21 +95,31 @@ public class PeriodicReconnectStrategy extends AbstractReconnectStrategy {
         if (scheduler == null) {
             return;
         }
+        if (brokerConnection == null) {
+            stop();
+            return;
+        }
 
         // If there is already a scheduled task, we continue only if it has been done (shouldn't be the case at all).
         if (scheduledTask != null && !scheduledTask.isDone()) {
             return;
         }
 
-        logger.info("Try to restore connection to '{}' every {}ms", getBrokerConnection().getName(),
-                getReconnectFrequency());
-
+        assert scheduler != null;
         scheduledTask = scheduler.scheduleWithFixedDelay(() -> {
-            try {
-                getBrokerConnection().start();
-            } catch (MqttException | ConfigurationException e) {
-                logger.warn("Broker connection couldn't be started", e);
+            MqttBrokerConnection brokerConnection = this.brokerConnection;
+            // If the broker connections is not available anymore, stop the timed reconnect.
+            if (brokerConnection == null) {
+                stop();
+                return;
             }
+            logger.info("Try to restore connection to '{}'. Next attempt in {}ms", brokerConnection.getHost(),
+                    getReconnectFrequency());
+
+            brokerConnection.start().exceptionally(e -> {
+                logger.warn("Broker connection couldn't be started", e);
+                return false;
+            });
         }, getFirstReconnectAfter(), getReconnectFrequency(), TimeUnit.MILLISECONDS);
     }
 

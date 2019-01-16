@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,10 +15,11 @@ package org.eclipse.smarthome.core.library.types;
 import java.math.BigDecimal;
 import java.util.IllegalFormatConversionException;
 
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.core.types.PrimitiveType;
 import org.eclipse.smarthome.core.types.State;
-import org.eclipse.smarthome.core.types.UnDefType;
 
 /**
  * The decimal type uses a BigDecimal internally and thus can be used for
@@ -27,11 +28,12 @@ import org.eclipse.smarthome.core.types.UnDefType;
  * @author Kai Kreuzer - Initial contribution and API
  *
  */
+@NonNullByDefault
 public class DecimalType extends Number implements PrimitiveType, State, Command, Comparable<DecimalType> {
 
     private static final long serialVersionUID = 4226845847123464690L;
 
-    final static public DecimalType ZERO = new DecimalType(0);
+    public static final DecimalType ZERO = new DecimalType(0);
 
     protected BigDecimal value;
 
@@ -100,7 +102,7 @@ public class DecimalType extends Number implements PrimitiveType, State, Command
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(@Nullable Object obj) {
         if (this == obj) {
             return true;
         }
@@ -146,35 +148,35 @@ public class DecimalType extends Number implements PrimitiveType, State, Command
         return value.longValue();
     }
 
-    protected State defaultConversion(Class<? extends State> target) {
+    protected <T extends State> @Nullable T defaultConversion(@Nullable Class<T> target) {
         return State.super.as(target);
     }
 
     @Override
-    public State as(Class<? extends State> target) {
+    public <T extends State> @Nullable T as(@Nullable Class<T> target) {
         if (target == OnOffType.class) {
-            return equals(ZERO) ? OnOffType.OFF : OnOffType.ON;
+            return target.cast(equals(ZERO) ? OnOffType.OFF : OnOffType.ON);
         } else if (target == PercentType.class) {
-            return new PercentType(toBigDecimal().multiply(BigDecimal.valueOf(100)));
+            return target.cast(new PercentType(toBigDecimal().multiply(BigDecimal.valueOf(100))));
         } else if (target == UpDownType.class) {
             if (equals(ZERO)) {
-                return UpDownType.UP;
+                return target.cast(UpDownType.UP);
             } else if (toBigDecimal().compareTo(BigDecimal.valueOf(1)) == 0) {
-                return UpDownType.DOWN;
+                return target.cast(UpDownType.DOWN);
             } else {
-                return UnDefType.UNDEF;
+                return null;
             }
         } else if (target == OpenClosedType.class) {
             if (equals(ZERO)) {
-                return OpenClosedType.CLOSED;
+                return target.cast(OpenClosedType.CLOSED);
             } else if (toBigDecimal().compareTo(BigDecimal.valueOf(1)) == 0) {
-                return OpenClosedType.OPEN;
+                return target.cast(OpenClosedType.OPEN);
             } else {
-                return UnDefType.UNDEF;
+                return null;
             }
         } else if (target == HSBType.class) {
-            return new HSBType(DecimalType.ZERO, PercentType.ZERO,
-                    new PercentType(this.toBigDecimal().multiply(BigDecimal.valueOf(100))));
+            return target.cast(new HSBType(DecimalType.ZERO, PercentType.ZERO,
+                    new PercentType(this.toBigDecimal().multiply(BigDecimal.valueOf(100)))));
         } else {
             return defaultConversion(target);
         }

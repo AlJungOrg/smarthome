@@ -1,6 +1,6 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
-Bundle-Name: Magic Bundle Tests
+Bundle-Name: Eclipse SmartHome Magic Bundle Tests
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Bundle-SymbolicName: org.eclipse.smarthome.magic.test
 Bundle-Vendor: Eclipse.org/SmartHome
@@ -16,12 +16,12 @@ Import-Package:
  org.eclipse.smarthome.test.java,
  org.eclipse.smarthome.test.storage,
  org.hamcrest;core=split,
+ org.hamcrest.collection,
+ org.hamcrest.core,
  org.junit;version="4.0.0",
  org.mockito,
+ org.mockito.stubbing,
  org.osgi.framework,
  org.osgi.service.device,
  org.slf4j
-Require-Bundle: 
- org.hamcrest,
- org.junit,
- org.mockito
+Automatic-Module-Name: org.eclipse.smarthome.magic.test

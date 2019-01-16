@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -79,7 +79,6 @@ public class ConverterAttributeMapValidator {
      * @throws ConversionException if the validation check fails
      */
     public Map<String, String> readValidatedAttributes(HierarchicalStreamReader reader) throws ConversionException {
-
         return readValidatedAttributes(reader, this.validationMaskTemplate);
     }
 
@@ -92,14 +91,11 @@ public class ConverterAttributeMapValidator {
      *
      * @param reader the reader to be used to read-in all attributes of the node (must not be null)
      * @param validationMaskTemplate the key-required map (could be null or empty)
-     *
      * @return the key-value map (not null, could be empty)
-     *
      * @throws ConversionException if the validation check fails
      */
     public static Map<String, String> readValidatedAttributes(HierarchicalStreamReader reader,
             Map<String, Boolean> validationMaskTemplate) throws ConversionException {
-
         Map<String, String> attributeMap = new HashMap<>(reader.getAttributeCount());
 
         Map<String, Boolean> validationMask = null;

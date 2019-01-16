@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,8 +11,6 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 package org.eclipse.smarthome.magic.binding.handler;
-
-import static org.eclipse.smarthome.magic.binding.MagicBindingConstants.CHANNEL_CONTACT;
 
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.Thing;
@@ -34,8 +32,9 @@ public class MagicContactHandler extends BaseThingHandler {
 
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
-        if (channelUID.getId().equals(CHANNEL_CONTACT)) {
-        }
+        // process the command for the contact channel here
+        // if (channelUID.getId().equals(MagicBindingConstants.CHANNEL_CONTACT)) {
+        // }
     }
 
     @Override

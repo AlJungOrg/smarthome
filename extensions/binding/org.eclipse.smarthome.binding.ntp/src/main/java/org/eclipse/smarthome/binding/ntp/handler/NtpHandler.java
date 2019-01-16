@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,9 +20,9 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.time.ZonedDateTime;
-import java.util.Calendar;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
@@ -61,7 +61,7 @@ import org.slf4j.LoggerFactory;
 
 public class NtpHandler extends BaseThingHandler {
 
-    private Logger logger = LoggerFactory.getLogger(NtpHandler.class);
+    private final Logger logger = LoggerFactory.getLogger(NtpHandler.class);
 
     /** timeout for requests to the NTP server */
     private static final int NTP_TIMEOUT = 30000;
@@ -72,7 +72,7 @@ public class NtpHandler extends BaseThingHandler {
     private final DateFormat SDF = new SimpleDateFormat(DATE_PATTERN_WITH_TZ);
 
     /** for publish purposes */
-    private DateFormat dateTimeFormat = new SimpleDateFormat(DATE_PATTERN_WITH_TZ);
+    private DateTimeFormatter dateTimeFormat = DateTimeFormatter.ofPattern(DATE_PATTERN_WITH_TZ);
 
     private final LocaleProvider localeProvider;
 
@@ -113,30 +113,44 @@ public class NtpHandler extends BaseThingHandler {
 
     @Override
     public void initialize() {
-
         try {
             logger.debug("Initializing NTP handler for '{}'.", getThing().getUID());
 
             Configuration config = getThing().getConfiguration();
-            hostname = (String) config.get(PROPERTY_NTP_SERVER_HOST);
+            hostname = config.get(PROPERTY_NTP_SERVER_HOST).toString();
             port = (BigDecimal) config.get(PROPERTY_NTP_SERVER_PORT);
             refreshInterval = (BigDecimal) config.get(PROPERTY_REFRESH_INTERVAL);
             refreshNtp = (BigDecimal) config.get(PROPERTY_REFRESH_NTP);
             refreshNtpCount = 0;
 
             try {
-                timeZone = TimeZone.getTimeZone((String) config.get(PROPERTY_TIMEZONE));
+                Object timeZoneConfigValue = config.get(PROPERTY_TIMEZONE);
+                if (timeZoneConfigValue != null) {
+                    timeZone = TimeZone.getTimeZone(timeZoneConfigValue.toString());
+                } else {
+                    timeZone = TimeZone.getDefault();
+                    logger.debug("{} using default TZ '{}', because configuration property '{}' is null.",
+                            getThing().getUID(), timeZone, PROPERTY_TIMEZONE);
+                }
             } catch (Exception e) {
                 timeZone = TimeZone.getDefault();
-                logger.debug("{} using default TZ: {}", getThing().getUID(), timeZone);
+                logger.debug("{} using default TZ '{}' due to an occurred exception: ", getThing().getUID(), timeZone,
+                        e);
             }
 
             try {
-                String localeString = (String) config.get(PROPERTY_LOCALE);
-                locale = new Locale(localeString);
+                Object localeStringConfigValue = config.get(PROPERTY_LOCALE);
+                if (localeStringConfigValue != null) {
+                    locale = new Locale(localeStringConfigValue.toString());
+                } else {
+                    locale = localeProvider.getLocale();
+                    logger.debug("{} using default locale '{}', because configuration property '{}' is null.",
+                            getThing().getUID(), locale, PROPERTY_LOCALE);
+                }
             } catch (Exception e) {
                 locale = localeProvider.getLocale();
-                logger.debug("{} using default locale: {}", getThing().getUID(), locale);
+                logger.debug("{} using default locale '{}' due to an occurred exception: ", getThing().getUID(), locale,
+                        e);
             }
             dateTimeChannelUID = new ChannelUID(getThing().getUID(), CHANNEL_DATE_TIME);
             stringChannelUID = new ChannelUID(getThing().getUID(), CHANNEL_STRING);
@@ -144,12 +158,12 @@ public class NtpHandler extends BaseThingHandler {
                 Channel stringChannel = getThing().getChannel(stringChannelUID.getId());
                 if (stringChannel != null) {
                     Configuration cfg = stringChannel.getConfiguration();
-                    String dateTimeFormatString = (String) cfg.get(PROPERTY_DATE_TIME_FORMAT);
+                    String dateTimeFormatString = cfg.get(PROPERTY_DATE_TIME_FORMAT).toString();
                     if (!(dateTimeFormatString == null || dateTimeFormatString.isEmpty())) {
-                        dateTimeFormat = new SimpleDateFormat(dateTimeFormatString);
+                        dateTimeFormat = DateTimeFormatter.ofPattern(dateTimeFormatString);
                     } else {
                         logger.debug("No format set in channel config for {}. Using default format.", stringChannelUID);
-                        dateTimeFormat = new SimpleDateFormat(DATE_PATTERN_WITH_TZ);
+                        dateTimeFormat = DateTimeFormatter.ofPattern(DATE_PATTERN_WITH_TZ);
                     }
                 } else {
                     logger.debug("Missing channel: '{}'", stringChannelUID.getId());
@@ -157,16 +171,15 @@ public class NtpHandler extends BaseThingHandler {
             } catch (RuntimeException ex) {
                 logger.debug("No channel config or invalid format for {}. Using default format. ({})", stringChannelUID,
                         ex.getMessage());
-                dateTimeFormat = new SimpleDateFormat(DATE_PATTERN_WITH_TZ);
+                dateTimeFormat = DateTimeFormatter.ofPattern(DATE_PATTERN_WITH_TZ);
             }
             SDF.setTimeZone(timeZone);
-            dateTimeFormat.setTimeZone(timeZone);
+            dateTimeFormat.withZone(timeZone.toZoneId());
 
             logger.debug(
                     "Initialized NTP handler '{}' with configuration: host '{}', refresh interval {}, timezone {}, locale {}.",
                     getThing().getUID(), hostname, refreshInterval, timeZone, locale);
             startAutomaticRefresh();
-
         } catch (Exception ex) {
             logger.error("Error occurred while initializing NTP handler: {}", ex.getMessage(), ex);
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
@@ -203,12 +216,10 @@ public class NtpHandler extends BaseThingHandler {
                 refreshNtpCount--;
             }
 
-            Calendar calendar = Calendar.getInstance(timeZone, locale);
-            calendar.setTimeInMillis(networkTimeInMillis);
-            ZonedDateTime zoned = ZonedDateTime.of(LocalDateTime.now(), timeZone.toZoneId());
-
+            ZonedDateTime zoned = ZonedDateTime.ofInstant(Instant.ofEpochMilli(networkTimeInMillis),
+                    timeZone.toZoneId());
             updateState(dateTimeChannelUID, new DateTimeType(zoned));
-            updateState(stringChannelUID, new StringType(dateTimeFormat.format(calendar.getTime())));
+            updateState(stringChannelUID, new StringType(dateTimeFormat.format(zoned)));
         } else {
             logger.debug("Not refreshing, since we do not seem to be initialized yet");
         }
@@ -218,22 +229,23 @@ public class NtpHandler extends BaseThingHandler {
      * Queries the given timeserver <code>hostname</code> and returns the time
      * in milliseconds.
      *
-     * @param hostname - the timeserver to query
+     * @param hostname the timeserver to query
      * @return the time in milliseconds or the current time of the system if an
      *         error occurs.
      */
     public long getTime(String hostname) {
-
         try {
             NTPUDPClient timeClient = new NTPUDPClient();
             timeClient.setDefaultTimeout(NTP_TIMEOUT);
             InetAddress inetAddress = InetAddress.getByName(hostname);
             TimeInfo timeInfo = timeClient.getTime(inetAddress, port.intValue());
+            timeInfo.computeDetails();
 
+            long serverMillis = timeInfo.getReturnTime() + timeInfo.getOffset();
             logger.debug("{} Got time update from host '{}': {}.", getThing().getUID(), hostname,
-                    SDF.format(new Date(timeInfo.getReturnTime())));
+                    SDF.format(new Date(serverMillis)));
             updateStatus(ThingStatus.ONLINE, ThingStatusDetail.NONE);
-            return timeInfo.getReturnTime();
+            return serverMillis;
         } catch (UnknownHostException uhe) {
             logger.debug(
                     "{} The given hostname '{}' of the timeserver is unknown -> returning current sytem time instead. ({})",

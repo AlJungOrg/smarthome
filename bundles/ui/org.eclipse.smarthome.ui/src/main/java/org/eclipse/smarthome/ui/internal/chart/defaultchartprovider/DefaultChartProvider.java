@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,6 +16,7 @@ import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -24,10 +25,10 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang.StringUtils;
+import org.eclipse.smarthome.core.i18n.TimeZoneProvider;
 import org.eclipse.smarthome.core.items.GroupItem;
 import org.eclipse.smarthome.core.items.Item;
 import org.eclipse.smarthome.core.items.ItemNotFoundException;
@@ -38,6 +39,7 @@ import org.eclipse.smarthome.core.persistence.FilterCriteria;
 import org.eclipse.smarthome.core.persistence.FilterCriteria.Ordering;
 import org.eclipse.smarthome.core.persistence.HistoricItem;
 import org.eclipse.smarthome.core.persistence.PersistenceService;
+import org.eclipse.smarthome.core.persistence.PersistenceServiceRegistry;
 import org.eclipse.smarthome.core.persistence.QueryablePersistenceService;
 import org.eclipse.smarthome.core.types.State;
 import org.eclipse.smarthome.ui.chart.ChartProvider;
@@ -48,6 +50,9 @@ import org.knowm.xchart.ChartBuilder;
 import org.knowm.xchart.Series;
 import org.knowm.xchart.SeriesMarker;
 import org.knowm.xchart.StyleManager.LegendPosition;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,16 +61,18 @@ import org.slf4j.LoggerFactory;
  *
  * See {@link ChartProvider} and {@link ChartServlet} for further details.
  *
- * @author Chris Jackson
+ * @author Chris Jackson - Initial contribution
  * @author Holger Reichert - Support for themes, DPI, legend hiding
- *
+ * @author Christoph Weitkamp - Consider default persistence service
  */
+@Component(immediate = true)
 public class DefaultChartProvider implements ChartProvider {
 
     private final Logger logger = LoggerFactory.getLogger(DefaultChartProvider.class);
 
+    private TimeZoneProvider timeZoneProvider;
     protected ItemUIRegistry itemUIRegistry;
-    static protected Map<String, QueryablePersistenceService> persistenceServices = new HashMap<String, QueryablePersistenceService>();
+    private PersistenceServiceRegistry persistenceServiceRegistry;
 
     private int legendPosition = 0;
 
@@ -76,6 +83,7 @@ public class DefaultChartProvider implements ChartProvider {
 
     public static final int DPI_DEFAULT = 96;
 
+    @Reference
     public void setItemUIRegistry(ItemUIRegistry itemUIRegistry) {
         this.itemUIRegistry = itemUIRegistry;
     }
@@ -84,20 +92,25 @@ public class DefaultChartProvider implements ChartProvider {
         this.itemUIRegistry = null;
     }
 
-    public void addPersistenceService(PersistenceService service) {
-        if (service instanceof QueryablePersistenceService) {
-            persistenceServices.put(service.getId(), (QueryablePersistenceService) service);
-        }
+    @Reference
+    protected void setPersistenceServiceRegistry(PersistenceServiceRegistry persistenceServiceRegistry) {
+        this.persistenceServiceRegistry = persistenceServiceRegistry;
     }
 
-    public void removePersistenceService(PersistenceService service) {
-        persistenceServices.remove(service.getId());
+    protected void unsetPersistenceServiceRegistry(PersistenceServiceRegistry persistenceServiceRegistry) {
+        this.persistenceServiceRegistry = null;
     }
 
-    static public Map<String, QueryablePersistenceService> getPersistenceServices() {
-        return persistenceServices;
+    @Reference
+    public void setTimeZoneProvider(TimeZoneProvider timeZoneProvider) {
+        this.timeZoneProvider = timeZoneProvider;
     }
 
+    public void unsetTimeZoneProvider(TimeZoneProvider timeZoneProvider) {
+        this.timeZoneProvider = null;
+    }
+
+    @Activate
     protected void activate() {
         logger.debug("Starting up default chart provider.");
         String themeNames = Arrays.stream(CHART_THEMES_AVAILABLE) //
@@ -106,26 +119,31 @@ public class DefaultChartProvider implements ChartProvider {
         logger.debug("Available themes for default chart provider: {}", themeNames);
     }
 
-    protected void deactivate() {
-    }
-
-    public void destroy() {
-    }
-
     @Override
     public String getName() {
         return "default";
     }
 
     @Override
-    public BufferedImage createChart(String service, String theme, Date startTime, Date endTime, int height, int width,
-            String items, String groups, Integer dpiValue, Boolean legend)
+    public BufferedImage createChart(String serviceId, String theme, Date startTime, Date endTime, int height,
+            int width, String items, String groups, Integer dpiValue, Boolean legend)
             throws ItemNotFoundException, IllegalArgumentException {
-
         logger.debug(
                 "Rendering chart: service: '{}', theme: '{}', startTime: '{}', endTime: '{}', width: '{}', height: '{}', items: '{}', groups: '{}', dpi: '{}', legend: '{}'",
-                service, theme, startTime, endTime, width, height, items, groups, dpiValue, legend);
-        QueryablePersistenceService persistenceService;
+                serviceId, theme, startTime, endTime, width, height, items, groups, dpiValue, legend);
+
+        // If a persistence service is specified, find the provider, or use the default provider
+        PersistenceService service = (serviceId == null) ? persistenceServiceRegistry.getDefault()
+                : persistenceServiceRegistry.get(serviceId);
+
+        // Did we find a service?
+        QueryablePersistenceService persistenceService = (service instanceof QueryablePersistenceService)
+                ? (QueryablePersistenceService) service
+                : (QueryablePersistenceService) persistenceServiceRegistry.getAll() //
+                        .stream() //
+                        .filter(it -> it instanceof QueryablePersistenceService) //
+                        .findFirst() //
+                        .orElseThrow(() -> new IllegalArgumentException("No Persistence service found."));
 
         int seriesCounter = 0;
 
@@ -178,25 +196,6 @@ public class DefaultChartProvider implements ChartProvider {
         chart.getStyleManager().setLegendBackgroundColor(chartTheme.getLegendBackgroundColor());
         chart.getStyleManager().setLegendFont(chartTheme.getLegendFont(dpi));
         chart.getStyleManager().setLegendSeriesLineLength(chartTheme.getLegendSeriesLineLength(dpi));
-
-        // If a persistence service is specified, find the provider
-        persistenceService = null;
-        if (service != null) {
-            persistenceService = getPersistenceServices().get(service);
-        } else {
-            // Otherwise, just get the first service, if one exists
-            Iterator<Entry<String, QueryablePersistenceService>> it = getPersistenceServices().entrySet().iterator();
-            if (it.hasNext()) {
-                persistenceService = it.next().getValue();
-            } else {
-                throw new IllegalArgumentException("No Persistence service found.");
-            }
-        }
-
-        // Did we find a service?
-        if (persistenceService == null) {
-            throw new IllegalArgumentException("Persistence service not found '" + service + "'.");
-        }
 
         // Loop through all the items
         if (items != null) {
@@ -323,7 +322,7 @@ public class DefaultChartProvider implements ChartProvider {
         // This is necessary for values that don't change often otherwise data will start
         // after the start of the graph (or not at all if there's no change during the graph period)
         filter = new FilterCriteria();
-        filter.setEndDate(timeBegin);
+        filter.setEndDate(ZonedDateTime.ofInstant(timeBegin.toInstant(), timeZoneProvider.getTimeZone()));
         filter.setItemName(item.getName());
         filter.setPageSize(1);
         filter.setOrdering(Ordering.DESCENDING);
@@ -337,8 +336,8 @@ public class DefaultChartProvider implements ChartProvider {
         }
 
         // Now, get all the data between the start and end time
-        filter.setBeginDate(timeBegin);
-        filter.setEndDate(timeEnd);
+        filter.setBeginDate(ZonedDateTime.ofInstant(timeBegin.toInstant(), timeZoneProvider.getTimeZone()));
+        filter.setEndDate(ZonedDateTime.ofInstant(timeEnd.toInstant(), timeZoneProvider.getTimeZone()));
         filter.setPageSize(Integer.MAX_VALUE);
         filter.setOrdering(Ordering.ASCENDING);
 

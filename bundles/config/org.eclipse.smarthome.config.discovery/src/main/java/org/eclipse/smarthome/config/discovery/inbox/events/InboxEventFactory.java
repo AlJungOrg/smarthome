@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,6 +12,9 @@
  */
 package org.eclipse.smarthome.config.discovery.inbox.events;
 
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import org.eclipse.smarthome.config.discovery.DiscoveryResult;
 import org.eclipse.smarthome.config.discovery.dto.DiscoveryResultDTO;
 import org.eclipse.smarthome.config.discovery.dto.DiscoveryResultDTOMapper;
@@ -19,9 +22,6 @@ import org.eclipse.smarthome.core.events.AbstractEventFactory;
 import org.eclipse.smarthome.core.events.Event;
 import org.eclipse.smarthome.core.events.EventFactory;
 import org.osgi.service.component.annotations.Component;
-
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
 
 /**
  * An {@link InboxEventFactory} is responsible for creating inbox event instances.
@@ -31,17 +31,18 @@ import com.google.common.collect.Sets;
 @Component(immediate = true, service = EventFactory.class)
 public class InboxEventFactory extends AbstractEventFactory {
 
-    private static final String INBOX_ADDED_EVENT_TOPIC = "smarthome/inbox/{thingUID}/added";
+    static final String INBOX_ADDED_EVENT_TOPIC = "smarthome/inbox/{thingUID}/added";
 
-    private static final String INBOX_REMOVED_EVENT_TOPIC = "smarthome/inbox/{thingUID}/removed";
+    static final String INBOX_REMOVED_EVENT_TOPIC = "smarthome/inbox/{thingUID}/removed";
 
-    private static final String INBOX_UPDATED_EVENT_TOPIC = "smarthome/inbox/{thingUID}/updated";
+    static final String INBOX_UPDATED_EVENT_TOPIC = "smarthome/inbox/{thingUID}/updated";
 
     /**
      * Constructs a new InboxEventFactory.
      */
     public InboxEventFactory() {
-        super(Sets.newHashSet(InboxAddedEvent.TYPE, InboxUpdatedEvent.TYPE, InboxRemovedEvent.TYPE));
+        super(Stream.of(InboxAddedEvent.TYPE, InboxUpdatedEvent.TYPE, InboxRemovedEvent.TYPE)
+                .collect(Collectors.toSet()));
     }
 
     @Override
@@ -76,9 +77,7 @@ public class InboxEventFactory extends AbstractEventFactory {
      * Creates an inbox added event.
      *
      * @param discoveryResult the discovery result
-     *
      * @return the created inbox added event
-     *
      * @throws IllegalArgumentException if discoveryResult is null
      */
     public static InboxAddedEvent createAddedEvent(DiscoveryResult discoveryResult) {
@@ -93,9 +92,7 @@ public class InboxEventFactory extends AbstractEventFactory {
      * Creates an inbox removed event.
      *
      * @param discoveryResult the discovery result
-     *
      * @return the created inbox removed event
-     *
      * @throws IllegalArgumentException if discoveryResult is null
      */
     public static InboxRemovedEvent createRemovedEvent(DiscoveryResult discoveryResult) {
@@ -110,9 +107,7 @@ public class InboxEventFactory extends AbstractEventFactory {
      * Creates an inbox updated event.
      *
      * @param discoveryResult the discovery result
-     *
      * @return the created inbox updated event
-     *
      * @throws IllegalArgumentException if discoveryResult is null
      */
     public static InboxUpdatedEvent createUpdatedEvent(DiscoveryResult discoveryResult) {
@@ -124,7 +119,7 @@ public class InboxEventFactory extends AbstractEventFactory {
     }
 
     private static void assertValidArgument(DiscoveryResult discoveryResult) {
-        Preconditions.checkArgument(discoveryResult != null, "The argument 'discoveryResult' must not be null.");
+        checkNotNull(discoveryResult, "discoveryResult");
     }
 
     private static String buildTopic(String topic, String thingUID) {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,6 +22,8 @@ import java.util.GregorianCalendar;
 import java.util.Locale;
 import java.util.TimeZone;
 
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.core.types.PrimitiveType;
 import org.eclipse.smarthome.core.types.State;
@@ -30,30 +32,36 @@ import org.eclipse.smarthome.core.types.State;
  *
  * @author Kai Kreuzer - Initial contribution
  * @author Erdoan Hadzhiyusein - Refactored to use ZonedDateTime
+ * @author Jan N. Klug - add ability to use time or date only
  */
+@NonNullByDefault
 public class DateTimeType implements PrimitiveType, State, Command {
 
+    // external format patterns for output
     public static final String DATE_PATTERN = "yyyy-MM-dd'T'HH:mm:ss";
     public static final String DATE_PATTERN_WITH_TZ = "yyyy-MM-dd'T'HH:mm:ssz";
-
     // this pattern returns the time zone in RFC822 format
     public static final String DATE_PATTERN_WITH_TZ_AND_MS = "yyyy-MM-dd'T'HH:mm:ss.SSSZ";
-
     public static final String DATE_PATTERN_WITH_TZ_AND_MS_GENERAL = "yyyy-MM-dd'T'HH:mm:ss.SSSz";
     public static final String DATE_PATTERN_WITH_TZ_AND_MS_ISO = "yyyy-MM-dd'T'HH:mm:ss.SSSX";
 
+    // internal format patterns for parsing
+    private static final String DATE_PARSE_PATTERN_WITHOUT_TZ = "yyyy-MM-dd'T'HH:mm[:ss[.SSS]]";
+    private static final String DATE_PARSE_PATTERN_WITH_TZ = "yyyy-MM-dd'T'HH:mm[:ss[.SSS]]z";
+    private static final String DATE_PARSE_PATTERN_WITH_TZ_RFC = "yyyy-MM-dd'T'HH:mm[:ss[.SSS]]Z";
+    private static final String DATE_PARSE_PATTERN_WITH_TZ_ISO = "yyyy-MM-dd'T'HH:mm[:ss[.SSS]]X";
+
     private ZonedDateTime zonedDateTime;
-    private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DATE_PATTERN);
-    private final DateTimeFormatter formatterTz = DateTimeFormatter.ofPattern(DATE_PATTERN_WITH_TZ);
-    private final DateTimeFormatter formatterTzMs = DateTimeFormatter.ofPattern(DATE_PATTERN_WITH_TZ_AND_MS_GENERAL);
-    private final DateTimeFormatter formatterTzMsRFC = DateTimeFormatter.ofPattern(DATE_PATTERN_WITH_TZ_AND_MS);
-    private final DateTimeFormatter formatterTzMsIso = DateTimeFormatter.ofPattern(DATE_PATTERN_WITH_TZ_AND_MS_ISO);
+    private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DATE_PARSE_PATTERN_WITHOUT_TZ);
+    private final DateTimeFormatter formatterTz = DateTimeFormatter.ofPattern(DATE_PARSE_PATTERN_WITH_TZ);
+    private final DateTimeFormatter formatterTzRFC = DateTimeFormatter.ofPattern(DATE_PARSE_PATTERN_WITH_TZ_RFC);
+    private final DateTimeFormatter formatterTzIso = DateTimeFormatter.ofPattern(DATE_PARSE_PATTERN_WITH_TZ_ISO);
 
     /**
      * @deprecated The constructor uses Calendar object hence it doesn't store time zone. A new constructor is
      *             available. Use {@link #DateTimeType(ZonedDateTime)} instead.
-     * 
-     * @param calendar - The Calendar object containing the time stamp.
+     *
+     * @param calendar The Calendar object containing the time stamp.
      */
     @Deprecated
     public DateTimeType(Calendar calendar) {
@@ -73,22 +81,19 @@ public class DateTimeType implements PrimitiveType, State, Command {
         ZonedDateTime date = null;
 
         try {
+            // direct parsing (date and time)
             try {
-                date = ZonedDateTime.parse(zonedValue, formatterTzMsRFC);
-            } catch (DateTimeParseException tzMsRfcException) {
+                date = parse(zonedValue);
+            } catch (DateTimeParseException fullDtException) {
+                // time only
                 try {
-                    date = ZonedDateTime.parse(zonedValue, formatterTzMsIso);
-                } catch (DateTimeParseException tzMsException) {
-                    try {
-                        date = ZonedDateTime.parse(zonedValue, formatterTz);
-                    } catch (DateTimeParseException tzException) {
-                        try {
-                            date = ZonedDateTime.parse(zonedValue, formatterTzMs);
-                        } catch (DateTimeParseException regularFormatException) {
-                            // A ZonedDateTime object cannot be creating by parsing directly a pattern without zone
-                            LocalDateTime localDateTime = LocalDateTime.parse(zonedValue, formatter);
-                            date = ZonedDateTime.of(localDateTime, ZoneId.systemDefault());
-                        }
+                    date = parse("1970-01-01T" + zonedValue);
+                } catch (DateTimeParseException timeOnlyException) {
+                    // date only
+                    if (zonedValue.length() == 10) {
+                        date = parse(zonedValue + "T00:00:00");
+                    } else {
+                        date = parse(zonedValue.substring(0, 10) + "T00:00:00" + zonedValue.substring(10));
                     }
                 }
             }
@@ -96,9 +101,7 @@ public class DateTimeType implements PrimitiveType, State, Command {
             throw new IllegalArgumentException(zonedValue + " is not in a valid format.", invalidFormatException);
         }
 
-        if (date != null) {
-            zonedDateTime = date;
-        }
+        zonedDateTime = date;
     }
 
     /**
@@ -118,12 +121,12 @@ public class DateTimeType implements PrimitiveType, State, Command {
     }
 
     @Override
-    public String format(String pattern) {
-        try {
-            return String.format(pattern, zonedDateTime);
-        } catch (NullPointerException npe) {
+    public String format(@Nullable String pattern) {
+        if (pattern == null) {
             return DateTimeFormatter.ofPattern(DATE_PATTERN).format(zonedDateTime);
         }
+
+        return String.format(pattern, zonedDateTime);
     }
 
     public String format(Locale locale, String pattern) {
@@ -137,7 +140,7 @@ public class DateTimeType implements PrimitiveType, State, Command {
 
     @Override
     public String toFullString() {
-        return zonedDateTime.format(formatterTzMsRFC);
+        return zonedDateTime.format(formatterTzRFC);
     }
 
     @Override
@@ -149,7 +152,7 @@ public class DateTimeType implements PrimitiveType, State, Command {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(@Nullable Object obj) {
         if (this == obj) {
             return true;
         }
@@ -169,4 +172,25 @@ public class DateTimeType implements PrimitiveType, State, Command {
         }
         return true;
     }
+
+    private ZonedDateTime parse(String value) throws DateTimeParseException {
+        ZonedDateTime date = null;
+        try {
+            date = ZonedDateTime.parse(value, formatterTzRFC);
+        } catch (DateTimeParseException tzMsRfcException) {
+            try {
+                date = ZonedDateTime.parse(value, formatterTzIso);
+            } catch (DateTimeParseException tzMsIsoException) {
+                try {
+                    date = ZonedDateTime.parse(value, formatterTz);
+                } catch (DateTimeParseException tzException) {
+                    LocalDateTime localDateTime = LocalDateTime.parse(value, formatter);
+                    date = ZonedDateTime.of(localDateTime, ZoneId.systemDefault());
+                }
+            }
+        }
+
+        return date;
+    }
+
 }

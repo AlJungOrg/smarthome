@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,13 +12,12 @@
  */
 package org.eclipse.smarthome.ui.paper.internal;
 
-import org.eclipse.smarthome.io.net.http.HttpContextFactoryService;
+import org.eclipse.smarthome.io.http.HttpContextFactoryService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
-import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.http.HttpService;
 import org.osgi.service.http.NamespaceException;
@@ -56,7 +55,7 @@ public class PaperUIApp {
         logger.info("Stopped Paper UI");
     }
 
-    @Reference(policy = ReferencePolicy.STATIC, cardinality = ReferenceCardinality.MANDATORY)
+    @Reference(policy = ReferencePolicy.STATIC)
     protected void setHttpService(HttpService httpService) {
         this.httpService = httpService;
     }
@@ -65,7 +64,7 @@ public class PaperUIApp {
         this.httpService = null;
     }
 
-    @Reference(policy = ReferencePolicy.STATIC, cardinality = ReferenceCardinality.MANDATORY)
+    @Reference(policy = ReferencePolicy.STATIC)
     public void setHttpContextFactoryService(HttpContextFactoryService httpContextFactoryService) {
         this.httpContextFactoryService = httpContextFactoryService;
     }

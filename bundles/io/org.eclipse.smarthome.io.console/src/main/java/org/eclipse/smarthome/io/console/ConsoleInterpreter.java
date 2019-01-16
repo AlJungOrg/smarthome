@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -31,7 +31,6 @@ public class ConsoleInterpreter {
 
     public static String getHelp(final String base, final String separator,
             Collection<ConsoleCommandExtension> extensions) {
-
         final List<String> usages = ConsoleInterpreter.getUsages(extensions);
         final StringBuffer buffer = new StringBuffer();
 

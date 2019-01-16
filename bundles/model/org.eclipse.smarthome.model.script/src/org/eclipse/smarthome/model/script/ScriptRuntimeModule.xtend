@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -33,6 +33,11 @@ import org.eclipse.xtext.xbase.interpreter.IExpressionInterpreter
 import org.eclipse.xtext.xbase.scoping.batch.ImplicitlyImportedFeatures
 import com.google.inject.Binder
 import com.google.inject.name.Names
+import org.eclipse.xtext.xbase.typesystem.computation.ITypeComputer
+import org.eclipse.smarthome.model.script.jvmmodel.ScriptTypeComputer
+import org.eclipse.xtext.parser.IEncodingProvider
+import org.eclipse.smarthome.model.script.internal.ScriptEncodingProvider
+import org.eclipse.xtext.service.DispatchingProvider
 
 /** 
  * Use this class to register components to be used at runtime / without the Equinox extension registry.
@@ -41,6 +46,14 @@ import com.google.inject.name.Names
 @SuppressWarnings("restriction") class ScriptRuntimeModule extends org.eclipse.smarthome.model.script.AbstractScriptRuntimeModule {
     def Class<? extends ImplicitlyImportedFeatures> bindImplicitlyImportedTypes() {
         return ScriptImplicitlyImportedTypes
+    }
+    
+    def Class<? extends ITypeComputer> bindITypeComputer() {
+        return ScriptTypeComputer
+    }
+
+    override configureRuntimeEncodingProvider(Binder binder) {
+        binder.bind(IEncodingProvider).annotatedWith(DispatchingProvider.Runtime).to(ScriptEncodingProvider)
     }
 
     override Class<? extends IExpressionInterpreter> bindIExpressionInterpreter() {
@@ -72,4 +85,5 @@ import com.google.inject.name.Names
         binder.bind(Boolean.TYPE).annotatedWith(Names.named(LazyURIEncoder.USE_INDEXED_FRAGMENTS_BINDING)).toInstance(
             Boolean.FALSE)
     }
+    
 }

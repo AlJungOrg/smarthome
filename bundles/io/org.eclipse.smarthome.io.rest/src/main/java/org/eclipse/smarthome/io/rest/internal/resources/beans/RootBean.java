@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,20 +15,18 @@ package org.eclipse.smarthome.io.rest.internal.resources.beans;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.eclipse.smarthome.io.rest.internal.RESTActivator;
-
 /**
  * This is a java bean that is used to define the root entry
  * page of the REST interface.
- * 
+ *
  * @author Kai Kreuzer - Initial contribution and API
  *
  */
 public class RootBean {
 
-    final public String version = RESTActivator.getContext().getBundle().getVersion().toString();
+    public final String version = "1";
 
-    final public List<Links> links = new ArrayList<Links>();
+    public final List<Links> links = new ArrayList<Links>();
 
     public static class Links {
         public Links(String type, String url) {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,6 +14,8 @@ package org.eclipse.smarthome.binding.lifx.internal.fields;
 
 import static org.eclipse.smarthome.binding.lifx.internal.util.LifxMessageUtil.*;
 
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.core.library.types.DecimalType;
 import org.eclipse.smarthome.core.library.types.HSBType;
 import org.eclipse.smarthome.core.library.types.PercentType;
@@ -21,6 +23,7 @@ import org.eclipse.smarthome.core.library.types.PercentType;
 /**
  * @author Wouter Born - Add support for MultiZone light control
  */
+@NonNullByDefault
 public class HSBK {
 
     private static final String DEFAULT_PROPERTY_NAME = "hsbk";
@@ -41,9 +44,9 @@ public class HSBK {
         this(other.hue, other.saturation, other.brightness, other.kelvin);
     }
 
-    public HSBK(HSBType hsb, PercentType temperature) {
+    public HSBK(HSBType hsb, int kelvin) {
         setHSB(hsb);
-        setTemperature(temperature);
+        this.kelvin = kelvin;
     }
 
     public int getHue() {
@@ -69,10 +72,6 @@ public class HSBK {
         return new HSBType(hue, saturation, brightness);
     }
 
-    public PercentType getTemperature() {
-        return kelvinToPercentType(kelvin);
-    }
-
     public void setHSB(HSBType hsb) {
         setHue(hsb.getHue());
         setSaturation(hsb.getSaturation());
@@ -91,8 +90,8 @@ public class HSBK {
         this.brightness = percentTypeToBrightness(brightness);
     }
 
-    public void setTemperature(PercentType temperature) {
-        kelvin = percentTypeToKelvin(temperature);
+    public void setKelvin(int kelvin) {
+        this.kelvin = kelvin;
     }
 
     @Override
@@ -107,7 +106,7 @@ public class HSBK {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(@Nullable Object obj) {
         if (this == obj) {
             return true;
         }

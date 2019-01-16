@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,64 +12,42 @@
  */
 package org.eclipse.smarthome.automation;
 
-import java.util.Collections;
 import java.util.Map;
 
+import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.smarthome.automation.type.ConditionType;
 import org.eclipse.smarthome.automation.type.Input;
 import org.eclipse.smarthome.automation.type.Output;
 import org.eclipse.smarthome.config.core.ConfigDescriptionParameter;
-import org.eclipse.smarthome.config.core.Configuration;
 
 /**
- * Condition module is used into "IF" section of the {@link Rule} definition.
- * The "IF" section defines conditions which must be satisfied to continue {@link Rule} execution. Building elements of
- * condition ( {@link ConfigDescriptionParameter}s and {@link Input}s are defined by {@link ConditionType} Conditions
- * don't have {@link Output} elements.
+ * This interface represents automation {@code Condition} modules which are working as a filter for {@link Rule}'s
+ * executions. After being triggered, a Rule's execution will continue only if all its conditions are satisfied.
+ * <p>
+ * Conditions can be used to check the output from the trigger or other data available in the system. To receive an
+ * output data from triggers the Conditions have {@link Input}s.
+ * <p>
+ * Conditions can be configured.
+ * <p>
+ * Conditions don't have {@link Output}s 'cause they don't provide information to the other modules of the Rule.
+ * <p>
+ * Building elements of conditions as {@link ConfigDescriptionParameter}s and {@link Input}s. They are defined by the
+ * corresponding {@link ConditionType}.
+ * <p>
+ * Condition modules are placed in <b>conditions</b> section of the {@link Rule} definition.
  *
+ * @see Module
  * @author Yordan Mihaylov - Initial Contribution
  */
-public class Condition extends Module {
-
-    private Map<String, String> inputs;
-
-    public Condition() {
-        super();
-    }
+@NonNullByDefault
+public interface Condition extends Module {
 
     /**
-     * Constructor of {@link Condition} module object.
+     * Gets the input references of the Condition. The references define how the {@link Input}s of this {@link Module}
+     * are connected to {@link Output}s of other {@link Module}s.
      *
-     * @param id id of the module.
-     * @param typeUID unique module type id.
-     * @param configuration configuration values of the {@link Condition} module.
-     * @param inputs set of {@link Input}s used by this module.
+     * @return a map that contains the input references of this condition.
      */
-    public Condition(String id, String typeUID, Configuration configuration, Map<String, String> inputs) {
-        super(id, typeUID, configuration);
-        setInputs(inputs);
-    }
-
-    /**
-     * This method is used to get input connections of the Condition. The connections
-     * are links between {@link Input}s of the current {@link Module} and {@link Output}s of other
-     * {@link Module}s.
-     *
-     * @return map that contains the inputs of this condition.
-     */
-    public Map<String, String> getInputs() {
-        return inputs != null ? inputs : Collections.<String, String> emptyMap();
-    }
-
-    /**
-     * This method is used to connect {@link Input}s of the Condition to {@link Output}s of other {@link Module}s.
-     *
-     * @param inputs map that contains the inputs for this condition.
-     */
-    public void setInputs(Map<String, String> inputs) {
-        if (inputs != null) {
-            this.inputs = inputs;
-        }
-    }
+    Map<String, String> getInputs();
 
 }

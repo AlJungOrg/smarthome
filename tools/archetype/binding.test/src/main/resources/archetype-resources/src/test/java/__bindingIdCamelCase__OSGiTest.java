@@ -19,11 +19,9 @@
  */
 package ${package};
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.*;
 
-import ${package}.handler.${bindingIdCamelCase}Handler;
+import ${package}.internal.${bindingIdCamelCase}Handler;
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.ManagedThingProvider;
 import org.eclipse.smarthome.core.thing.ThingProvider;
@@ -36,10 +34,10 @@ import org.junit.Before;
 import org.junit.Test;
 
 /**
-* Tests cases for {@link ${bindingIdCamelCase}Handler}.
-*
-* @author ${author} - Initial contribution
-*/
+ * Test cases for {@link ${bindingIdCamelCase}Handler}.
+ *
+ * @author ${author} - Initial contribution
+ */
 public class ${bindingIdCamelCase}OSGiTest extends JavaOSGiTest {
 
     private static final ThingTypeUID BRIDGE_THING_TYPE_UID = new ThingTypeUID("${bindingId}", "bridge");
@@ -51,8 +49,12 @@ public class ${bindingIdCamelCase}OSGiTest extends JavaOSGiTest {
     @Before
     public void setUp() {
         registerService(volatileStorageService);
+        
         managedThingProvider = getService(ThingProvider.class, ManagedThingProvider.class);
+        assertNotNull(managedThingProvider);
+        
         bridge = BridgeBuilder.create(BRIDGE_THING_TYPE_UID, "1").withLabel("My Bridge").build();
+        assertNotNull(bridge);
     }
 
     @After
@@ -63,9 +65,8 @@ public class ${bindingIdCamelCase}OSGiTest extends JavaOSGiTest {
 
     @Test
     public void creationOf${bindingIdCamelCase}Handler() {
-        assertThat(bridge.getHandler(), is(nullValue()));
+        assertNull(bridge.getHandler());
         managedThingProvider.add(bridge);
-        waitForAssert(() -> assertThat(bridge.getHandler(), is(notNullValue())));
+        waitForAssert(() -> assertNotNull(managedThingProvider.get(bridge.getUID())));
     }
-
 }

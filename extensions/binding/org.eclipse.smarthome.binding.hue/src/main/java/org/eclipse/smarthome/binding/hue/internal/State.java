@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -158,6 +158,9 @@ public class State {
      * @return current color mode
      */
     public ColorMode getColorMode() {
+        if (colormode == null) {
+            return null;
+        }
         return ColorMode.valueOf(colormode.toUpperCase());
     }
 
@@ -167,6 +170,9 @@ public class State {
      * @return current active effect
      */
     public Effect getEffect() {
+        if (effect == null) {
+            return null;
+        }
         return Effect.valueOf(effect.toUpperCase());
     }
 

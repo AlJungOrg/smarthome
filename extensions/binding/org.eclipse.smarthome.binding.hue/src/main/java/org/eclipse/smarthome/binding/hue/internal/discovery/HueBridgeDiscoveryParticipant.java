@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,7 +12,8 @@
  */
 package org.eclipse.smarthome.binding.hue.internal.discovery;
 
-import static org.eclipse.smarthome.binding.hue.HueBindingConstants.*;
+import static org.eclipse.smarthome.binding.hue.internal.HueBindingConstants.*;
+import static org.eclipse.smarthome.core.thing.Thing.PROPERTY_SERIAL_NUMBER;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -29,6 +30,7 @@ import org.eclipse.smarthome.core.thing.ThingUID;
 import org.jupnp.model.meta.DeviceDetails;
 import org.jupnp.model.meta.ModelDetails;
 import org.jupnp.model.meta.RemoteDevice;
+import org.osgi.service.component.annotations.Component;
 
 /**
  * The {@link HueBridgeDiscoveryParticipant} is responsible for discovering new and
@@ -38,6 +40,7 @@ import org.jupnp.model.meta.RemoteDevice;
  * @author Thomas Höfer - Added representation
  */
 @NonNullByDefault
+@Component(service = UpnpDiscoveryParticipant.class, immediate = true)
 public class HueBridgeDiscoveryParticipant implements UpnpDiscoveryParticipant {
 
     @Override
@@ -51,10 +54,11 @@ public class HueBridgeDiscoveryParticipant implements UpnpDiscoveryParticipant {
         if (uid != null) {
             Map<String, Object> properties = new HashMap<>(2);
             properties.put(HOST, device.getDetails().getBaseURL().getHost());
-            properties.put(SERIAL_NUMBER, device.getDetails().getSerialNumber());
+            properties.put(PROPERTY_SERIAL_NUMBER, device.getDetails().getSerialNumber());
 
             DiscoveryResult result = DiscoveryResultBuilder.create(uid).withProperties(properties)
-                    .withLabel(device.getDetails().getFriendlyName()).withRepresentationProperty(SERIAL_NUMBER).build();
+                    .withLabel(device.getDetails().getFriendlyName()).withRepresentationProperty(PROPERTY_SERIAL_NUMBER)
+                    .build();
             return result;
         } else {
             return null;

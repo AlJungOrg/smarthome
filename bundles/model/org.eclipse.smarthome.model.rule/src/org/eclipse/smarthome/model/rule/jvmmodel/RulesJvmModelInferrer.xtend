@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,6 +24,9 @@ import org.eclipse.smarthome.model.rule.rules.ChangedEventTrigger
 import org.eclipse.smarthome.model.rule.rules.CommandEventTrigger
 import org.eclipse.smarthome.model.rule.rules.EventEmittedTrigger
 import org.eclipse.smarthome.model.rule.rules.EventTrigger
+import org.eclipse.smarthome.model.rule.rules.GroupMemberChangedEventTrigger
+import org.eclipse.smarthome.model.rule.rules.GroupMemberCommandEventTrigger
+import org.eclipse.smarthome.model.rule.rules.GroupMemberUpdateEventTrigger
 import org.eclipse.smarthome.model.rule.rules.Rule
 import org.eclipse.smarthome.model.rule.rules.RuleModel
 import org.eclipse.smarthome.model.rule.rules.ThingStateChangedEventTrigger
@@ -35,6 +38,8 @@ import org.eclipse.xtext.xbase.jvmmodel.IJvmDeclaredTypeAcceptor
 import org.eclipse.xtext.xbase.jvmmodel.JvmTypesBuilder
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.eclipse.xtext.common.types.JvmFormalParameter
+import org.eclipse.emf.common.util.EList
 
 /**
  * <p>Infers a JVM model from the source model.</p> 
@@ -144,7 +149,7 @@ class RulesJvmModelInferrer extends ScriptJvmModelInferrer {
                         val commandTypeRef = ruleModel.newTypeRef(Command)
                         parameters += rule.toParameter(VAR_RECEIVED_COMMAND, commandTypeRef)
                     }
-                    if (containsStateChangeTrigger(rule)) {
+                    if (containsStateChangeTrigger(rule) && !containsParam(parameters, VAR_PREVIOUS_STATE)) {
                         val stateTypeRef = ruleModel.newTypeRef(State)
                         parameters += rule.toParameter(VAR_PREVIOUS_STATE, stateTypeRef)
                     }
@@ -152,7 +157,7 @@ class RulesJvmModelInferrer extends ScriptJvmModelInferrer {
                         val eventTypeRef = ruleModel.newTypeRef(ChannelTriggeredEvent)
                         parameters += rule.toParameter(VAR_RECEIVED_EVENT, eventTypeRef)
                     }
-                    if (containsThingStateChangedEventTrigger(rule)) {
+                    if (containsThingStateChangedEventTrigger(rule) && !containsParam(parameters, VAR_PREVIOUS_STATE)) {
                         val stateTypeRef = ruleModel.newTypeRef(State)
                         parameters += rule.toParameter(VAR_PREVIOUS_STATE, stateTypeRef)
                     }
@@ -163,9 +168,16 @@ class RulesJvmModelInferrer extends ScriptJvmModelInferrer {
         ]
     }
 
+    def private boolean containsParam(EList<JvmFormalParameter> params, String param) {
+        return params.map[name].contains(param);
+    }
+
     def private boolean containsCommandTrigger(Rule rule) {
         for (EventTrigger trigger : rule.getEventtrigger()) {
             if (trigger instanceof CommandEventTrigger) {
+                return true;
+            }
+            if (trigger instanceof GroupMemberCommandEventTrigger) {
                 return true;
             }
         }
@@ -177,6 +189,9 @@ class RulesJvmModelInferrer extends ScriptJvmModelInferrer {
             if (trigger instanceof ChangedEventTrigger) {
                 return true;
             }
+            if (trigger instanceof GroupMemberChangedEventTrigger) {
+                return true;
+            }
         }
         return false;
     }
@@ -184,6 +199,9 @@ class RulesJvmModelInferrer extends ScriptJvmModelInferrer {
     def private boolean containsStateUpdateTrigger(Rule rule) {
         for (EventTrigger trigger : rule.getEventtrigger()) {
             if (trigger instanceof UpdateEventTrigger) {
+                return true;
+            }
+            if (trigger instanceof GroupMemberUpdateEventTrigger) {
                 return true;
             }
         }

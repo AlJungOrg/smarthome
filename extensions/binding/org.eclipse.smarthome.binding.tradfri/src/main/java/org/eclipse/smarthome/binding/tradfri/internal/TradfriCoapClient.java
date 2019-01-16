@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,12 +14,12 @@ package org.eclipse.smarthome.binding.tradfri.internal;
 
 import java.net.URI;
 import java.util.LinkedList;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 
 import org.eclipse.californium.core.CoapClient;
+import org.eclipse.californium.core.CoapObserveRelation;
 import org.eclipse.californium.core.coap.MediaTypeRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,40 +34,33 @@ public class TradfriCoapClient extends CoapClient {
 
     private static final int TIMEOUT = 2000;
     private static final int DEFAULT_DELAY_MILLIS = 600;
-    private final Logger logger;
-    private final LinkedList<PayloadCallbackPair> commandsQueue;
-    private final Runnable commandExecutor;
+    private final Logger logger = LoggerFactory.getLogger(TradfriCoapClient.class);
+    private final LinkedList<PayloadCallbackPair> commandsQueue = new LinkedList<>();
     private Future<?> job;
 
     public TradfriCoapClient(URI uri) {
         super(uri);
         setTimeout(TIMEOUT);
-        logger = LoggerFactory.getLogger(getClass());
+    }
 
-        commandsQueue = new LinkedList<>();
-        
-        commandExecutor = () -> {
-            while (true) {
-                try {
-                    int delayTime = 0;
-                    synchronized (this.commandsQueue) {
-                        PayloadCallbackPair payloadCallbackPair = TradfriCoapClient.this.commandsQueue.poll();
-                        if (payloadCallbackPair != null) {
-                            logger.debug("Proccessing payload: {}", payloadCallbackPair.payload);
-                            TradfriCoapClient.this.put(new TradfriCoapHandler(payloadCallbackPair.callback), payloadCallbackPair.payload, MediaTypeRegistry.TEXT_PLAIN);
-                            delayTime = Optional.ofNullable(payloadCallbackPair.delay).orElse(DEFAULT_DELAY_MILLIS);
-                        } else {
-                            return;
-                        }
+    private void executeCommands() {
+        while (true) {
+            try {
+                synchronized (commandsQueue) {
+                    PayloadCallbackPair payloadCallbackPair = commandsQueue.poll();
+                    if (payloadCallbackPair != null) {
+                        logger.debug("CoAP PUT request\nuri: {}\npayload: {}", getURI(), payloadCallbackPair.payload);
+                        put(new TradfriCoapHandler(payloadCallbackPair.callback), payloadCallbackPair.payload,
+                                MediaTypeRegistry.TEXT_PLAIN);
+                    } else {
+                        return;
                     }
-                    Thread.sleep(delayTime);
-                } catch (InterruptedException e) {
-                    logger.debug("commandExecutorThread was interrupted", e);
                 }
+                Thread.sleep(DEFAULT_DELAY_MILLIS);
+            } catch (InterruptedException e) {
+                logger.debug("commandExecutorThread was interrupted", e);
             }
-        };
-        
-        job = null;
+        }
     }
 
     /**
@@ -75,8 +68,8 @@ public class TradfriCoapClient extends CoapClient {
      *
      * @param callback the callback to use for updates
      */
-    public void startObserve(CoapCallback callback) {
-        observe(new TradfriCoapHandler(callback));
+    public CoapObserveRelation startObserve(CoapCallback callback) {
+        return observe(new TradfriCoapHandler(callback));
     }
 
     /**
@@ -85,6 +78,7 @@ public class TradfriCoapClient extends CoapClient {
      * @return the future that will hold the result
      */
     public CompletableFuture<String> asyncGet() {
+        logger.debug("CoAP GET request\nuri: {}", getURI());
         CompletableFuture<String> future = new CompletableFuture<>();
         get(new TradfriCoapHandler(future));
         return future;
@@ -96,6 +90,7 @@ public class TradfriCoapClient extends CoapClient {
      * @param callback the callback to use for the response
      */
     public void asyncGet(CoapCallback callback) {
+        logger.debug("CoAP GET request\nuri: {}", getURI());
         get(new TradfriCoapHandler(callback));
     }
 
@@ -105,13 +100,10 @@ public class TradfriCoapClient extends CoapClient {
      *
      * @param payload the payload to send with the PUT request
      * @param callback the callback to use for the response
-     * @param delay the amount of time (in milliseconds) after which processing of the command by the bridge should be
-     *            finished.
-     *            (if not specified a default value will be used)
      * @param scheduler scheduler to be used for sending commands
      */
-    public void asyncPut(String payload, CoapCallback callback, Integer delay, ScheduledExecutorService scheduler) {
-        this.asyncPut(new PayloadCallbackPair(payload, callback, delay), scheduler);
+    public void asyncPut(String payload, CoapCallback callback, ScheduledExecutorService scheduler) {
+        asyncPut(new PayloadCallbackPair(payload, callback), scheduler);
     }
 
     /**
@@ -125,7 +117,7 @@ public class TradfriCoapClient extends CoapClient {
             if (this.commandsQueue.isEmpty()) {
                 this.commandsQueue.offer(payloadCallbackPair);
                 if (job == null || job.isDone()) {
-                    job = scheduler.submit(commandExecutor);
+                    job = scheduler.submit(() -> executeCommands());
                 }
             } else {
                 this.commandsQueue.offer(payloadCallbackPair);
@@ -145,12 +137,10 @@ public class TradfriCoapClient extends CoapClient {
     public final class PayloadCallbackPair {
         public final String payload;
         public final CoapCallback callback;
-        public final Integer delay;
 
-        public PayloadCallbackPair(String payload, CoapCallback callback, Integer delay) {
+        public PayloadCallbackPair(String payload, CoapCallback callback) {
             this.payload = payload;
             this.callback = callback;
-            this.delay = delay;
         }
     }
 }

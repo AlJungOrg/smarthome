@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,6 +12,7 @@
  */
 package org.eclipse.smarthome.core.library.types;
 
+import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.smarthome.core.library.items.PlayerItem;
 import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.core.types.PrimitiveType;
@@ -22,6 +23,7 @@ import org.eclipse.smarthome.core.types.State;
  *
  * @author Alex Tugarev
  */
+@NonNullByDefault
 public enum RewindFastforwardType implements PrimitiveType, State, Command {
     REWIND,
     FASTFORWARD;

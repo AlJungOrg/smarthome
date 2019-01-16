@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory;
  * @author Kai Kreuzer
  *
  */
-abstract public class AbstractResourceIconProvider implements IconProvider {
+public abstract class AbstractResourceIconProvider implements IconProvider {
 
     private final Logger logger = LoggerFactory.getLogger(AbstractResourceIconProvider.class);
 
@@ -87,14 +87,28 @@ abstract public class AbstractResourceIconProvider implements IconProvider {
             return getResource(iconSetId, resourceWithoutState);
         }
 
-        String resourceWithState = category.toLowerCase() + "-" + state.toLowerCase() + "."
+        String iconState;
+        if (state.contains(" ")) {
+            try {
+                String firstPart = state.substring(0, state.indexOf(" "));
+                Double.valueOf(firstPart);
+                iconState = firstPart;
+            } catch (NumberFormatException e) {
+                // firstPart is not a number, pass on the full state
+                iconState = state;
+            }
+        } else {
+            iconState = state;
+        }
+
+        String resourceWithState = category.toLowerCase() + "-" + iconState.toLowerCase() + "."
                 + format.toString().toLowerCase();
         if (hasResource(iconSetId, resourceWithState)) {
             return getResource(iconSetId, resourceWithState);
         } else {
             // let's treat all percentage-based categories
             try {
-                Double stateAsDouble = Double.valueOf(state);
+                Double stateAsDouble = Double.valueOf(iconState);
                 if (stateAsDouble >= 0 && stateAsDouble <= 100) {
                     for (int i = stateAsDouble.intValue(); i >= 0; i--) {
                         String resourceWithNumberState = category.toLowerCase() + "-" + i + "."
@@ -117,7 +131,7 @@ abstract public class AbstractResourceIconProvider implements IconProvider {
      *
      * @return the priority as a positive integer
      */
-    abstract protected Integer getPriority();
+    protected abstract Integer getPriority();
 
     /**
      * Provides the content of a resource for a certain icon set as a stream or null, if the resource does not exist.
@@ -126,7 +140,7 @@ abstract public class AbstractResourceIconProvider implements IconProvider {
      * @param resourceName the name of the resource
      * @return the content as a stream or null, if the resource does not exist
      */
-    abstract protected InputStream getResource(String iconSetId, String resourceName);
+    protected abstract InputStream getResource(String iconSetId, String resourceName);
 
     /**
      * Checks whether a certain resource exists for a given icon set.
@@ -135,6 +149,6 @@ abstract public class AbstractResourceIconProvider implements IconProvider {
      * @param resourceName the name of the resource
      * @return true, if the resource exists, false otherwise
      */
-    abstract protected boolean hasResource(String iconSetId, String resourceName);
+    protected abstract boolean hasResource(String iconSetId, String resourceName);
 
 }

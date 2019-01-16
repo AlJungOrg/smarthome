@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,17 +12,21 @@
  */
 package org.eclipse.smarthome.model.script.extension;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.eclipse.smarthome.io.console.Console;
 import org.eclipse.smarthome.io.console.extensions.AbstractConsoleCommandExtension;
+import org.eclipse.smarthome.io.console.extensions.ConsoleCommandExtension;
 import org.eclipse.smarthome.model.script.engine.Script;
 import org.eclipse.smarthome.model.script.engine.ScriptEngine;
 import org.eclipse.smarthome.model.script.engine.ScriptExecutionException;
 import org.eclipse.smarthome.model.script.engine.ScriptParsingException;
-
-import com.google.common.base.Joiner;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferencePolicy;
 
 /**
  * This class provides the script engine as a console command
@@ -30,18 +34,19 @@ import com.google.common.base.Joiner;
  * @author Oliver Libutzki - Initial contribution
  *
  */
+@Component(service = ConsoleCommandExtension.class)
 public class ScriptEngineConsoleCommandExtension extends AbstractConsoleCommandExtension {
 
     private ScriptEngine scriptEngine;
 
     public ScriptEngineConsoleCommandExtension() {
-        super(">", "Execute scripts");
+        super("script", "Execute scripts");
     }
 
     @Override
     public void execute(String[] args, Console console) {
         if (scriptEngine != null) {
-            String scriptString = Joiner.on(" ").join(args);
+            String scriptString = Arrays.stream(args).collect(Collectors.joining(" "));
             Script script;
             try {
                 script = scriptEngine.newScriptFromString(scriptString);
@@ -67,6 +72,7 @@ public class ScriptEngineConsoleCommandExtension extends AbstractConsoleCommandE
         return Collections.singletonList(buildCommandUsage("<script to execute>", "Executes a script"));
     }
 
+    @Reference(policy = ReferencePolicy.DYNAMIC)
     public void setScriptEngine(ScriptEngine scriptEngine) {
         this.scriptEngine = scriptEngine;
     }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,11 +12,11 @@
  */
 package org.eclipse.smarthome.core.cache;
 
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
-import org.eclipse.jdt.annotation.NonNull;
+import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 
 /**
@@ -25,15 +25,29 @@ import org.eclipse.jdt.annotation.Nullable;
  * issue a fetch in another thread and notify callback implementors asynchronously.
  *
  * @author David Graeff - Initial contribution
+ * @author Martin van Wingerden - Add Duration constructor
  *
  * @param <V> the type of the cached value
  */
+@NonNullByDefault
 public class ExpiringCacheAsync<V> {
     protected final long expiry;
     protected long expiresAt = 0;
-    protected CompletableFuture<V> currentNewValueRequest = null;
-    @Nullable
-    protected V value;
+    protected @Nullable CompletableFuture<V> currentNewValueRequest = null;
+    protected @Nullable V value;
+
+    /**
+     * Create a new instance.
+     *
+     * @param expiry the duration in milliseconds for how long the value stays valid. Must be positive.
+     * @throws IllegalArgumentException For an expire value <=0.
+     */
+    public ExpiringCacheAsync(Duration expiry) {
+        if (expiry.isNegative() || expiry.isZero()) {
+            throw new IllegalArgumentException("Cache expire time must be greater than 0");
+        }
+        this.expiry = expiry.toNanos();
+    }
 
     /**
      * Create a new instance.
@@ -41,11 +55,8 @@ public class ExpiringCacheAsync<V> {
      * @param expiry the duration in milliseconds for how long the value stays valid. Must be greater than 0.
      * @throws IllegalArgumentException For an expire value <=0.
      */
-    public ExpiringCacheAsync(long expiry) throws IllegalArgumentException {
-        if (expiry <= 0) {
-            throw new IllegalArgumentException("Cache expire time must be greater than 0");
-        }
-        this.expiry = TimeUnit.MILLISECONDS.toNanos(expiry);
+    public ExpiringCacheAsync(long expiry) {
+        this(Duration.ofMillis(expiry));
     }
 
     /**
@@ -57,8 +68,7 @@ public class ExpiringCacheAsync<V> {
      *         `getValue().thenAccept(value->useYourValueHere(value));`. If you need the value synchronously you can use
      *         `getValue().get()`.
      */
-    @SuppressWarnings("null")
-    public CompletableFuture<V> getValue(@NonNull Supplier<CompletableFuture<V>> requestNewValueFuture) {
+    public CompletableFuture<V> getValue(Supplier<CompletableFuture<V>> requestNewValueFuture) {
         if (isExpired()) {
             return refreshValue(requestNewValueFuture);
         } else {
@@ -90,27 +100,28 @@ public class ExpiringCacheAsync<V> {
      *            if there is already an ongoing refresh.
      * @return the new value in form of a CompletableFuture.
      */
-    public synchronized @NonNull CompletableFuture<V> refreshValue(
-            @NonNull Supplier<CompletableFuture<V>> requestNewValueFuture) {
+    @SuppressWarnings({ "null", "unused" })
+    public synchronized CompletableFuture<V> refreshValue(Supplier<CompletableFuture<V>> requestNewValueFuture) {
+        CompletableFuture<V> currentNewValueRequest = this.currentNewValueRequest;
+
         expiresAt = 0;
         // There is already an ongoing refresh, just return that future
         if (currentNewValueRequest != null) {
             return currentNewValueRequest;
         }
         // We request a value update from the supplier now
-        currentNewValueRequest = requestNewValueFuture.get();
+        currentNewValueRequest = this.currentNewValueRequest = requestNewValueFuture.get();
         if (currentNewValueRequest == null) {
             throw new IllegalArgumentException("We expect a CompletableFuture for refreshValue() to work!");
         }
-        @SuppressWarnings("null")
         CompletableFuture<V> t = currentNewValueRequest.thenApply(newValue -> {
             // No request is ongoing anymore, update the value and expire time
-            currentNewValueRequest = null;
+            this.currentNewValueRequest = null;
             value = newValue;
             expiresAt = getCurrentNanoTime() + expiry;
             return value;
         });
-        // The @NonNull annotation forces us to check the return value of thenApply.
+        // The @NonNullbyDefault annotation forces us to check the return value of thenApply.
         if (t == null) {
             throw new IllegalArgumentException("We expect a CompletableFuture for refreshValue() to work!");
         }
@@ -130,8 +141,7 @@ public class ExpiringCacheAsync<V> {
      * Return the raw value, no matter if it is already
      * expired or still valid.
      */
-    @Nullable
-    public V getLastKnownValue() {
+    public @Nullable V getLastKnownValue() {
         return value;
     }
 }

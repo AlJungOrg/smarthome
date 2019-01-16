@@ -40,17 +40,19 @@ a bridge is configured.
 ### Things
 
 ```xtend
-Bridge lirc:bridge:local [ host="192.168.1.120", port="9001" ] {
+Bridge lirc:bridge:local [ host="192.168.1.120", portNumber="9001" ] {
     Thing remote Onkyo_RC_799M [ remote="Onkyo_RC-799M" ]
     Thing remote Samsung [ remote="Samsung" ]
 }
 ```
 
 Bridge:
+
 * **host**: IP address or hostname of the LIRC server. Defaults to localhost
 * **port**: The port number the LIRC server is listening on. Defaults to 8765
 
 Remote:
+
 * **remote**: The name of the remote as known by LIRC
 
 ### Items

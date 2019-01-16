@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,6 +14,8 @@ package org.eclipse.smarthome.ui.classic.internal.render;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.HashMap;
@@ -26,6 +28,7 @@ import org.eclipse.smarthome.core.items.Item;
 import org.eclipse.smarthome.core.items.ItemNotFoundException;
 import org.eclipse.smarthome.core.library.types.DecimalType;
 import org.eclipse.smarthome.core.library.types.PercentType;
+import org.eclipse.smarthome.core.library.types.QuantityType;
 import org.eclipse.smarthome.core.types.State;
 import org.eclipse.smarthome.model.sitemap.Widget;
 import org.eclipse.smarthome.ui.classic.internal.WebAppActivator;
@@ -33,7 +36,6 @@ import org.eclipse.smarthome.ui.classic.internal.WebAppConfig;
 import org.eclipse.smarthome.ui.classic.render.RenderException;
 import org.eclipse.smarthome.ui.classic.render.WidgetRenderer;
 import org.eclipse.smarthome.ui.items.ItemUIRegistry;
-import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,7 +47,7 @@ import org.slf4j.LoggerFactory;
  * @author Kai Kreuzer - Initial contribution and API
  *
  */
-abstract public class AbstractWidgetRenderer implements WidgetRenderer {
+public abstract class AbstractWidgetRenderer implements WidgetRenderer {
 
     private final Logger logger = LoggerFactory.getLogger(AbstractWidgetRenderer.class);
 
@@ -60,24 +62,18 @@ abstract public class AbstractWidgetRenderer implements WidgetRenderer {
     protected static final String SNIPPET_LOCATION = "snippets/";
 
     /* a local cache so we do not have to read the snippets over and over again from the bundle */
-    protected static final Map<String, String> snippetCache = new HashMap<String, String>();
+    protected static final Map<String, String> SNIPPET_CACHE = new HashMap<String, String>();
 
-    public void setItemUIRegistry(ItemUIRegistry itemUIRegistry) {
+    protected void setItemUIRegistry(ItemUIRegistry itemUIRegistry) {
         this.itemUIRegistry = itemUIRegistry;
     }
 
-    public void unsetItemUIRegistry(ItemUIRegistry itemUIRegistry) {
+    protected void unsetItemUIRegistry(ItemUIRegistry itemUIRegistry) {
         this.itemUIRegistry = null;
     }
 
     public ItemUIRegistry getItemUIRegistry() {
         return itemUIRegistry;
-    }
-
-    protected void activate(ComponentContext context) {
-    }
-
-    protected void deactivate(ComponentContext context) {
     }
 
     /**
@@ -89,7 +85,7 @@ abstract public class AbstractWidgetRenderer implements WidgetRenderer {
      */
     protected synchronized String getSnippet(String elementType) throws RenderException {
         String lowerCaseElementType = elementType.toLowerCase();
-        String snippet = snippetCache.get(lowerCaseElementType);
+        String snippet = SNIPPET_CACHE.get(lowerCaseElementType);
         if (snippet == null) {
             String snippetLocation = SNIPPET_LOCATION + lowerCaseElementType + SNIPPET_EXT;
             URL entry = WebAppActivator.getContext().getBundle().getEntry(snippetLocation);
@@ -97,7 +93,7 @@ abstract public class AbstractWidgetRenderer implements WidgetRenderer {
                 try {
                     snippet = IOUtils.toString(entry.openStream());
                     if (!config.isHtmlCacheDisabled()) {
-                        snippetCache.put(lowerCaseElementType, snippet);
+                        SNIPPET_CACHE.put(lowerCaseElementType, snippet);
                     }
                 } catch (IOException e) {
                     logger.warn("Cannot load snippet for element type '{}'", lowerCaseElementType, e);
@@ -127,7 +123,6 @@ abstract public class AbstractWidgetRenderer implements WidgetRenderer {
      * @return the label to use for the widget
      */
     public String getLabel(Widget w, String preferredValue) {
-
         String label = itemUIRegistry.getLabel(w);
         int index = label.indexOf('[');
         int index2 = label.lastIndexOf(']');
@@ -248,4 +243,21 @@ abstract public class AbstractWidgetRenderer implements WidgetRenderer {
         this.config = config;
     }
 
+    protected String getUnitForWidget(Widget widget) {
+        return itemUIRegistry.getUnitForWidget(widget);
+    }
+
+    protected State convertStateToLabelUnit(QuantityType<?> state, String label) {
+        return itemUIRegistry.convertStateToLabelUnit(state, label);
+    }
+
+    protected boolean isValidURL(String url) {
+        if (url != null && !url.isEmpty()) {
+            try {
+                return new URL(url).toURI() != null ? true : false;
+            } catch (MalformedURLException | URISyntaxException ex) {
+            }
+        }
+        return false;
+    }
 }

@@ -3,7 +3,7 @@ Bundle-ManifestVersion: 2
 Bundle-Name: Eclipse SmartHome Sitemap REST API
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Bundle-SymbolicName: org.eclipse.smarthome.io.rest.sitemap
-Bundle-Vendor: Eclipse.org
+Bundle-Vendor: Eclipse.org/SmartHome
 Bundle-Version: 0.10.0.qualifier
 Export-Package: org.eclipse.smarthome.io.rest.sitemap
 Import-Package: 
@@ -18,16 +18,25 @@ Import-Package:
  org.eclipse.emf.common.util,
  org.eclipse.emf.ecore,
  org.eclipse.jdt.annotation;resolution:=optional,
+ org.eclipse.smarthome.config.core,
  org.eclipse.smarthome.core.auth,
+ org.eclipse.smarthome.core.common,
+ org.eclipse.smarthome.core.common.registry,
+ org.eclipse.smarthome.core.events,
  org.eclipse.smarthome.core.items,
  org.eclipse.smarthome.core.items.dto,
+ org.eclipse.smarthome.core.items.events,
+ org.eclipse.smarthome.core.library,
  org.eclipse.smarthome.core.types,
  org.eclipse.smarthome.io.rest,
  org.eclipse.smarthome.io.rest.core.item,
+ org.eclipse.smarthome.io.rest.sitemap,
  org.eclipse.smarthome.model.core,
  org.eclipse.smarthome.model.sitemap,
  org.eclipse.smarthome.ui.items,
  org.glassfish.jersey.media.sse,
  org.glassfish.jersey.server,
+ org.osgi.framework,
  org.slf4j
 Service-Component: OSGI-INF/*.xml
+Automatic-Module-Name: org.eclipse.smarthome.io.rest.sitemap

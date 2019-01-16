@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,6 +29,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.io.FilenameUtils;
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.config.core.ConfigConstants;
 import org.eclipse.smarthome.core.i18n.LocaleProvider;
 import org.osgi.framework.BundleContext;
@@ -49,8 +51,10 @@ import org.slf4j.LoggerFactory;
  * @author Kai Kreuzer - File caching mechanism
  * @author Markus Rathgeb - Add locale provider support
  */
+@NonNullByDefault
 public abstract class AbstractFileTransformationService<T> implements TransformationService {
 
+    @Nullable
     private WatchService watchService = null;
 
     protected final Map<String, T> cachedFiles = new ConcurrentHashMap<>();
@@ -58,7 +62,9 @@ public abstract class AbstractFileTransformationService<T> implements Transforma
 
     private final Logger logger = LoggerFactory.getLogger(AbstractFileTransformationService.class);
 
+    @NonNullByDefault({})
     private LocaleProvider localeProvider;
+    @NonNullByDefault({})
     private ServiceTracker<LocaleProvider, LocaleProvider> localeProviderTracker;
 
     private class LocaleProviderServiceTrackerCustomizer
@@ -71,17 +77,17 @@ public abstract class AbstractFileTransformationService<T> implements Transforma
         }
 
         @Override
-        public LocaleProvider addingService(ServiceReference<LocaleProvider> reference) {
+        public LocaleProvider addingService(@Nullable ServiceReference<LocaleProvider> reference) {
             localeProvider = context.getService(reference);
             return localeProvider;
         }
 
         @Override
-        public void modifiedService(ServiceReference<LocaleProvider> reference, LocaleProvider service) {
+        public void modifiedService(@Nullable ServiceReference<LocaleProvider> reference, LocaleProvider service) {
         }
 
         @Override
-        public void removedService(ServiceReference<LocaleProvider> reference, LocaleProvider service) {
+        public void removedService(@Nullable ServiceReference<LocaleProvider> reference, LocaleProvider service) {
             localeProvider = null;
         }
 
@@ -107,28 +113,22 @@ public abstract class AbstractFileTransformationService<T> implements Transforma
      * It expects the transformation to be read from a file which is stored
      * under the 'conf/transform'
      *
-     * @param filename
-     *            the name of the file which contains the transformation definition.
+     * @param filename the name of the file which contains the transformation definition.
      *            The name may contain subfoldernames
      *            as well
-     * @param source
-     *            the input to transform
+     * @param source the input to transform
      * @throws TransformationException
      */
     @Override
-    public String transform(String filename, String source) throws TransformationException {
-
+    public @Nullable String transform(String filename, String source) throws TransformationException {
         if (filename == null || source == null) {
             throw new TransformationException("the given parameters 'filename' and 'source' must not be null");
         }
 
-        if (watchService == null) {
-            initializeWatchService();
-        } else {
-            processFolderEvents();
-        }
+        final WatchService watchService = getWatchService();
+        processFolderEvents(watchService);
 
-        String transformFile = getLocalizedProposedFilename(filename);
+        String transformFile = getLocalizedProposedFilename(filename, watchService);
         T transform = cachedFiles.get(transformFile);
         if (transform == null) {
             transform = internalLoadTransform(transformFile);
@@ -141,7 +141,6 @@ public abstract class AbstractFileTransformationService<T> implements Transforma
             logger.warn("Could not transform '{}' with the file '{}' : {}", source, filename, e.getMessage());
             return "";
         }
-
     }
 
     /**
@@ -149,12 +148,8 @@ public abstract class AbstractFileTransformationService<T> implements Transforma
      * Abstract method defined by subclasses to effectively operate the
      * transformation according to its rules
      *
-     * @param transform
-     *            transformation held by the file provided to <code>transform</code> method
-     *
-     * @param source
-     *            the input to transform
-     *
+     * @param transform transformation held by the file provided to <code>transform</code> method
+     * @param source the input to transform
      * @return the transformed result or null if the
      *         transformation couldn't be completed for any reason.
      *
@@ -166,28 +161,31 @@ public abstract class AbstractFileTransformationService<T> implements Transforma
      * Abstract method defined by subclasses to effectively read the transformation
      * source file according to their own needs.
      *
-     * @param filename
-     *            Name of the file to be read. This filename may have been transposed
+     * @param filename Name of the file to be read. This filename may have been transposed
      *            to a localized one
-     *
-     * @return
-     *         An object containing the source file
-     *
-     * @throws TransformationException
-     *             file couldn't be read for any reason
+     * @return An object containing the source file
+     * @throws TransformationException file couldn't be read for any reason
      */
     protected abstract T internalLoadTransform(String filename) throws TransformationException;
 
-    private void initializeWatchService() {
+    private synchronized WatchService getWatchService() throws TransformationException {
+        WatchService watchService = this.watchService;
+        if (watchService != null) {
+            return watchService;
+        }
+
         try {
-            watchService = FileSystems.getDefault().newWatchService();
-            watchSubDirectory("");
+            watchService = this.watchService = FileSystems.getDefault().newWatchService();
         } catch (IOException e) {
             logger.error("Unable to start transformation directory monitoring");
+            throw new TransformationException("Cannot get a new watch service.");
         }
+
+        watchSubDirectory("", watchService);
+        return watchService;
     }
 
-    private void watchSubDirectory(String subDirectory) {
+    private void watchSubDirectory(String subDirectory, final WatchService watchService) {
         if (watchedDirectories.indexOf(subDirectory) == -1) {
             String watchedDirectory = getSourcePath() + subDirectory;
             Path transformFilePath = Paths.get(watchedDirectory);
@@ -205,7 +203,7 @@ public abstract class AbstractFileTransformationService<T> implements Transforma
     /**
      * Ensures that a modified or deleted cached files does not stay in the cache
      */
-    private void processFolderEvents() {
+    private void processFolderEvents(final WatchService watchService) {
         WatchKey key = watchService.poll();
         if (key != null) {
             for (WatchEvent<?> e : key.pollEvents()) {
@@ -237,13 +235,13 @@ public abstract class AbstractFileTransformationService<T> implements Transforma
      * @param filename name of the requested transformation file
      * @return original or localized transformation file to use
      */
-    protected String getLocalizedProposedFilename(String filename) {
+    protected String getLocalizedProposedFilename(String filename, final WatchService watchService) {
         String extension = FilenameUtils.getExtension(filename);
         String prefix = FilenameUtils.getPath(filename);
         String result = filename;
 
         if (!prefix.isEmpty()) {
-            watchSubDirectory(prefix);
+            watchSubDirectory(prefix, watchService);
         }
 
         // the filename may already contain locale information

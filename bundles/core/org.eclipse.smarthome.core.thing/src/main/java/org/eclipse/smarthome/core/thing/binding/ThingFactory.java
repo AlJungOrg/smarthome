@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -43,13 +43,12 @@ import org.slf4j.LoggerFactory;
  */
 @NonNullByDefault
 public class ThingFactory {
-    private static final Logger logger = LoggerFactory.getLogger(ThingFactory.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ThingFactory.class);
 
     /**
      * Generates a random Thing UID for the given thingType
      *
-     * @param thingTypeUID
-     *            thing type (must not be null)
+     * @param thingTypeUID thing type (must not be null)
      * @return random Thing UID
      */
     public static ThingUID generateRandomThingUID(ThingTypeUID thingTypeUID) {
@@ -61,15 +60,11 @@ public class ThingFactory {
     /**
      * Creates a thing based on a given thing type.
      *
-     * @param thingType
-     *            thing type (must not be null)
-     * @param thingUID
-     *            thindUID (must not be null)
-     * @param configuration
-     *            (must not be null)
-     * @param bridge
-     *            (can be null)
-     * @return thing
+     * @param thingType thing type (must not be null)
+     * @param thingUID thindUID (must not be null)
+     * @param configuration (must not be null)
+     * @param bridge (can be null)
+     * @return thing the thing
      */
     public static Thing createThing(ThingType thingType, ThingUID thingUID, Configuration configuration,
             @Nullable ThingUID bridgeUID) {
@@ -81,17 +76,12 @@ public class ThingFactory {
      * default-configuration given in the configDescriptions if the
      * configDescriptionRegistry is not null
      *
-     * @param thingType
-     *            (must not be null)
-     * @param thingUID
-     *            (must not be null)
-     * @param configuration
-     *            (must not be null)
-     * @param bridgeUID
-     *            (can be null)
-     * @param configDescriptionRegistry
-     *            (can be null)
-     * @return thing
+     * @param thingType (must not be null)
+     * @param thingUID (must not be null)
+     * @param configuration (must not be null)
+     * @param bridgeUID (can be null)
+     * @param configDescriptionRegistry (can be null)
+     * @return thing the thing
      */
     public static Thing createThing(ThingType thingType, ThingUID thingUID, Configuration configuration,
             @Nullable ThingUID bridgeUID, @Nullable ConfigDescriptionRegistry configDescriptionRegistry) {
@@ -110,7 +100,7 @@ public class ThingFactory {
             if (thingHandlerFactory.supportsThingType(thingTypeUID)) {
                 Thing thing = thingHandlerFactory.createThing(thingTypeUID, configuration, thingUID, bridgeUID);
                 if (thing == null) {
-                    logger.error(
+                    LOGGER.error(
                             "Thing factory ({}) returned null on create thing when it reports to support the thing type ({}).",
                             thingHandlerFactory.getClass(), thingTypeUID);
                 } else {
@@ -130,13 +120,10 @@ public class ThingFactory {
      *
      * Creates a thing based on given thing type.
      *
-     * @param thingType
-     *            thing type (must not be null)
-     * @param thingUID
-     *            thingUID (must not be null)
-     * @param configuration
-     *            (must not be null)
-     * @return thing
+     * @param thingType thing type (must not be null)
+     * @param thingUID thingUID (must not be null)
+     * @param configuration (must not be null)
+     * @return thing the thing
      */
     public static Thing createThing(ThingType thingType, ThingUID thingUID, Configuration configuration) {
         return createThing(thingType, thingUID, configuration, null);

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -194,8 +194,12 @@ public class LifxLightCommunicationHandler {
                 MACAddress discoveredAddress = response.getTarget();
                 if (packetFromConfiguredHost && macAddress == null) {
                     macAddress = discoveredAddress;
-                    selectorContext.setMACAddress(macAddress);
                     currentLightState.setOnline(discoveredAddress);
+
+                    LifxSelectorContext context = selectorContext;
+                    if (context != null) {
+                        context.setMACAddress(macAddress);
+                    }
                     return;
                 } else if (macAddress != null && macAddress.equals(discoveredAddress)) {
                     boolean newHost = host == null || !address.equals(host);
@@ -215,8 +219,12 @@ public class LifxLightCommunicationHandler {
                             try {
                                 cancelKey(unicastKey, logId);
                                 unicastKey = openUnicastChannel(selector, logId, host);
-                                selectorContext.setHost(host);
-                                selectorContext.setUnicastKey(unicastKey);
+
+                                LifxSelectorContext context = selectorContext;
+                                if (context != null) {
+                                    context.setHost(host);
+                                    context.setUnicastKey(unicastKey);
+                                }
                             } catch (IOException e) {
                                 logger.warn("{} while opening the unicast channel of the light ({}): {}",
                                         e.getClass().getSimpleName(), logId, e.getMessage());

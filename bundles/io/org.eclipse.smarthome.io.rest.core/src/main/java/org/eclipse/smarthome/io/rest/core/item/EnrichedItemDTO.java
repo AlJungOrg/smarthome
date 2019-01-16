@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,6 +12,8 @@
  */
 package org.eclipse.smarthome.io.rest.core.item;
 
+import java.util.Map;
+
 import org.eclipse.smarthome.core.items.dto.ItemDTO;
 import org.eclipse.smarthome.core.types.StateDescription;
 
@@ -20,6 +22,7 @@ import org.eclipse.smarthome.core.types.StateDescription;
  * description and the link.
  *
  * @author Dennis Nobel - Initial contribution
+ * @author Kai Kreuzer - Added metadata
  *
  */
 public class EnrichedItemDTO extends ItemDTO {
@@ -28,6 +31,8 @@ public class EnrichedItemDTO extends ItemDTO {
     public String state;
     public String transformedState;
     public StateDescription stateDescription;
+    public Map<String, Object> metadata;
+    public boolean editable;
 
     public EnrichedItemDTO(ItemDTO itemDTO, String link, String state, String transformedState,
             StateDescription stateDescription) {

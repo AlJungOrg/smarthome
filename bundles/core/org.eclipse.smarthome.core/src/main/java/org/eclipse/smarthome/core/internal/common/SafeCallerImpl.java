@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,10 +12,8 @@
  */
 package org.eclipse.smarthome.core.internal.common;
 
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -23,9 +21,9 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.core.common.SafeCaller;
 import org.eclipse.smarthome.core.common.SafeCallerBuilder;
+import org.eclipse.smarthome.core.common.ThreadPoolManager;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.ConfigurationPolicy;
 import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Modified;
 
@@ -36,7 +34,7 @@ import org.osgi.service.component.annotations.Modified;
  *
  */
 @NonNullByDefault
-@Component(configurationPid = "org.eclipse.smarthome.safecaller", immediate = true, configurationPolicy = ConfigurationPolicy.OPTIONAL)
+@Component(configurationPid = "org.eclipse.smarthome.safecaller", immediate = true)
 public class SafeCallerImpl implements SafeCaller {
 
     private static final String SAFE_CALL_POOL_NAME = "safeCall";
@@ -50,7 +48,7 @@ public class SafeCallerImpl implements SafeCaller {
     @Activate
     public void activate(@Nullable Map<String, Object> properties) {
         watcher = Executors.newSingleThreadScheduledExecutor();
-        manager = new SafeCallManagerImpl(watcher, getPoolName(), false);
+        manager = new SafeCallManagerImpl(watcher, getScheduler(), false);
         modified(properties);
     }
 
@@ -76,23 +74,8 @@ public class SafeCallerImpl implements SafeCaller {
         return new SafeCallerBuilderImpl<T>(target, new Class<?>[] { interfaceType }, manager);
     }
 
-    @Override
-    public <T> SafeCallerBuilder<T> create(T target) {
-        return new SafeCallerBuilderImpl<T>(target, getAllInterfaces(target), manager);
-    }
-
-    protected String getPoolName() {
-        return SAFE_CALL_POOL_NAME;
-    }
-
-    private static <T> Class<?>[] getAllInterfaces(T target) {
-        Set<Class<?>> ret = new HashSet<>();
-        Class<?> clazz = target.getClass();
-        while (clazz != null) {
-            ret.addAll(Arrays.asList(clazz.getInterfaces()));
-            clazz = clazz.getSuperclass();
-        }
-        return ret.toArray(new Class<?>[ret.size()]);
+    protected ExecutorService getScheduler() {
+        return ThreadPoolManager.getPool(SAFE_CALL_POOL_NAME);
     }
 
 }

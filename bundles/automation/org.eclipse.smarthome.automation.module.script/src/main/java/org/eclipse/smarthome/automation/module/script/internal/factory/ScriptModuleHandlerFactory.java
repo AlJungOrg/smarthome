@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,15 +15,21 @@ package org.eclipse.smarthome.automation.module.script.internal.factory;
 import java.util.Arrays;
 import java.util.Collection;
 
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.automation.Action;
 import org.eclipse.smarthome.automation.Condition;
 import org.eclipse.smarthome.automation.Module;
 import org.eclipse.smarthome.automation.handler.BaseModuleHandlerFactory;
 import org.eclipse.smarthome.automation.handler.ModuleHandler;
+import org.eclipse.smarthome.automation.handler.ModuleHandlerFactory;
 import org.eclipse.smarthome.automation.module.script.ScriptEngineManager;
 import org.eclipse.smarthome.automation.module.script.internal.handler.ScriptActionHandler;
 import org.eclipse.smarthome.automation.module.script.internal.handler.ScriptConditionHandler;
-import org.osgi.framework.BundleContext;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferencePolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,25 +39,29 @@ import org.slf4j.LoggerFactory;
  * @author Kai Kreuzer
  *
  */
+@NonNullByDefault
+@Component(service = ModuleHandlerFactory.class)
 public class ScriptModuleHandlerFactory extends BaseModuleHandlerFactory {
 
-    private Logger logger = LoggerFactory.getLogger(ScriptModuleHandlerFactory.class);
+    private final Logger logger = LoggerFactory.getLogger(ScriptModuleHandlerFactory.class);
 
-    private ScriptEngineManager scriptEngineManager;
+    private @NonNullByDefault({}) ScriptEngineManager scriptEngineManager;
 
-    private static final Collection<String> types = Arrays
+    private static final Collection<String> TYPES = Arrays
             .asList(new String[] { ScriptActionHandler.SCRIPT_ACTION_ID, ScriptConditionHandler.SCRIPT_CONDITION });
 
     @Override
-    public void activate(BundleContext bundleContext) {
-        super.activate(bundleContext);
+    @Deactivate
+    protected void deactivate() {
+        super.deactivate();
     }
 
     @Override
     public Collection<String> getTypes() {
-        return types;
+        return TYPES;
     }
 
+    @Reference(policy = ReferencePolicy.DYNAMIC)
     public void setScriptEngineManager(ScriptEngineManager scriptEngineManager) {
         this.scriptEngineManager = scriptEngineManager;
     }
@@ -61,7 +71,7 @@ public class ScriptModuleHandlerFactory extends BaseModuleHandlerFactory {
     }
 
     @Override
-    protected ModuleHandler internalCreate(Module module, String ruleUID) {
+    protected @Nullable ModuleHandler internalCreate(Module module, String ruleUID) {
         logger.trace("create {} -> {}", module.getId(), module.getTypeUID());
         String moduleTypeUID = module.getTypeUID();
         if (moduleTypeUID != null) {
@@ -75,7 +85,6 @@ public class ScriptModuleHandlerFactory extends BaseModuleHandlerFactory {
             } else {
                 logger.error("The ModuleHandler is not supported: {}", moduleTypeUID);
             }
-
         } else {
             logger.error("ModuleType is not registered: {}", moduleTypeUID);
         }

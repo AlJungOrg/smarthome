@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,21 +12,43 @@
  */
 package org.eclipse.smarthome.core.i18n;
 
+import java.util.function.Supplier;
+
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
+
 /**
  *
  * @author Denis Nobel - Initial contribution
  */
+@NonNullByDefault
 public class I18nUtil {
 
     /** The 'text' pattern (prefix) which marks constants. */
     private static final String CONSTANT_PATTERN = "@text/";
 
-    public static boolean isConstant(String key) {
+    public static boolean isConstant(@Nullable String key) {
         return key != null && key.startsWith(CONSTANT_PATTERN);
     }
 
     public static String stripConstant(String key) {
         return key.replace(CONSTANT_PATTERN, "");
+    }
+
+    /**
+     * If key is a constant strip the constant part, otherwise use the supplier provided string.
+     *
+     * @param key the key
+     * @param supplier the supplier that return value is used if key is identified as a constant
+     * @return the key with the stripped constant marker or the supplier provided key if it is not identified as a
+     *         constant
+     */
+    public static String stripConstantOr(final @Nullable String key, Supplier<String> supplier) {
+        if (key != null && key.startsWith(CONSTANT_PATTERN)) {
+            return stripConstant(key);
+        } else {
+            return supplier.get();
+        }
     }
 
 }

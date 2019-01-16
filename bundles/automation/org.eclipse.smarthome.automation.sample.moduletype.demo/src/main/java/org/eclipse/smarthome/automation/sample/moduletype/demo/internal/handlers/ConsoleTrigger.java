@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,10 +17,10 @@ import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Map;
 
+import org.eclipse.smarthome.automation.ModuleHandlerCallback;
 import org.eclipse.smarthome.automation.Trigger;
-import org.eclipse.smarthome.automation.handler.BaseModuleHandler;
-import org.eclipse.smarthome.automation.handler.RuleEngineCallback;
-import org.eclipse.smarthome.automation.handler.TriggerHandler;
+import org.eclipse.smarthome.automation.handler.BaseTriggerModuleHandler;
+import org.eclipse.smarthome.automation.handler.TriggerHandlerCallback;
 import org.eclipse.smarthome.automation.sample.moduletype.demo.internal.factory.HandlerFactory;
 import org.eclipse.smarthome.config.core.Configuration;
 import org.osgi.framework.BundleContext;
@@ -43,16 +43,16 @@ import org.osgi.service.event.EventHandler;
  *    "keyName":"key"
  * }
  * </pre>
- * 
+ *
  * @author Plamen Peev - Initial contribution
  */
-public class ConsoleTrigger extends BaseModuleHandler<Trigger> implements TriggerHandler, EventHandler {
+public class ConsoleTrigger extends BaseTriggerModuleHandler implements EventHandler {
 
     /**
      * This constant is used by {@link HandlerFactory} to create a correct handler instance. It must be the same as in
      * JSON definition of the module type.
      */
-    public final static String UID = "ConsoleTrigger";
+    public static final String UID = "ConsoleTrigger";
 
     /**
      * This constant is used to get the value of the 'eventTopic' property from {@link Trigger}'s {@link Configuration}.
@@ -84,12 +84,6 @@ public class ConsoleTrigger extends BaseModuleHandler<Trigger> implements Trigge
      * This field will contain the name of the entry that contains the value for trigger's output
      */
     private final String keyName;
-
-    /**
-     * This is a callback to RuleEngine which is used by the {@link TriggerHandler} to notify the RuleEngine about
-     * firing of this {@link Trigger} handler.
-     */
-    private RuleEngineCallback ruleCallback;
 
     /**
      * This field stores the service registration of this {@link Trigger} handler as {@link EventHandler} in the
@@ -137,7 +131,7 @@ public class ConsoleTrigger extends BaseModuleHandler<Trigger> implements Trigge
         final Integer outputValue = (Integer) event.getProperty(keyName);
         final Map<String, Object> outputProps = new HashMap<String, Object>();
         outputProps.put(OUTPUT_NAME, outputValue);
-        ruleCallback.triggered(module, outputProps);
+        ((TriggerHandlerCallback) callback).triggered(module, outputProps);
     }
 
     /**
@@ -146,8 +140,8 @@ public class ConsoleTrigger extends BaseModuleHandler<Trigger> implements Trigge
      * @param ruleCallback a callback object to the RuleEngine.
      */
     @Override
-    public void setRuleEngineCallback(final RuleEngineCallback ruleCallback) {
-        this.ruleCallback = ruleCallback;
+    public void setCallback(final ModuleHandlerCallback callback) {
+        super.setCallback(callback);
         final Dictionary<String, Object> registrationProperties = new Hashtable<String, Object>();
         registrationProperties.put(EventConstants.EVENT_TOPIC, eventTopic);
         registration = context.registerService(EventHandler.class, this, registrationProperties);

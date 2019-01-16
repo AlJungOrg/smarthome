@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,6 +24,7 @@ import org.eclipse.smarthome.core.audio.AudioException;
 import org.eclipse.smarthome.core.audio.AudioFormat;
 import org.eclipse.smarthome.core.audio.AudioSource;
 import org.eclipse.smarthome.core.audio.AudioStream;
+import org.osgi.service.component.annotations.Component;
 
 /**
  * This is an AudioSource from an input channel of the host.
@@ -32,6 +33,7 @@ import org.eclipse.smarthome.core.audio.AudioStream;
  * @author Kai Kreuzer - Refactored and stabilized
  *
  */
+@Component(service = AudioSource.class, immediate = true)
 public class JavaSoundAudioSource implements AudioSource {
 
     /**

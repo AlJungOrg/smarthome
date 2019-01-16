@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,6 +19,7 @@ import java.util.Formatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.core.types.State;
 
@@ -29,14 +30,15 @@ import org.eclipse.smarthome.core.types.State;
  * @author Gaël L'hopital - port to Eclipse SmartHome
  *
  */
+@NonNullByDefault
 public class StringListType implements Command, State {
 
     protected List<String> typeDetails;
 
     // constants
-    static final public String DELIMITER = ",";
-    static final public String ESCAPED_DELIMITER = "\\" + DELIMITER;
-    static final public String REGEX_SPLITTER = "(?<!\\\\)" + DELIMITER;
+    public static final String DELIMITER = ",";
+    public static final String ESCAPED_DELIMITER = "\\" + DELIMITER;
+    public static final String REGEX_SPLITTER = "(?<!\\\\)" + DELIMITER;
 
     public StringListType() {
         typeDetails = Collections.emptyList();
@@ -58,8 +60,8 @@ public class StringListType implements Command, State {
      * Deserialize the input string, splitting it on every delimiter not preceded by a backslash.
      */
     public StringListType(String serialized) {
-        typeDetails = Arrays.stream(serialized.split(REGEX_SPLITTER)).map(s -> s.replace(ESCAPED_DELIMITER, DELIMITER))
-                .collect(Collectors.toList());
+        typeDetails = Arrays.stream(serialized.split(REGEX_SPLITTER, -1))
+                .map(s -> s.replace(ESCAPED_DELIMITER, DELIMITER)).collect(Collectors.toList());
     }
 
     public String getValue(final int index) {
@@ -77,7 +79,7 @@ public class StringListType implements Command, State {
      * (alphabetical) order of their keys.
      *
      * @param pattern the pattern to use containing indexes to reference the
-     *            single elements of this type.
+     *                    single elements of this type.
      */
     @Override
     public String format(String pattern) {

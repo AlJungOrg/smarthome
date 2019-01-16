@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,5 +21,5 @@ package org.eclipse.smarthome.model.core;
 public class ModelCoreConstants {
 
     /** The service pid used for the managed service (without the "org.eclipse.smarthome" prefix */
-    public final static String SERVICE_PID = "folder";
+    public static final String SERVICE_PID = "folder";
 }

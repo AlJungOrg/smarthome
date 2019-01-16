@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,6 +14,7 @@ package org.eclipse.smarthome.binding.lifx.internal.listener;
 
 import java.util.Map;
 
+import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.smarthome.binding.lifx.internal.LifxLightPropertiesUpdater;
 
 /**
@@ -22,6 +23,7 @@ import org.eclipse.smarthome.binding.lifx.internal.LifxLightPropertiesUpdater;
  *
  * @author Wouter Born - Update light properties when online
  */
+@NonNullByDefault
 public interface LifxPropertiesUpdateListener {
 
     /**

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,24 +23,22 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutorService;
+import java.util.stream.Collectors;
 
-import org.eclipse.jdt.annotation.NonNull;
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.core.common.ThreadPoolManager;
 import org.eclipse.smarthome.core.events.EventPublisher;
+import org.eclipse.smarthome.core.i18n.UnitProvider;
 import org.eclipse.smarthome.core.items.events.ItemEventFactory;
+import org.eclipse.smarthome.core.service.StateDescriptionService;
 import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.core.types.RefreshType;
 import org.eclipse.smarthome.core.types.State;
 import org.eclipse.smarthome.core.types.StateDescription;
-import org.eclipse.smarthome.core.types.StateDescriptionProvider;
-import org.eclipse.smarthome.core.types.StateOption;
 import org.eclipse.smarthome.core.types.UnDefType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 
 /**
  * The abstract base class for all items. It provides all relevant logic
@@ -52,13 +50,14 @@ import com.google.common.collect.ImmutableSet;
  * @author Stefan Bußweiler - Migration to new ESH event concept
  *
  */
-abstract public class GenericItem implements ActiveItem {
+@NonNullByDefault
+public abstract class GenericItem implements ActiveItem {
 
     private final Logger logger = LoggerFactory.getLogger(GenericItem.class);
 
     private static final String ITEM_THREADPOOLNAME = "items";
 
-    protected EventPublisher eventPublisher;
+    protected @Nullable EventPublisher eventPublisher;
 
     protected Set<StateChangeListener> listeners = new CopyOnWriteArraySet<StateChangeListener>(
             Collections.newSetFromMap(new WeakHashMap<StateChangeListener, Boolean>()));
@@ -67,21 +66,23 @@ abstract public class GenericItem implements ActiveItem {
 
     protected Set<String> tags = new HashSet<String>();
 
-    @NonNull
-    final protected String name;
+    protected final String name;
 
-    @NonNull
-    final protected String type;
+    protected final String type;
 
     protected State state = UnDefType.NULL;
 
-    protected String label;
+    protected @Nullable String label;
 
-    protected String category;
+    protected @Nullable String category;
 
-    private List<StateDescriptionProvider> stateDescriptionProviders;
+    private @Nullable StateDescriptionService stateDescriptionService;
 
-    public GenericItem(@NonNull String type, @NonNull String name) {
+    protected @Nullable UnitProvider unitProvider;
+
+    protected @Nullable ItemStateConverter itemStateConverter;
+
+    public GenericItem(String type, String name) {
         this.name = name;
         this.type = type;
     }
@@ -92,7 +93,7 @@ abstract public class GenericItem implements ActiveItem {
     }
 
     @Override
-    public State getStateAs(Class<? extends State> typeClass) {
+    public <T extends State> @Nullable T getStateAs(Class<T> typeClass) {
         return state.as(typeClass);
     }
 
@@ -113,15 +114,13 @@ abstract public class GenericItem implements ActiveItem {
 
     @Override
     public List<String> getGroupNames() {
-        return ImmutableList.copyOf(groupNames);
+        return Collections.unmodifiableList(new ArrayList<>(groupNames));
     }
 
     /**
      * Adds a group name to the {@link GenericItem}.
      *
-     * @param groupItemName
-     *            group item name to add
-     *
+     * @param groupItemName group item name to add
      * @throws IllegalArgumentException if groupItemName is {@code null}
      */
     @Override
@@ -151,9 +150,7 @@ abstract public class GenericItem implements ActiveItem {
     /**
      * Removes a group item name from the {@link GenericItem}.
      *
-     * @param groupItemName
-     *            group item name to remove
-     *
+     * @param groupItemName group item name to remove
      * @throws IllegalArgumentException if groupItemName is {@code null}
      */
     @Override
@@ -164,12 +161,33 @@ abstract public class GenericItem implements ActiveItem {
         groupNames.remove(groupItemName);
     }
 
-    public void setEventPublisher(EventPublisher eventPublisher) {
+    /**
+     * Disposes this item. Clears all injected services and unregisters all change listeners.
+     * This does not remove this item from its groups. Removing from groups should be done externally to retain the
+     * member order in case this item is exchanged in a group.
+     */
+    public void dispose() {
+        this.listeners.clear();
+        this.eventPublisher = null;
+        this.stateDescriptionService = null;
+        this.unitProvider = null;
+        this.itemStateConverter = null;
+    }
+
+    public void setEventPublisher(@Nullable EventPublisher eventPublisher) {
         this.eventPublisher = eventPublisher;
     }
 
-    public void setStateDescriptionProviders(List<StateDescriptionProvider> stateDescriptionProviders) {
-        this.stateDescriptionProviders = stateDescriptionProviders;
+    public void setStateDescriptionService(@Nullable StateDescriptionService stateDescriptionService) {
+        this.stateDescriptionService = stateDescriptionService;
+    }
+
+    public void setUnitProvider(@Nullable UnitProvider unitProvider) {
+        this.unitProvider = unitProvider;
+    }
+
+    public void setItemStateConverter(@Nullable ItemStateConverter itemStateConverter) {
+        this.itemStateConverter = itemStateConverter;
     }
 
     protected void internalSend(Command command) {
@@ -185,8 +203,7 @@ abstract public class GenericItem implements ActiveItem {
      * Subclasses may override this method in order to do necessary conversions upfront. Afterwards,
      * {@link #applyState(State)} should be called by classes overriding this method.
      *
-     * @param state
-     *            new state of this item
+     * @param state new state of this item
      */
     public void setState(State state) {
         applyState(state);
@@ -261,13 +278,13 @@ abstract public class GenericItem implements ActiveItem {
         if (!getTags().isEmpty()) {
             sb.append(", ");
             sb.append("Tags=[");
-            sb.append(Joiner.on(", ").join(getTags()));
+            sb.append(getTags().stream().collect(Collectors.joining(", ")));
             sb.append("]");
         }
         if (!getGroupNames().isEmpty()) {
             sb.append(", ");
             sb.append("Groups=[");
-            sb.append(Joiner.on(", ").join(getGroupNames()));
+            sb.append(getGroupNames().stream().collect(Collectors.joining(", ")));
             sb.append("]");
         }
         sb.append(")");
@@ -298,7 +315,7 @@ abstract public class GenericItem implements ActiveItem {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(@Nullable Object obj) {
         if (this == obj) {
             return true;
         }
@@ -321,12 +338,12 @@ abstract public class GenericItem implements ActiveItem {
 
     @Override
     public Set<String> getTags() {
-        return ImmutableSet.copyOf(tags);
+        return Collections.unmodifiableSet(new HashSet<>(tags));
     }
 
     @Override
     public boolean hasTag(String tag) {
-        return (tags.contains(tag));
+        return tags.stream().anyMatch(t -> t.equalsIgnoreCase(tag));
     }
 
     @Override
@@ -346,7 +363,7 @@ abstract public class GenericItem implements ActiveItem {
 
     @Override
     public void removeTag(String tag) {
-        tags.remove(tag);
+        tags.remove(tags.stream().filter(t -> t.equalsIgnoreCase(tag)).findFirst().orElse(tag));
     }
 
     @Override
@@ -355,58 +372,36 @@ abstract public class GenericItem implements ActiveItem {
     }
 
     @Override
-    public String getLabel() {
+    public @Nullable String getLabel() {
         return this.label;
     }
 
     @Override
-    public void setLabel(String label) {
+    public void setLabel(@Nullable String label) {
         this.label = label;
     }
 
     @Override
-    public String getCategory() {
+    public @Nullable String getCategory() {
         return category;
     }
 
     @Override
-    public void setCategory(String category) {
+    public void setCategory(@Nullable String category) {
         this.category = category;
     }
 
     @Override
-    public StateDescription getStateDescription() {
+    public @Nullable StateDescription getStateDescription() {
         return getStateDescription(null);
     }
 
     @Override
-    public StateDescription getStateDescription(Locale locale) {
-        StateDescription result = null;
-        List<StateOption> stateOptions = Collections.emptyList();
-        if (stateDescriptionProviders != null) {
-            for (StateDescriptionProvider stateDescriptionProvider : stateDescriptionProviders) {
-                StateDescription stateDescription = stateDescriptionProvider.getStateDescription(this.name, locale);
-
-                // as long as no valid StateDescription is provided we reassign here:
-                if (result == null) {
-                    result = stateDescription;
-                }
-
-                // if the current StateDescription does provide options and we don't already have some, we pick them up
-                // here
-                if (stateDescription != null && !stateDescription.getOptions().isEmpty() && stateOptions.isEmpty()) {
-                    stateOptions = stateDescription.getOptions();
-                }
-            }
+    public @Nullable StateDescription getStateDescription(@Nullable Locale locale) {
+        if (stateDescriptionService != null) {
+            return stateDescriptionService.getStateDescription(this.name, locale);
         }
-
-        // we recreate the StateDescription if we found a valid one and state options are given:
-        if (result != null && !stateOptions.isEmpty()) {
-            result = new StateDescription(result.getMinimum(), result.getMaximum(), result.getStep(),
-                    result.getPattern(), result.isReadOnly(), stateOptions);
-        }
-
-        return result;
+        return null;
     }
 
     /**
@@ -417,11 +412,8 @@ abstract public class GenericItem implements ActiveItem {
      * @return true if state is an acceptedDataType or subclass thereof
      */
     public boolean isAcceptedState(List<Class<? extends State>> acceptedDataTypes, State state) {
-        if (acceptedDataTypes.stream().map(clazz -> clazz.isAssignableFrom(state.getClass()))
-                .filter(found -> found == true).findAny().isPresent()) {
-            return true;
-        }
-        return false;
+        return acceptedDataTypes.stream().map(clazz -> clazz.isAssignableFrom(state.getClass())).filter(found -> found)
+                .findAny().isPresent();
     }
 
     protected void logSetTypeError(State state) {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,6 +12,9 @@
  */
 package org.eclipse.smarthome.core.thing.link.events;
 
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import org.eclipse.smarthome.core.events.AbstractEventFactory;
 import org.eclipse.smarthome.core.events.Event;
 import org.eclipse.smarthome.core.events.EventFactory;
@@ -19,9 +22,6 @@ import org.eclipse.smarthome.core.thing.link.AbstractLink;
 import org.eclipse.smarthome.core.thing.link.ItemChannelLink;
 import org.eclipse.smarthome.core.thing.link.dto.ItemChannelLinkDTO;
 import org.osgi.service.component.annotations.Component;
-
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
 
 /**
  * This is an {@link EventFactory} for creating link events. The following event types are supported by this
@@ -43,7 +43,7 @@ public class LinkEventFactory extends AbstractEventFactory {
      * Constructs a new LinkEventFactory.
      */
     public LinkEventFactory() {
-        super(Sets.newHashSet(ItemChannelLinkAddedEvent.TYPE, ItemChannelLinkRemovedEvent.TYPE));
+        super(Stream.of(ItemChannelLinkAddedEvent.TYPE, ItemChannelLinkRemovedEvent.TYPE).collect(Collectors.toSet()));
     }
 
     @Override
@@ -71,13 +71,11 @@ public class LinkEventFactory extends AbstractEventFactory {
      * Creates an item channel link added event.
      *
      * @param itemChannelLink item channel link
-     *
      * @return the created item channel link added event
-     *
      * @throws IllegalArgumentException if item channel link is null
      */
     public static ItemChannelLinkAddedEvent createItemChannelLinkAddedEvent(ItemChannelLink itemChannelLink) {
-        assertValidArgument(itemChannelLink);
+        checkNotNull(itemChannelLink, "itemChannelLink");
         String topic = buildTopic(LINK_ADDED_EVENT_TOPIC, itemChannelLink);
         ItemChannelLinkDTO itemChannelLinkDTO = map(itemChannelLink);
         String payload = serializePayload(itemChannelLinkDTO);
@@ -88,21 +86,15 @@ public class LinkEventFactory extends AbstractEventFactory {
      * Creates an item channel link removed event.
      *
      * @param itemChannelLink item channel link
-     *
      * @return the created item channel link removed event
-     *
      * @throws IllegalArgumentException if item channel link is null
      */
     public static ItemChannelLinkRemovedEvent createItemChannelLinkRemovedEvent(ItemChannelLink itemChannelLink) {
-        assertValidArgument(itemChannelLink);
+        checkNotNull(itemChannelLink, "itemChannelLink");
         String topic = buildTopic(LINK_REMOVED_EVENT_TOPIC, itemChannelLink);
         ItemChannelLinkDTO itemChannelLinkDTO = map(itemChannelLink);
         String payload = serializePayload(itemChannelLinkDTO);
         return new ItemChannelLinkRemovedEvent(topic, payload, itemChannelLinkDTO);
-    }
-
-    private static void assertValidArgument(AbstractLink itemChannelLink) {
-        Preconditions.checkArgument(itemChannelLink != null, "The argument 'itemChannelLink' must not be null.");
     }
 
     private static String buildTopic(String topic, AbstractLink itemChannelLink) {

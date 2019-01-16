@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -36,7 +36,7 @@ import org.slf4j.LoggerFactory;
  *
  * @param <T> the type of module the concrete handler can handle
  */
-abstract public class AbstractScriptModuleHandler<T extends Module> extends BaseModuleHandler<T> {
+public abstract class AbstractScriptModuleHandler<T extends Module> extends BaseModuleHandler<T> {
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     /** Constant defining the configuration parameter of modules that specifies the mime type of a script */
@@ -47,13 +47,13 @@ abstract public class AbstractScriptModuleHandler<T extends Module> extends Base
 
     protected ScriptEngineManager scriptEngineManager;
 
-    private String engineIdentifier;
+    private final String engineIdentifier;
 
     private Optional<ScriptEngine> scriptEngine = Optional.empty();
     private String type;
     protected String script;
 
-    private String ruleUID;
+    private final String ruleUID;
 
     public AbstractScriptModuleHandler(T module, String ruleUID, ScriptEngineManager scriptEngineManager) {
         super(module);
@@ -90,23 +90,25 @@ abstract public class AbstractScriptModuleHandler<T extends Module> extends Base
     private void loadConfig() {
         Object type = module.getConfiguration().get(SCRIPT_TYPE);
         Object script = module.getConfiguration().get(SCRIPT);
-        if (type == null || !(type instanceof String) || ((String) type).trim().isEmpty()) {
-            throw new RuntimeException(
-                    String.format("Type is missing in the configuration of module '%s'.", module.getId()));
-        } else if (script == null || !(script instanceof String) || ((String) script).trim().isEmpty()) {
-            throw new RuntimeException(
-                    String.format("Script is missing in the configuration of module '%s'.", module.getId()));
+        if (!isValid(type)) {
+            throw new IllegalStateException(String.format("Type is missing in the configuration of module '%s'.", module.getId()));
+        } else if (!isValid(script)) {
+            throw new IllegalStateException(String.format("Script is missing in the configuration of module '%s'.", module.getId()));
         } else {
             this.type = (String) type;
             this.script = (String) script;
         }
+    }
+    
+    private boolean isValid(Object parameter) {
+        return parameter != null && parameter instanceof String && !((String) parameter).trim().isEmpty();
     }
 
     /**
      * Adds the passed context variables of the rule engine to the context scope of the ScriptEngine, this should be
      * updated each time the module is executed
      *
-     * @param engine the scriptengine that is used
+     * @param engine the script engine that is used
      * @param context the variables and types to put into the execution context
      */
     protected void setExecutionContext(ScriptEngine engine, Map<String, ?> context) {
@@ -131,7 +133,6 @@ abstract public class AbstractScriptModuleHandler<T extends Module> extends Base
             }
             executionContext.setAttribute(key, value, ScriptContext.ENGINE_SCOPE);
         }
-
     }
 
 }

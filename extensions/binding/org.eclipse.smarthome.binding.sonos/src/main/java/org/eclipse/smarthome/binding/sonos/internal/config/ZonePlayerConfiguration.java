@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,9 +21,11 @@ public class ZonePlayerConfiguration {
     public static final String UDN = "udn";
     public static final String REFRESH = "refresh";
     public static final String NOTIFICATION_TIMEOUT = "notificationTimeout";
+    public static final String NOTIFICATION_VOLUME = "notificationVolume";
 
     public String udn;
     public Integer refresh;
     public Integer notificationTimeout;
+    public Integer notificationVolume;
 
 }

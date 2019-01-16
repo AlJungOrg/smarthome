@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,30 +13,47 @@
 package org.eclipse.smarthome.core.items;
 
 import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.when;
+import static org.mockito.MockitoAnnotations.initMocks;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import javax.measure.Quantity;
+import javax.measure.quantity.Dimensionless;
+import javax.measure.quantity.Pressure;
+import javax.measure.quantity.Temperature;
+
 import org.eclipse.smarthome.core.events.Event;
 import org.eclipse.smarthome.core.events.EventFilter;
 import org.eclipse.smarthome.core.events.EventPublisher;
 import org.eclipse.smarthome.core.events.EventSubscriber;
+import org.eclipse.smarthome.core.i18n.UnitProvider;
+import org.eclipse.smarthome.core.internal.items.GroupFunctionHelper;
+import org.eclipse.smarthome.core.internal.items.ItemStateConverterImpl;
+import org.eclipse.smarthome.core.items.dto.GroupFunctionDTO;
 import org.eclipse.smarthome.core.items.events.GroupItemStateChangedEvent;
 import org.eclipse.smarthome.core.items.events.ItemUpdatedEvent;
+import org.eclipse.smarthome.core.library.CoreItemFactory;
 import org.eclipse.smarthome.core.library.items.ColorItem;
 import org.eclipse.smarthome.core.library.items.DimmerItem;
 import org.eclipse.smarthome.core.library.items.NumberItem;
 import org.eclipse.smarthome.core.library.items.RollershutterItem;
 import org.eclipse.smarthome.core.library.items.SwitchItem;
 import org.eclipse.smarthome.core.library.types.ArithmeticGroupFunction;
+import org.eclipse.smarthome.core.library.types.DecimalType;
 import org.eclipse.smarthome.core.library.types.HSBType;
 import org.eclipse.smarthome.core.library.types.OnOffType;
 import org.eclipse.smarthome.core.library.types.PercentType;
+import org.eclipse.smarthome.core.library.types.QuantityType;
 import org.eclipse.smarthome.core.library.types.RawType;
+import org.eclipse.smarthome.core.library.types.StringType;
 import org.eclipse.smarthome.core.types.RefreshType;
 import org.eclipse.smarthome.core.types.State;
 import org.eclipse.smarthome.core.types.UnDefType;
@@ -44,6 +61,9 @@ import org.eclipse.smarthome.test.java.JavaOSGiTest;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.mockito.Mock;
+
+import tec.uom.se.unit.Units;
 
 public class GroupItemTest extends JavaOSGiTest {
 
@@ -55,8 +75,15 @@ public class GroupItemTest extends JavaOSGiTest {
 
     ItemRegistry itemRegistry;
 
+    @Mock
+    private UnitProvider unitProvider;
+
+    private GroupFunctionHelper groupFunctionHelper;
+    private ItemStateConverter itemStateConverter;
+
     @Before
     public void setUp() {
+        initMocks(this);
         registerVolatileStorageService();
         publisher = event -> events.add(event);
 
@@ -82,6 +109,12 @@ public class GroupItemTest extends JavaOSGiTest {
                 return null;
             }
         });
+
+        when(unitProvider.getUnit(Temperature.class)).thenReturn(Units.CELSIUS);
+
+        groupFunctionHelper = new GroupFunctionHelper();
+        itemStateConverter = new ItemStateConverterImpl();
+        ((ItemStateConverterImpl) itemStateConverter).setUnitProvider(unitProvider);
     }
 
     @Ignore
@@ -110,6 +143,7 @@ public class GroupItemTest extends JavaOSGiTest {
         assertThat(change.getItem().label, is("secondLabel"));
     }
 
+    @SuppressWarnings("unchecked")
     @Test()
     public void assertAcceptedCommandTypesOnGroupItemsReturnsSubsetOfCommandTypesSupportedByAllMembers() {
         SwitchItem switchItem = new SwitchItem("switch");
@@ -143,6 +177,25 @@ public class GroupItemTest extends JavaOSGiTest {
     }
 
     @Test
+    public void testDisposeUnregistersAsListenerFromMembers() {
+        GroupItem group = new GroupItem("group");
+        TestItem member1 = new TestItem("member1");
+        TestItem member2 = new TestItem("member2");
+
+        group.addMember(member1);
+        group.addMember(member2);
+
+        assertThat(member1.getListeners(), hasSize(1));
+        assertThat(member1.getListeners(), hasSize(1));
+        assertThat(group.getMembers(), hasSize(2));
+
+        group.dispose();
+        assertThat(member1.getListeners(), hasSize(0));
+        assertThat(member1.getListeners(), hasSize(0));
+        assertThat(group.getMembers(), hasSize(0));
+    }
+
+    @Test
     public void testGetAllMembersWithCircleDependency() {
         GroupItem rootGroupItem = new GroupItem("root");
         rootGroupItem.addMember(new TestItem("member1"));
@@ -159,6 +212,7 @@ public class GroupItemTest extends JavaOSGiTest {
         }
     }
 
+    @SuppressWarnings("null")
     @Test
     public void testGetAllMembersWithFilter() {
         GroupItem rootGroupItem = new GroupItem("root");
@@ -197,12 +251,138 @@ public class GroupItemTest extends JavaOSGiTest {
     }
 
     @Test
+    public void testGetMembersFilteringGroups() {
+        GroupItem rootGroupItem = new GroupItem("root");
+
+        TestItem member1 = new TestItem("member1");
+        member1.setLabel("mem1");
+        rootGroupItem.addMember(member1);
+
+        GroupItem subGroup = new GroupItem("subGroup1");
+        subGroup.setLabel("subGrp1");
+        TestItem subMember1 = new TestItem("subGroup member 1");
+        subMember1.setLabel("subMem1");
+        subGroup.addMember(subMember1);
+
+        rootGroupItem.addMember(subGroup);
+
+        Set<Item> members = rootGroupItem
+                .getMembers(i -> !(i instanceof GroupItem) && i.getGroupNames().contains(rootGroupItem.getName()));
+        assertThat(members.size(), is(1));
+    }
+
+    @Test
+    public void testGetMembersFilteringGroupsTransient() {
+        GroupItem rootGroupItem = new GroupItem("root");
+
+        TestItem member1 = new TestItem("member1");
+        member1.setLabel("mem1");
+        rootGroupItem.addMember(member1);
+
+        GroupItem subGroup = new GroupItem("subGroup1");
+        subGroup.setLabel("subGrp1");
+        TestItem subMember1 = new TestItem("subGroup member 1");
+        subMember1.setLabel("subMem1");
+        subGroup.addMember(subMember1);
+
+        rootGroupItem.addMember(subGroup);
+
+        Set<Item> members = rootGroupItem.getMembers(i -> !(i instanceof GroupItem));
+        assertThat(members.size(), is(2));
+    }
+
+    @Test
+    public void testGetStateAs_shouldEqualStateUpdate() {
+        // Main group uses AND function
+        GroupItem rootGroupItem = new GroupItem("root", new SwitchItem("baseItem"),
+                new ArithmeticGroupFunction.And(OnOffType.ON, OnOffType.OFF));
+        rootGroupItem.setItemStateConverter(itemStateConverter);
+
+        TestItem member1 = new TestItem("member1");
+        rootGroupItem.addMember(member1);
+        TestItem member2 = new TestItem("member2");
+        rootGroupItem.addMember(member2);
+
+        // Sub-group uses NAND function
+        GroupItem subGroup = new GroupItem("subGroup1", new SwitchItem("baseItem"),
+                new ArithmeticGroupFunction.NAnd(OnOffType.ON, OnOffType.OFF));
+        TestItem subMember = new TestItem("subGroup member 1");
+        subGroup.addMember(subMember);
+        rootGroupItem.addMember(subGroup);
+
+        member1.setState(OnOffType.ON);
+        member2.setState(OnOffType.ON);
+        subMember.setState(OnOffType.OFF);
+
+        // subGroup and subMember state differ
+        assertThat(subGroup.getStateAs(OnOffType.class), is(OnOffType.ON));
+        assertThat(subMember.getStateAs(OnOffType.class), is(OnOffType.OFF));
+
+        // We expect ON here
+        State getStateAsState = rootGroupItem.getStateAs(OnOffType.class);
+
+        rootGroupItem.stateUpdated(member1, UnDefType.NULL); // recalculate the state
+        State stateUpdatedState = rootGroupItem.getState();
+
+        assertThat(getStateAsState, is(OnOffType.ON));
+        assertThat(stateUpdatedState, is(OnOffType.ON));
+    }
+
+    @Test
+    public void assertCyclicGroupItemsCalculateState() {
+        GroupFunction countFn = new ArithmeticGroupFunction.Count(new StringType(".*"));
+        GroupItem rootGroup = new GroupItem("rootGroup", new SwitchItem("baseItem"), countFn);
+        TestItem rootMember = new TestItem("rootMember");
+        rootGroup.addMember(rootMember);
+
+        GroupItem group1 = new GroupItem("group1");
+        GroupItem group2 = new GroupItem("group2");
+
+        rootGroup.addMember(group1);
+        group1.addMember(group2);
+        group2.addMember(group1);
+
+        group1.addMember(new TestItem("sub1"));
+        group2.addMember(new TestItem("sub2-1"));
+        group2.addMember(new TestItem("sub2-2"));
+        group2.addMember(new TestItem("sub2-3"));
+
+        // count: rootMember, sub1, sub2-1, sub2-2, sub2-3
+        assertThat(rootGroup.getStateAs(DecimalType.class), is(new DecimalType(5)));
+    }
+
+    @Test
+    public void assertCyclicGroupItemsCalculateStateWithSubGroupFunction() {
+        GroupFunction countFn = new ArithmeticGroupFunction.Count(new StringType(".*"));
+        GroupItem rootGroup = new GroupItem("rootGroup", new SwitchItem("baseItem"), countFn);
+        TestItem rootMember = new TestItem("rootMember");
+        rootGroup.addMember(rootMember);
+
+        GroupItem group1 = new GroupItem("group1");
+        GroupItem group2 = new GroupItem("group2", new SwitchItem("baseItem"), new ArithmeticGroupFunction.Sum());
+
+        rootGroup.addMember(group1);
+        group1.addMember(group2);
+        group2.addMember(group1);
+
+        group1.addMember(new TestItem("sub1"));
+        group2.addMember(new TestItem("sub2-1"));
+        group2.addMember(new TestItem("sub2-2"));
+        group2.addMember(new TestItem("sub2-3"));
+
+        // count: rootMember, sub1, group2
+        assertThat(rootGroup.getStateAs(DecimalType.class), is(new DecimalType(3)));
+    }
+
+    @Test
     public void assertThatGroupItemPostsEventsForChangesCorrectly() {
         // from ItemEventFactory.GROUPITEM_STATE_CHANGED_EVENT_TOPIC
         String GROUPITEM_STATE_CHANGED_EVENT_TOPIC = "smarthome/items/{itemName}/{memberName}/statechanged";
 
         events.clear();
         GroupItem groupItem = new GroupItem("root", new SwitchItem("mySwitch"), new GroupFunction.Equality());
+        groupItem.setItemStateConverter(itemStateConverter);
+
         SwitchItem member = new SwitchItem("member1");
         groupItem.addMember(member);
         groupItem.setEventPublisher(publisher);
@@ -237,6 +417,8 @@ public class GroupItemTest extends JavaOSGiTest {
         events.clear();
         GroupItem groupItem = new GroupItem("root", new SwitchItem("mySwitch"),
                 new ArithmeticGroupFunction.Or(OnOffType.ON, OnOffType.OFF));
+        groupItem.setItemStateConverter(itemStateConverter);
+
         SwitchItem sw1 = new SwitchItem("switch1");
         SwitchItem sw2 = new SwitchItem("switch2");
         groupItem.addMember(sw1);
@@ -267,6 +449,8 @@ public class GroupItemTest extends JavaOSGiTest {
         events.clear();
         GroupItem groupItem = new GroupItem("root", new SwitchItem("mySwitch"),
                 new ArithmeticGroupFunction.Or(OnOffType.ON, OnOffType.OFF));
+        groupItem.setItemStateConverter(itemStateConverter);
+
         SwitchItem sw1 = new SwitchItem("switch1");
         SwitchItem sw2 = new SwitchItem("switch2");
         groupItem.addMember(sw1);
@@ -308,6 +492,8 @@ public class GroupItemTest extends JavaOSGiTest {
         events.clear();
         GroupItem groupItem = new GroupItem("root", new SwitchItem("mySwitch"),
                 new ArithmeticGroupFunction.And(OnOffType.ON, OnOffType.OFF));
+        groupItem.setItemStateConverter(itemStateConverter);
+
         SwitchItem sw1 = new SwitchItem("switch1");
         SwitchItem sw2 = new SwitchItem("switch2");
         groupItem.addMember(sw1);
@@ -440,6 +626,7 @@ public class GroupItemTest extends JavaOSGiTest {
     public void assertThatGroupItemwithDimmeritemAcceptsGetsPercentTypeStateIfMembersHavePercentTypeStates() {
         events.clear();
         GroupItem groupItem = new GroupItem("root", new DimmerItem("myDimmer"), new ArithmeticGroupFunction.Avg());
+        groupItem.setItemStateConverter(itemStateConverter);
 
         DimmerItem member1 = new DimmerItem("dimmer1");
         groupItem.addMember(member1);
@@ -483,6 +670,71 @@ public class GroupItemTest extends JavaOSGiTest {
         newGroupState = groupItem.getState();
         assertTrue(newGroupState instanceof PercentType);
         assertThat(((PercentType) newGroupState).intValue(), is(30));
+    }
+
+    @SuppressWarnings("null")
+    @Test
+    public void assertThatNumberGroupItemWithDimensionCalculatesCorrectState() {
+        NumberItem baseItem = createNumberItem("baseItem", Temperature.class, UnDefType.NULL);
+        GroupFunctionDTO gfDTO = new GroupFunctionDTO();
+        gfDTO.name = "sum";
+        GroupFunction function = groupFunctionHelper.createGroupFunction(gfDTO, Collections.emptyList(),
+                Temperature.class);
+        GroupItem groupItem = new GroupItem("number", baseItem, function);
+        groupItem.setUnitProvider(unitProvider);
+
+        NumberItem celsius = createNumberItem("C", Temperature.class, new QuantityType<Temperature>("23 °C"));
+        groupItem.addMember(celsius);
+        NumberItem fahrenheit = createNumberItem("F", Temperature.class, new QuantityType<Temperature>("23 °F"));
+        groupItem.addMember(fahrenheit);
+        NumberItem kelvin = createNumberItem("K", Temperature.class, new QuantityType<Temperature>("23 K"));
+        groupItem.addMember(kelvin);
+
+        QuantityType<?> state = (QuantityType<?>) groupItem.getStateAs(QuantityType.class);
+
+        assertThat(state.getUnit(), is(Units.CELSIUS));
+        assertThat(state.doubleValue(), is(-232.15d));
+
+        celsius.setState(new QuantityType<Temperature>("265 °C"));
+
+        state = (QuantityType<?>) groupItem.getStateAs(QuantityType.class);
+
+        assertThat(state.getUnit(), is(Units.CELSIUS));
+        assertThat(state.doubleValue(), is(9.85d));
+    }
+
+    @Test
+    public void assertThatNumberGroupItemWithDifferentDimensionsCalculatesCorrectState() {
+        NumberItem baseItem = createNumberItem("baseItem", Temperature.class, UnDefType.NULL);
+        GroupFunctionDTO gfDTO = new GroupFunctionDTO();
+        gfDTO.name = "sum";
+        GroupFunction function = groupFunctionHelper.createGroupFunction(gfDTO, Collections.emptyList(),
+                Temperature.class);
+        GroupItem groupItem = new GroupItem("number", baseItem, function);
+        groupItem.setUnitProvider(unitProvider);
+        groupItem.setItemStateConverter(itemStateConverter);
+
+        NumberItem celsius = createNumberItem("C", Temperature.class, new QuantityType<Temperature>("23 °C"));
+        groupItem.addMember(celsius);
+        NumberItem hectoPascal = createNumberItem("F", Pressure.class, new QuantityType<Pressure>("1010 hPa"));
+        groupItem.addMember(hectoPascal);
+        NumberItem percent = createNumberItem("K", Dimensionless.class, new QuantityType<Dimensionless>("110 %"));
+        groupItem.addMember(percent);
+
+        QuantityType<?> state = (QuantityType<?>) groupItem.getStateAs(QuantityType.class);
+
+        assertThat(state, is(new QuantityType<Temperature>("23 °C")));
+
+        groupItem.stateUpdated(celsius, UnDefType.NULL);
+        assertThat(groupItem.getState(), is(new QuantityType<Temperature>("23 °C")));
+    }
+
+    private NumberItem createNumberItem(String name, Class<? extends Quantity<?>> dimension, State state) {
+        NumberItem item = new NumberItem(CoreItemFactory.NUMBER + ":" + dimension.getSimpleName(), name);
+        item.setUnitProvider(unitProvider);
+        item.setState(state);
+
+        return item;
     }
 
 }

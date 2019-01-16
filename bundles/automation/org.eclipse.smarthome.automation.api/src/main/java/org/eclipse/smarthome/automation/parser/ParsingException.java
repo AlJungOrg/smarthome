@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,22 +25,22 @@ import java.util.List;
 public class ParsingException extends Exception {
 
     /**
-     * This field keeps all accumulated exceptions.
+     * Keeps all accumulated exceptions.
      */
     List<ParsingNestedException> exceptions;
 
     /**
-     * This constructor creates the holder for one exception during the parsing process.
+     * Creates the holder for one exception during the parsing process.
      *
      * @param e is an exception during the parsing process.
      */
     public ParsingException(ParsingNestedException e) {
-        exceptions = new ArrayList<ParsingNestedException>();
+        exceptions = new ArrayList<>();
         exceptions.add(e);
     }
 
     /**
-     * This constructor creates a holder for several exceptions during the parsing process.
+     * Creates a holder for several exceptions during the parsing process.
      *
      * @param exceptions is a list with exceptions during the parsing process.
      */
@@ -67,10 +67,8 @@ public class ParsingException extends Exception {
         StackTraceElement[] st = new StackTraceElement[size];
         for (int n = 0; n < exceptions.size(); n++) {
             StackTraceElement[] ste = exceptions.get(n).getStackTrace();
-            for (int i = 0; i < ste.length; i++) {
-                st[index] = ste[i];
-                index++;
-            }
+            System.arraycopy(ste, 0, st, index, ste.length);
+            index += ste.length;
         }
         return st;
     }

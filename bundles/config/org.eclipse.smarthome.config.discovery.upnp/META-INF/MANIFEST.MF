@@ -11,12 +11,15 @@ Import-Package:
  org.eclipse.jdt.annotation;resolution:=optional,
  org.eclipse.smarthome.config.discovery,
  org.eclipse.smarthome.config.discovery.upnp,
+ org.eclipse.smarthome.core.net,
  org.eclipse.smarthome.core.thing,
  org.jupnp,
  org.jupnp.controlpoint,
  org.jupnp.model.meta,
  org.jupnp.registry,
+ org.jupnp.transport,
  org.osgi.framework,
  org.osgi.service.component,
  org.slf4j
 Service-Component: OSGI-INF/*.xml
+Automatic-Module-Name: org.eclipse.smarthome.config.discovery.upnp

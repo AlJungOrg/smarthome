@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,8 +12,14 @@
  */
 package org.eclipse.smarthome.transform.jsonpath.internal;
 
+import java.util.List;
+
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.core.transform.TransformationException;
 import org.eclipse.smarthome.core.transform.TransformationService;
+import org.eclipse.smarthome.core.types.UnDefType;
+import org.osgi.service.component.annotations.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,6 +36,8 @@ import com.jayway.jsonpath.PathNotFoundException;
  * @author Sebastian Janzen
  *
  */
+@NonNullByDefault
+@Component(immediate = true, property = { "smarthome.transform=JSONPATH" })
 public class JSonPathTransformationService implements TransformationService {
 
     private final Logger logger = LoggerFactory.getLogger(JSonPathTransformationService.class);
@@ -43,8 +51,7 @@ public class JSonPathTransformationService implements TransformationService {
      *             which is encapsulated in a {@link TransformationException}.
      */
     @Override
-    public String transform(String jsonPathExpression, String source) throws TransformationException {
-
+    public @Nullable String transform(String jsonPathExpression, String source) throws TransformationException {
         if (jsonPathExpression == null || source == null) {
             throw new TransformationException("the given parameters 'JSonPath' and 'source' must not be null");
         }
@@ -54,13 +61,30 @@ public class JSonPathTransformationService implements TransformationService {
         try {
             Object transformationResult = JsonPath.read(source, jsonPathExpression);
             logger.debug("transformation resulted in '{}'", transformationResult);
-            return (transformationResult != null) ? transformationResult.toString() : source;
+            if (transformationResult == null) {
+                return null;
+            } else if (transformationResult instanceof List) {
+                return flattenList((List<?>) transformationResult);
+            } else {
+                return transformationResult.toString();
+            }
         } catch (PathNotFoundException e) {
             throw new TransformationException("Invalid path '" + jsonPathExpression + "' in '" + source + "'");
         } catch (InvalidPathException | InvalidJsonException e) {
             throw new TransformationException("An error occurred while transforming JSON expression.", e);
         }
+    }
 
+    private String flattenList(List<?> list) {
+        if (list.size() == 1) {
+            return list.get(0).toString();
+        }
+        if (list.size() > 1) {
+            logger.warn(
+                    "JsonPath expressions with more than one result are not allowed, please adapt your selector. Result: {}",
+                    list);
+        }
+        return UnDefType.NULL.toFullString();
     }
 
 }

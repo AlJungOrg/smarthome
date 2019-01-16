@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -63,7 +63,6 @@ public class TradfriLightData extends TradfriDeviceData {
         return this;
     }
 
-    @SuppressWarnings("unused")
     public int getTransitionTime() {
         JsonElement transitionTime = attributes.get(TRANSITION_TIME);
         if (transitionTime != null) {
@@ -74,7 +73,7 @@ public class TradfriLightData extends TradfriDeviceData {
     }
 
     public TradfriLightData setColorTemperature(PercentType c) {
-        TradfriColor color = TradfriColor.fromColorTemperature(c);
+        TradfriColor color = new TradfriColor(c);
         int x = color.xyX;
         int y = color.xyY;
         logger.debug("New color temperature: {},{} ({} %)", x, y, c.intValue());
@@ -87,16 +86,15 @@ public class TradfriLightData extends TradfriDeviceData {
         JsonElement colorX = attributes.get(COLOR_X);
         JsonElement colorY = attributes.get(COLOR_Y);
         if (colorX != null && colorY != null) {
-            return TradfriColor.calculateColorTemperature(colorX.getAsInt(), colorY.getAsInt());
+            TradfriColor color = new TradfriColor(colorX.getAsInt(), colorY.getAsInt(), null);
+            return color.getColorTemperature();
         } else {
             return null;
         }
     }
 
     public TradfriLightData setColor(HSBType hsb) {
-        // construct new HSBType with full brightness and extract XY color values from it
-        HSBType hsbFullBright = new HSBType(hsb.getHue(), hsb.getSaturation(), PercentType.HUNDRED);
-        TradfriColor color = TradfriColor.fromHSBType(hsbFullBright);
+        TradfriColor color = new TradfriColor(hsb);
         attributes.add(COLOR_X, new JsonPrimitive(color.xyX));
         attributes.add(COLOR_Y, new JsonPrimitive(color.xyY));
         return this;
@@ -111,9 +109,8 @@ public class TradfriLightData extends TradfriDeviceData {
             int x = colorX.getAsInt();
             int y = colorY.getAsInt();
             int brightness = dimmer.getAsInt();
-            // extract HSBType from converted xy/brightness
-            TradfriColor color = TradfriColor.fromCie(x, y, brightness);
-            return color.hsbType;
+            TradfriColor color = new TradfriColor(x, y, brightness);
+            return color.getHSB();
         }
         return null;
     }
@@ -126,7 +123,7 @@ public class TradfriLightData extends TradfriDeviceData {
     public boolean getOnOffState() {
         JsonElement onOff = attributes.get(ONOFF);
         if (onOff != null) {
-            return attributes.get(ONOFF).getAsInt() == 1;
+            return onOff.getAsInt() == 1;
         } else {
             return false;
         }

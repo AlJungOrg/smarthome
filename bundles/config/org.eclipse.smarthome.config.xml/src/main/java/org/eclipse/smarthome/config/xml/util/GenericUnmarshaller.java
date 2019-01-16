@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -52,12 +52,11 @@ public abstract class GenericUnmarshaller<T> implements Converter {
     @SuppressWarnings("rawtypes")
     @Override
     public final boolean canConvert(Class paramClass) {
-        return (clazz == paramClass);
+        return (clazz.equals(paramClass));
     }
 
     @Override
     public final void marshal(Object value, HierarchicalStreamWriter writer, MarshallingContext context) {
-
         throw new UnsupportedOperationException();
     }
 

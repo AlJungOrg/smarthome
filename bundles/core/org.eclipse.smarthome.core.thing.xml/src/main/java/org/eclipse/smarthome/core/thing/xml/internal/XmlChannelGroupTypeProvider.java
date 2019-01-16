@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,18 +13,14 @@
 package org.eclipse.smarthome.core.thing.xml.internal;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Locale;
 
 import org.eclipse.smarthome.config.xml.AbstractXmlBasedProvider;
-import org.eclipse.smarthome.core.i18n.TranslationProvider;
 import org.eclipse.smarthome.core.thing.UID;
-import org.eclipse.smarthome.core.thing.i18n.ThingTypeI18nUtil;
+import org.eclipse.smarthome.core.thing.i18n.ChannelGroupTypeI18nLocalizationService;
 import org.eclipse.smarthome.core.thing.type.ChannelGroupType;
+import org.eclipse.smarthome.core.thing.type.ChannelGroupTypeProvider;
 import org.eclipse.smarthome.core.thing.type.ChannelGroupTypeUID;
-import org.eclipse.smarthome.core.thing.type.ChannelType;
-import org.eclipse.smarthome.core.thing.type.ChannelTypeProvider;
-import org.eclipse.smarthome.core.thing.type.ChannelTypeUID;
 import org.osgi.framework.Bundle;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -33,12 +29,13 @@ import org.osgi.service.component.annotations.Reference;
  * {@link XmlChannelGroupTypeProvider} provides channel group types from XML files.
  *
  * @author Simon Kaufmann - factored out from {@link XmlChannelTypeProvider}
+ * @author Christoph Weitkamp - factored out common aspects into ThingTypeI18nLocalizationService
  */
-@Component(immediate = true, property = { "esh.scope=core.xml.channelGroups" })
+@Component(property = { "esh.scope=core.xml.channelGroups" })
 public class XmlChannelGroupTypeProvider extends AbstractXmlBasedProvider<UID, ChannelGroupType>
-        implements ChannelTypeProvider {
+        implements ChannelGroupTypeProvider {
 
-    private ThingTypeI18nUtil thingTypeI18nUtil;
+    private ChannelGroupTypeI18nLocalizationService channelGroupTypeI18nLocalizationService;
 
     @Override
     public ChannelGroupType getChannelGroupType(ChannelGroupTypeUID channelGroupTypeUID, Locale locale) {
@@ -51,40 +48,23 @@ public class XmlChannelGroupTypeProvider extends AbstractXmlBasedProvider<UID, C
     }
 
     @Reference
-    public void setI18nProvider(TranslationProvider i18nProvider) {
-        this.thingTypeI18nUtil = new ThingTypeI18nUtil(i18nProvider);
+    public void setChannelGroupTypeI18nLocalizationService(
+            final ChannelGroupTypeI18nLocalizationService channelGroupTypeI18nLocalizationService) {
+        this.channelGroupTypeI18nLocalizationService = channelGroupTypeI18nLocalizationService;
     }
 
-    public void unsetI18nProvider(TranslationProvider i18nProvider) {
-        this.thingTypeI18nUtil = null;
+    public void unsetChannelGroupTypeI18nLocalizationService(
+            final ChannelGroupTypeI18nLocalizationService channelGroupTypeI18nLocalizationService) {
+        this.channelGroupTypeI18nLocalizationService = null;
     }
 
     @Override
     protected ChannelGroupType localize(Bundle bundle, ChannelGroupType channelGroupType, Locale locale) {
-        if (this.thingTypeI18nUtil == null) {
+        if (channelGroupTypeI18nLocalizationService == null) {
             return null;
         }
-
-        ChannelGroupTypeUID channelGroupTypeUID = channelGroupType.getUID();
-        String label = this.thingTypeI18nUtil.getChannelGroupLabel(bundle, channelGroupTypeUID,
-                channelGroupType.getLabel(), locale);
-        String description = this.thingTypeI18nUtil.getChannelGroupDescription(bundle, channelGroupTypeUID,
-                channelGroupType.getDescription(), locale);
-
-        ChannelGroupType localizedChannelGroupType = new ChannelGroupType(channelGroupTypeUID,
-                channelGroupType.isAdvanced(), label, description, channelGroupType.getCategory(),
-                channelGroupType.getChannelDefinitions());
-        return localizedChannelGroupType;
-    }
-
-    @Override
-    public Collection<ChannelType> getChannelTypes(Locale locale) {
-        return Collections.emptyList();
-    }
-
-    @Override
-    public ChannelType getChannelType(ChannelTypeUID channelTypeUID, Locale locale) {
-        return null;
+        return channelGroupTypeI18nLocalizationService.createLocalizedChannelGroupType(bundle, channelGroupType,
+                locale);
     }
 
 }

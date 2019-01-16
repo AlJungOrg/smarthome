@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,7 +21,7 @@ import org.eclipse.smarthome.automation.sample.extension.java.internal.type.Welc
 import org.eclipse.smarthome.config.core.Configuration;
 
 /**
- * This class serves to handle the Action types provided by this application. It is used to help the RuleEngine
+ * This class serves to handle the Action types provided by this application. It is used to help the RuleManager
  * to execute the {@link Action}s.
  *
  * @author Ana Dimova - Initial Contribution
@@ -35,9 +35,8 @@ public class WelcomeHomeActionHandler extends BaseModuleHandler<Action> implemen
 
     @Override
     public Map<String, Object> execute(Map<String, Object> context) {
-        String device = getDevice(module.getConfiguration());
-        String result = getResult(module.getConfiguration());
-        System.out.println("[Automation Java API Demo : " + module.getTypeUID() + "] " + device + ": " + result);
+        getDevice(module.getConfiguration());
+        getResult(module.getConfiguration());
         return null;
     }
 

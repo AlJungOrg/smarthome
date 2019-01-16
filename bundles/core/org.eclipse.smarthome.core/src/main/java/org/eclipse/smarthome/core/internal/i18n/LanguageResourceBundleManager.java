@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -137,7 +137,6 @@ public class LanguageResourceBundleManager {
      */
     public String getText(String resource, String key, Locale locale) {
         if ((key != null) && (!key.isEmpty())) {
-
             Locale effectiveLocale = locale != null ? locale : localeProvider.getLocale();
 
             if (resource != null) {

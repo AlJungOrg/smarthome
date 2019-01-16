@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,7 +13,10 @@
 package org.eclipse.smarthome.ui.internal.proxy;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.Hashtable;
 import java.util.Map;
 
@@ -36,6 +39,11 @@ import org.eclipse.smarthome.model.sitemap.Sitemap;
 import org.eclipse.smarthome.model.sitemap.Video;
 import org.eclipse.smarthome.model.sitemap.Widget;
 import org.eclipse.smarthome.ui.items.ItemUIRegistry;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.http.HttpContext;
 import org.osgi.service.http.HttpService;
 import org.osgi.service.http.NamespaceException;
@@ -67,6 +75,7 @@ import org.slf4j.LoggerFactory;
  * @author Kai Kreuzer - Initial contribution and API
  * @author John Cocula - added optional Image/Video item= support; refactored to allow use of later spec servlet
  */
+@Component(immediate = true, property = { "service.pid=org.eclipse.smarthome.proxy" })
 public class ProxyServletService extends HttpServlet {
 
     /** the alias for this servlet */
@@ -87,6 +96,7 @@ public class ProxyServletService extends HttpServlet {
     protected ItemUIRegistry itemUIRegistry;
     protected ModelRepository modelRepository;
 
+    @Reference(policy = ReferencePolicy.DYNAMIC)
     protected void setItemUIRegistry(ItemUIRegistry itemUIRegistry) {
         this.itemUIRegistry = itemUIRegistry;
     }
@@ -95,6 +105,7 @@ public class ProxyServletService extends HttpServlet {
         this.itemUIRegistry = null;
     }
 
+    @Reference
     protected void setModelRepository(ModelRepository modelRepository) {
         this.modelRepository = modelRepository;
     }
@@ -103,6 +114,7 @@ public class ProxyServletService extends HttpServlet {
         this.modelRepository = null;
     }
 
+    @Reference(policy = ReferencePolicy.DYNAMIC)
     protected void setHttpService(HttpService httpService) {
         this.httpService = httpService;
     }
@@ -151,6 +163,7 @@ public class ProxyServletService extends HttpServlet {
         return props;
     }
 
+    @Activate
     protected void activate(Map<String, Object> config) {
         try {
             Servlet servlet = getImpl();
@@ -164,6 +177,7 @@ public class ProxyServletService extends HttpServlet {
         }
     }
 
+    @Deactivate
     protected void deactivate() {
         try {
             httpService.unregister("/" + PROXY_ALIAS);
@@ -206,7 +220,6 @@ public class ProxyServletService extends HttpServlet {
      * @return the URI indicated by the request, or <code>null</code> if not possible
      */
     URI uriFromRequest(HttpServletRequest request) {
-
         try {
             // Return any URI we've already saved for this request
             URI uri = (URI) request.getAttribute(ATTR_URI);
@@ -259,27 +272,33 @@ public class ProxyServletService extends HttpServlet {
                 State state = itemUIRegistry.getItemState(itemName);
                 if (state != null && state instanceof StringType) {
                     try {
-                        uri = URI.create(state.toString());
+                        uri = createURIFromString(state.toString());
                         request.setAttribute(ATTR_URI, uri);
                         return uri;
-                    } catch (IllegalArgumentException ex) {
+                    } catch (MalformedURLException | URISyntaxException ex) {
                         // fall thru
                     }
                 }
             }
 
             try {
-                uri = URI.create(uriString);
+                uri = createURIFromString(uriString);
                 request.setAttribute(ATTR_URI, uri);
                 return uri;
-            } catch (IllegalArgumentException iae) {
+            } catch (MalformedURLException | URISyntaxException ex) {
                 throw new ProxyServletException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                        String.format("URI '%s' is not a valid URI.", uriString));
+                        String.format("URL '%s' is not a valid URL.", uriString));
             }
         } catch (ProxyServletException pse) {
             request.setAttribute(ATTR_SERVLET_EXCEPTION, pse);
             return null;
         }
+    }
+
+    private URI createURIFromString(String url) throws MalformedURLException, URISyntaxException {
+        // URI in this context should be valid URL. Therefore before creating URI, create URL,
+        // which validates the string.
+        return new URL(url).toURI();
     }
 
     /**
@@ -302,6 +321,54 @@ public class ProxyServletService extends HttpServlet {
                 request.header(HttpHeader.AUTHORIZATION, basicAuthentication);
             }
         }
+    }
+
+    /**
+     * Determine if the request is relative to a video widget.
+     *
+     * @param request the servlet request
+     * @return true if the request is relative to a video widget
+     */
+    boolean proxyingVideoWidget(HttpServletRequest request) {
+
+        boolean proxyingVideo = false;
+
+        try {
+            String sitemapName = request.getParameter("sitemap");
+            if (sitemapName == null) {
+                throw new ProxyServletException(HttpServletResponse.SC_BAD_REQUEST,
+                        "Parameter 'sitemap' must be provided!");
+            }
+
+            String widgetId = request.getParameter("widgetId");
+            if (widgetId == null) {
+                throw new ProxyServletException(HttpServletResponse.SC_BAD_REQUEST,
+                        "Parameter 'widgetId' must be provided!");
+            }
+
+            Sitemap sitemap = (Sitemap) modelRepository.getModel(sitemapName);
+            if (sitemap == null) {
+                throw new ProxyServletException(HttpServletResponse.SC_NOT_FOUND,
+                        String.format("Sitemap '%s' could not be found!", sitemapName));
+            }
+
+            Widget widget = itemUIRegistry.getWidget(sitemap, widgetId);
+            if (widget == null) {
+                throw new ProxyServletException(HttpServletResponse.SC_NOT_FOUND,
+                        String.format("Widget '%s' could not be found!", widgetId));
+            }
+
+            if (widget instanceof Image) {
+            } else if (widget instanceof Video) {
+                proxyingVideo = true;
+            } else {
+                throw new ProxyServletException(HttpServletResponse.SC_FORBIDDEN,
+                        String.format("Widget type '%s' is not supported!", widget.getClass().getName()));
+            }
+        } catch (ProxyServletException pse) {
+            request.setAttribute(ATTR_SERVLET_EXCEPTION, pse);
+        }
+        return proxyingVideo;
     }
 
     /**

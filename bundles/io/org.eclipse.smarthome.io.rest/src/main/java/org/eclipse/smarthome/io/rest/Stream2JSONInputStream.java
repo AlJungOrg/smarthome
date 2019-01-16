@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -46,7 +46,6 @@ public class Stream2JSONInputStream extends InputStream {
      * Creates a new {@link Stream2JSONInputStream} backed by the given {@link Stream} source.
      *
      * @param source the {@link Stream} backing this input stream. Must not be null.
-     *
      * @throws IllegalArgumentException in case the source is null.
      */
     public Stream2JSONInputStream(Stream<?> source) {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,6 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.config.core.Configuration;
+import org.eclipse.smarthome.config.core.ConfigurationDeserializer;
 import org.eclipse.smarthome.core.storage.Storage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -93,7 +94,6 @@ public class JsonStorage<T> implements Storage<T> {
 
         Map<String, StorageEntry> inputMap = null;
         if (file.exists()) {
-
             // Read the file
             inputMap = readDatabase(file);
         }
@@ -125,7 +125,6 @@ public class JsonStorage<T> implements Storage<T> {
             map.putAll(inputMap);
             logger.debug("Opened Json storage file at '{}'.", file.getAbsolutePath());
         }
-
     }
 
     @Override

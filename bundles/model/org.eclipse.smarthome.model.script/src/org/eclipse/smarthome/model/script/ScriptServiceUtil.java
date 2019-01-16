@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,9 +22,13 @@ import org.eclipse.smarthome.core.thing.ThingRegistry;
 import org.eclipse.smarthome.model.core.ModelRepository;
 import org.eclipse.smarthome.model.script.engine.ScriptEngine;
 import org.eclipse.smarthome.model.script.engine.action.ActionService;
-import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.FrameworkUtil;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,6 +38,7 @@ import org.slf4j.LoggerFactory;
  * @author Davy Vanherbergen - Initial contribution
  * @author Kai Kreuzer - renamed and removed interface
  */
+@Component(immediate = true, service = ScriptServiceUtil.class)
 public class ScriptServiceUtil {
 
     private final Logger logger = LoggerFactory.getLogger(ScriptServiceUtil.class);
@@ -52,6 +57,7 @@ public class ScriptServiceUtil {
 
     public List<ActionService> actionServices = new CopyOnWriteArrayList<ActionService>();
 
+    @Activate
     public void activate(final BundleContext bc) {
         if (instance != null) {
             throw new IllegalStateException("ScriptServiceUtil should only be activated once!");
@@ -60,42 +66,14 @@ public class ScriptServiceUtil {
         logger.debug("ScriptServiceUtil started");
     }
 
+    @Deactivate
     public void deactivate() {
         logger.debug("ScriptServiceUtil stopped");
         instance = null;
     }
 
     private static ScriptServiceUtil getInstance() {
-        if (instance == null) {
-            // TODO remove the logging once #3562 got resolved
-            Logger logger = LoggerFactory.getLogger(ScriptServiceUtil.class);
-            Bundle bundle = FrameworkUtil.getBundle(ScriptServiceUtil.class);
-            BundleContext context = bundle.getBundleContext();
-            if (context != null) {
-                logger.debug(
-                        "ScriptServiceUtil is not initialized!\n  ThingRegistry: {}\n  ItemRegistry: {}\n  EventPublisher: {}\n  ModelRepository: {}",
-                        context.getServiceReference("org.eclipse.smarthome.core.thing.ThingRegistry"),
-                        context.getServiceReference("org.eclipse.smarthome.core.items.ItemRegistry"),
-                        context.getServiceReference("org.eclipse.smarthome.core.events.EventPublisher"),
-                        context.getServiceReference("org.eclipse.smarthome.model.core.ModelRepository"));
-                logger.debug("Bundle Versions:\n  o.e.sh.model.rule.runtime: {}\n  o.e.sh.model.core: {}",
-                        getVersion(context, "org.eclipse.smarthome.model.rule.runtime"),
-                        getVersion(context, "org.eclipse.smarthome.model.core"));
-            } else {
-                logger.debug("Bundle {} is not started", bundle.getSymbolicName());
-            }
-            throw new IllegalStateException("ScriptServiceUtil not initialized yet!");
-        }
         return instance;
-    }
-
-    private static String getVersion(BundleContext context, String bsn) {
-        for (Bundle bundle : context.getBundles()) {
-            if (bundle.getSymbolicName().equals(bsn)) {
-                return bundle.getVersion().toString();
-            }
-        }
-        return null;
     }
 
     public static ItemRegistry getItemRegistry() {
@@ -134,6 +112,7 @@ public class ScriptServiceUtil {
         return actionServices;
     }
 
+    @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
     public void addActionService(ActionService actionService) {
         this.actionServices.add(actionService);
     }
@@ -142,6 +121,7 @@ public class ScriptServiceUtil {
         this.actionServices.remove(actionService);
     }
 
+    @Reference
     public void setItemRegistry(ItemRegistry itemRegistry) {
         this.itemRegistry = itemRegistry;
     }
@@ -150,6 +130,7 @@ public class ScriptServiceUtil {
         this.itemRegistry = null;
     }
 
+    @Reference
     public void setThingRegistry(ThingRegistry thingRegistry) {
         this.thingRegistry = thingRegistry;
     }
@@ -158,6 +139,7 @@ public class ScriptServiceUtil {
         this.thingRegistry = null;
     }
 
+    @Reference
     public void setEventPublisher(EventPublisher eventPublisher) {
         this.eventPublisher = eventPublisher;
     }
@@ -166,6 +148,7 @@ public class ScriptServiceUtil {
         this.eventPublisher = null;
     }
 
+    @Reference
     public void setModelRepository(ModelRepository modelRepository) {
         this.modelRepository = modelRepository;
     }

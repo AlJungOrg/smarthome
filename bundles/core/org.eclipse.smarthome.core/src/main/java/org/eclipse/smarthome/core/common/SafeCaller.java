@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -40,16 +40,5 @@ public interface SafeCaller {
      * @return a safe call builder instance.
      */
     <T> SafeCallerBuilder<T> create(T target, Class<T> interfaceType);
-
-    /**
-     * Create a safe call builder for the given object.
-     *
-     * It's a short variant of {@link #create(Object, Class)} where the interface(s) are inferred automatically. It work
-     * only if the static type of {@code target} is an interface.
-     *
-     * @param target the object on which calls should be protected by the safe caller
-     * @return a safe call builder instance.
-     */
-    <T> SafeCallerBuilder<T> create(T target);
 
 }

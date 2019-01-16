@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -40,7 +40,7 @@ import org.osgi.service.component.annotations.Reference;
 public class NtpDiscovery extends AbstractDiscoveryService {
 
     public NtpDiscovery() throws IllegalArgumentException {
-        super(SUPPORTED_THING_TYPES_UIDS, 10);
+        super(SUPPORTED_THING_TYPES_UIDS, 2);
     }
 
     @Override
@@ -58,7 +58,6 @@ public class NtpDiscovery extends AbstractDiscoveryService {
         scheduler.schedule(() -> {
             discoverNtp();
         }, 1, TimeUnit.SECONDS);
-
     }
 
     @Override

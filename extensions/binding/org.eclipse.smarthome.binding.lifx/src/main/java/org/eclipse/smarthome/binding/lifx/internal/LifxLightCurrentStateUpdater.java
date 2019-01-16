@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,7 @@
 package org.eclipse.smarthome.binding.lifx.internal;
 
 import static org.eclipse.smarthome.binding.lifx.LifxBindingConstants.MIN_ZONE_INDEX;
+import static org.eclipse.smarthome.binding.lifx.internal.protocol.Product.Feature.*;
 import static org.eclipse.smarthome.binding.lifx.internal.util.LifxMessageUtil.infraredToPercentType;
 
 import java.util.concurrent.ScheduledExecutorService;
@@ -20,6 +21,8 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.binding.lifx.handler.LifxLightHandler.CurrentLightState;
 import org.eclipse.smarthome.binding.lifx.internal.fields.HSBK;
 import org.eclipse.smarthome.binding.lifx.internal.protocol.GetColorZonesRequest;
@@ -27,7 +30,7 @@ import org.eclipse.smarthome.binding.lifx.internal.protocol.GetLightInfraredRequ
 import org.eclipse.smarthome.binding.lifx.internal.protocol.GetRequest;
 import org.eclipse.smarthome.binding.lifx.internal.protocol.GetWifiInfoRequest;
 import org.eclipse.smarthome.binding.lifx.internal.protocol.Packet;
-import org.eclipse.smarthome.binding.lifx.internal.protocol.Products;
+import org.eclipse.smarthome.binding.lifx.internal.protocol.Product;
 import org.eclipse.smarthome.binding.lifx.internal.protocol.StateLightInfraredResponse;
 import org.eclipse.smarthome.binding.lifx.internal.protocol.StateLightPowerResponse;
 import org.eclipse.smarthome.binding.lifx.internal.protocol.StateMultiZoneResponse;
@@ -44,6 +47,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Wouter Born - Extracted class from LifxLightHandler
  */
+@NonNullByDefault
 public class LifxLightCurrentStateUpdater {
 
     private static final int STATE_POLLING_INTERVAL = 3;
@@ -51,7 +55,7 @@ public class LifxLightCurrentStateUpdater {
     private final Logger logger = LoggerFactory.getLogger(LifxLightCurrentStateUpdater.class);
 
     private final String logId;
-    private final Products product;
+    private final Product product;
     private final CurrentLightState currentLightState;
     private final ScheduledExecutorService scheduler;
     private final LifxLightCommunicationHandler communicationHandler;
@@ -61,7 +65,7 @@ public class LifxLightCurrentStateUpdater {
     private boolean wasOnline;
     private boolean updateSignalStrength;
 
-    private ScheduledFuture<?> statePollingJob;
+    private @Nullable ScheduledFuture<?> statePollingJob;
 
     public LifxLightCurrentStateUpdater(LifxLightContext context, LifxLightCommunicationHandler communicationHandler) {
         this.logId = context.getLogId();
@@ -96,7 +100,8 @@ public class LifxLightCurrentStateUpdater {
         try {
             lock.lock();
             communicationHandler.addResponsePacketListener(this::handleResponsePacket);
-            if (statePollingJob == null || statePollingJob.isCancelled()) {
+            ScheduledFuture<?> localStatePollingJob = statePollingJob;
+            if (localStatePollingJob == null || localStatePollingJob.isCancelled()) {
                 statePollingJob = scheduler.scheduleWithFixedDelay(this::pollLightState, 0, STATE_POLLING_INTERVAL,
                         TimeUnit.SECONDS);
             }
@@ -111,8 +116,9 @@ public class LifxLightCurrentStateUpdater {
         try {
             lock.lock();
             communicationHandler.removeResponsePacketListener(this::handleResponsePacket);
-            if (statePollingJob != null && !statePollingJob.isCancelled()) {
-                statePollingJob.cancel(true);
+            ScheduledFuture<?> localStatePollingJob = statePollingJob;
+            if (localStatePollingJob != null && !localStatePollingJob.isCancelled()) {
+                localStatePollingJob.cancel(true);
                 statePollingJob = null;
             }
         } catch (Exception e) {
@@ -125,10 +131,10 @@ public class LifxLightCurrentStateUpdater {
     private void sendLightStateRequests() {
         communicationHandler.sendPacket(new GetRequest());
 
-        if (product.isInfrared()) {
+        if (product.hasFeature(INFRARED)) {
             communicationHandler.sendPacket(new GetLightInfraredRequest());
         }
-        if (product.isMultiZone()) {
+        if (product.hasFeature(MULTIZONE)) {
             communicationHandler.sendPacket(new GetColorZonesRequest());
         }
         if (updateSignalStrength) {
@@ -186,7 +192,7 @@ public class LifxLightCurrentStateUpdater {
 
     private void handleMultiZoneStatus(StateMultiZoneResponse packet) {
         HSBK[] colors = currentLightState.getColors();
-        if (colors == null || colors.length != packet.getCount()) {
+        if (colors.length != packet.getCount()) {
             colors = new HSBK[packet.getCount()];
         }
         for (int i = 0; i < packet.getColors().length && packet.getIndex() + i < colors.length; i++) {

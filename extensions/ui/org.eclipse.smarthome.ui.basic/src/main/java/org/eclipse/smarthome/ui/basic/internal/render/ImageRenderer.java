@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,7 +12,6 @@
  */
 package org.eclipse.smarthome.ui.basic.internal.render;
 
-import java.net.URI;
 import java.util.Date;
 
 import org.apache.commons.lang.StringUtils;
@@ -24,6 +23,12 @@ import org.eclipse.smarthome.model.sitemap.Image;
 import org.eclipse.smarthome.model.sitemap.Widget;
 import org.eclipse.smarthome.ui.basic.render.RenderException;
 import org.eclipse.smarthome.ui.basic.render.WidgetRenderer;
+import org.eclipse.smarthome.ui.items.ItemUIRegistry;
+import org.osgi.framework.BundleContext;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.annotations.Reference;
 
 /**
  * This is an implementation of the {@link WidgetRenderer} interface, which
@@ -33,9 +38,22 @@ import org.eclipse.smarthome.ui.basic.render.WidgetRenderer;
  * @author Vlad Ivanov - BasicUI changes
  *
  */
+@Component(service = WidgetRenderer.class)
 public class ImageRenderer extends AbstractWidgetRenderer {
 
-    private final static String URL_NONE_ICON = "images/none.png";
+    private static final String URL_NONE_ICON = "images/none.png";
+
+    @Override
+    @Activate
+    protected void activate(BundleContext bundleContext) {
+        super.activate(bundleContext);
+    }
+
+    @Override
+    @Deactivate
+    protected void deactivate(BundleContext bundleContext) {
+        super.deactivate(bundleContext);
+    }
 
     @Override
     public boolean canRender(Widget w) {
@@ -61,14 +79,7 @@ public class ImageRenderer extends AbstractWidgetRenderer {
         if (w.eResource() != null) {
             sitemap = w.eResource().getURI().path();
         }
-        boolean validUrl = false;
-        if (image.getUrl() != null && !image.getUrl().isEmpty()) {
-            try {
-                URI.create(image.getUrl());
-                validUrl = true;
-            } catch (IllegalArgumentException ex) {
-            }
-        }
+        boolean validUrl = isValidURL(image.getUrl());
         String proxiedUrl = "../proxy?sitemap=" + sitemap + "&amp;widgetId=" + widgetId;
         State state = itemUIRegistry.getState(w);
         String url;
@@ -94,4 +105,16 @@ public class ImageRenderer extends AbstractWidgetRenderer {
         sb.append(snippet);
         return null;
     }
+
+    @Override
+    @Reference
+    protected void setItemUIRegistry(ItemUIRegistry ItemUIRegistry) {
+        super.setItemUIRegistry(ItemUIRegistry);
+    }
+
+    @Override
+    protected void unsetItemUIRegistry(ItemUIRegistry ItemUIRegistry) {
+        super.unsetItemUIRegistry(ItemUIRegistry);
+    }
+
 }

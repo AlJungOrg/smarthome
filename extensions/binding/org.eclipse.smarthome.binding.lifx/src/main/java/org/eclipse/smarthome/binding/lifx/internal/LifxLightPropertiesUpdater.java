@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,6 +25,8 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.binding.lifx.LifxBindingConstants;
 import org.eclipse.smarthome.binding.lifx.handler.LifxLightHandler.CurrentLightState;
 import org.eclipse.smarthome.binding.lifx.internal.fields.MACAddress;
@@ -33,7 +35,7 @@ import org.eclipse.smarthome.binding.lifx.internal.protocol.GetHostFirmwareReque
 import org.eclipse.smarthome.binding.lifx.internal.protocol.GetVersionRequest;
 import org.eclipse.smarthome.binding.lifx.internal.protocol.GetWifiFirmwareRequest;
 import org.eclipse.smarthome.binding.lifx.internal.protocol.Packet;
-import org.eclipse.smarthome.binding.lifx.internal.protocol.Products;
+import org.eclipse.smarthome.binding.lifx.internal.protocol.Product;
 import org.eclipse.smarthome.binding.lifx.internal.protocol.StateHostFirmwareResponse;
 import org.eclipse.smarthome.binding.lifx.internal.protocol.StateVersionResponse;
 import org.eclipse.smarthome.binding.lifx.internal.protocol.StateWifiFirmwareResponse;
@@ -46,6 +48,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Wouter Born - Update light properties when online
  */
+@NonNullByDefault
 public class LifxLightPropertiesUpdater {
 
     private final Logger logger = LoggerFactory.getLogger(LifxLightPropertiesUpdater.class);
@@ -53,8 +56,8 @@ public class LifxLightPropertiesUpdater {
     private static final int UPDATE_INTERVAL = 15;
 
     private final String logId;
-    private final InetSocketAddress ipAddress;
-    private final MACAddress macAddress;
+    private final @Nullable InetSocketAddress ipAddress;
+    private final @Nullable MACAddress macAddress;
     private final CurrentLightState currentLightState;
     private final LifxLightCommunicationHandler communicationHandler;
 
@@ -66,7 +69,7 @@ public class LifxLightPropertiesUpdater {
 
     private final ReentrantLock lock = new ReentrantLock();
     private final ScheduledExecutorService scheduler;
-    private ScheduledFuture<?> updateJob;
+    private @Nullable ScheduledFuture<?> updateJob;
 
     private final Map<String, String> properties = new HashMap<>();
     private boolean updating;
@@ -115,19 +118,22 @@ public class LifxLightPropertiesUpdater {
     }
 
     private void updateHostProperty() {
-        if (communicationHandler.getIpAddress() != null) {
-            properties.put(LifxBindingConstants.PROPERTY_HOST, communicationHandler.getIpAddress().getHostString());
-        } else if (ipAddress != null) {
-            properties.put(LifxBindingConstants.PROPERTY_HOST, ipAddress.getHostString());
+        InetSocketAddress host = communicationHandler.getIpAddress();
+        if (host == null) {
+            host = ipAddress;
+        }
+        if (host != null) {
+            properties.put(LifxBindingConstants.PROPERTY_HOST, host.getHostString());
         }
     }
 
     private void updateMACAddressProperty() {
-        if (communicationHandler.getMACAddress() != null) {
-            properties.put(LifxBindingConstants.PROPERTY_MAC_ADDRESS,
-                    communicationHandler.getMACAddress().getAsLabel());
-        } else if (macAddress != null) {
-            properties.put(LifxBindingConstants.PROPERTY_MAC_ADDRESS, macAddress.getAsLabel());
+        MACAddress mac = communicationHandler.getMACAddress();
+        if (mac == null) {
+            mac = macAddress;
+        }
+        if (mac != null) {
+            properties.put(LifxBindingConstants.PROPERTY_MAC_ADDRESS, mac.getAsLabel());
         }
     }
 
@@ -145,14 +151,14 @@ public class LifxLightPropertiesUpdater {
         }
 
         if (packet instanceof StateVersionResponse) {
-            Products products = Products.getProductFromProductID(((StateVersionResponse) packet).getProduct());
+            Product product = Product.getProductFromProductID(((StateVersionResponse) packet).getProduct());
             long productVersion = ((StateVersionResponse) packet).getVersion();
 
-            properties.put(LifxBindingConstants.PROPERTY_PRODUCT_ID, Long.toString(products.getProduct()));
-            properties.put(LifxBindingConstants.PROPERTY_PRODUCT_NAME, products.getName());
+            properties.put(LifxBindingConstants.PROPERTY_PRODUCT_ID, Long.toString(product.getID()));
+            properties.put(LifxBindingConstants.PROPERTY_PRODUCT_NAME, product.getName());
             properties.put(LifxBindingConstants.PROPERTY_PRODUCT_VERSION, Long.toString(productVersion));
-            properties.put(LifxBindingConstants.PROPERTY_VENDOR_ID, Long.toString(products.getVendor()));
-            properties.put(LifxBindingConstants.PROPERTY_VENDOR_NAME, products.getVendorName());
+            properties.put(LifxBindingConstants.PROPERTY_VENDOR_ID, Long.toString(product.getVendor().getID()));
+            properties.put(LifxBindingConstants.PROPERTY_VENDOR_NAME, product.getVendor().getName());
 
             receivedPacketTypes.add(packet.getPacketType());
         } else if (packet instanceof StateHostFirmwareResponse) {
@@ -188,7 +194,8 @@ public class LifxLightPropertiesUpdater {
         try {
             lock.lock();
             communicationHandler.addResponsePacketListener(this::handleResponsePacket);
-            if (updateJob == null || updateJob.isCancelled()) {
+            ScheduledFuture<?> localUpdateJob = updateJob;
+            if (localUpdateJob == null || localUpdateJob.isCancelled()) {
                 updateJob = scheduler.scheduleWithFixedDelay(this::updateProperties, 0, UPDATE_INTERVAL,
                         TimeUnit.SECONDS);
             }
@@ -203,8 +210,9 @@ public class LifxLightPropertiesUpdater {
         try {
             lock.lock();
             communicationHandler.removeResponsePacketListener(this::handleResponsePacket);
-            if (updateJob != null && !updateJob.isCancelled()) {
-                updateJob.cancel(true);
+            ScheduledFuture<?> localUpdateJob = updateJob;
+            if (localUpdateJob != null && !localUpdateJob.isCancelled()) {
+                localUpdateJob.cancel(true);
                 updateJob = null;
             }
         } catch (Exception e) {

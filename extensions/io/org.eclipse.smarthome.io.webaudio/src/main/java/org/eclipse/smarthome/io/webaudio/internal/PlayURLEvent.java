@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,7 +15,7 @@ package org.eclipse.smarthome.io.webaudio.internal;
 import org.eclipse.smarthome.core.events.AbstractEvent;
 
 /**
- * This is an {@link Event} that is sent when a web client should play an audio stream from a url.
+ * This is an {@link Event} that is sent when a web client should play an audio stream from an url.
  *
  * @author Kai Kreuzer - Initial contribution and API
  */
@@ -24,7 +24,7 @@ public class PlayURLEvent extends AbstractEvent {
     /**
      * The extension event type.
      */
-    public final static String TYPE = PlayURLEvent.class.getSimpleName();
+    public static final String TYPE = PlayURLEvent.class.getSimpleName();
 
     private String url;
 

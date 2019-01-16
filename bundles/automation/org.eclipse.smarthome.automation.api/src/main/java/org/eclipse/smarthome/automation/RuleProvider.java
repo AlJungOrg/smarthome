@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,7 +15,8 @@ package org.eclipse.smarthome.automation;
 import org.eclipse.smarthome.core.common.registry.Provider;
 
 /**
- * A {@link RuleProvider} is responsible for providing rules.
+ * This class is responsible for providing {@link Rule}s. {@link RuleProvider}s are tracked by the {@link RuleRegistry}
+ * service, which collect all rules from different providers of the same type.
  *
  * @author Kai Kreuzer - Initial contribution
  */

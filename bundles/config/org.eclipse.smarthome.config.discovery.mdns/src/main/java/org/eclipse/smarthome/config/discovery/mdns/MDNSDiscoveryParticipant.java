@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -52,7 +52,6 @@ public interface MDNSDiscoveryParticipant {
      * Creates a discovery result for a mDNS service
      *
      * @param device the mDNS service found on the network
-     *
      * @return the according discovery result or <code>null</code>, if device is not
      *         supported by this participant
      */
@@ -63,7 +62,6 @@ public interface MDNSDiscoveryParticipant {
      * Returns the thing UID for a mDNS service
      *
      * @param device the mDNS service on the network
-     *
      * @return a thing UID or <code>null</code>, if device is not supported
      *         by this participant
      */

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,45 +12,56 @@
  */
 package org.eclipse.smarthome.core.thing.firmware;
 
-import com.google.common.base.Preconditions;
+import java.util.Objects;
+
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
+import org.eclipse.smarthome.core.thing.ThingUID;
 
 /**
  * The {@link FirmwareUpdateResultInfo} contains information about the result of a firmware update.
  *
  * @author Thomas Höfer - Initial contribution
+ * @author Dimitar Ivanov - Consolidated all the needed information for firmware status events
  */
+@NonNullByDefault
 public final class FirmwareUpdateResultInfo {
 
-    private FirmwareUpdateResult result;
+    private final FirmwareUpdateResult result;
 
-    private String errorMessage;
+    private @Nullable String errorMessage;
 
-    /**
-     * Default constructor. Will allow to instantiate this class by reflection.
-     */
-    protected FirmwareUpdateResultInfo() {
-        // does nothing at all
+    private final ThingUID thingUID;
+
+    private FirmwareUpdateResultInfo(ThingUID thingUID, FirmwareUpdateResult result, @Nullable String errorMessage) {
+        Objects.requireNonNull(thingUID, "The thingUID must not be null.");
+        this.thingUID = thingUID;
+
+        Objects.requireNonNull(result, "Firmware update result must not be null");
+        this.result = result;
+
+        if (result != FirmwareUpdateResult.SUCCESS) {
+            if (errorMessage == null || errorMessage.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "Error message must not be null or empty for erroneous firmare updates");
+            }
+            this.errorMessage = errorMessage;
+        }
     }
 
     /**
      * Creates a new {@link FirmwareUpdateResultInfo}.
      *
+     * @param thingUID thingUID of the thing being updated
      * @param result the result of the firmware update (must not be null)
      * @param errorMessage the error message in case of result is {@link FirmwareUpdateResult#ERROR} (must not be null
      *            or empty for erroneous firmware updates; ignored for successful firmware updates)
-     *
-     * @throws NullPointerException if result is null
+     * @return FirmwareUpdateResultInfo (not null)
      * @throws IllegalArgumentException if error message is null or empty for erroneous firmware updates
      */
-    FirmwareUpdateResultInfo(FirmwareUpdateResult result, String errorMessage) {
-        Preconditions.checkNotNull(result, "Firmware update result must not be null");
-        this.result = result;
-
-        if (result != FirmwareUpdateResult.SUCCESS) {
-            Preconditions.checkArgument(errorMessage != null && !errorMessage.isEmpty(),
-                    "Error message must not be null or empty for erroneous firmare updates");
-            this.errorMessage = errorMessage;
-        }
+    public static FirmwareUpdateResultInfo createFirmwareUpdateResultInfo(ThingUID thingUID,
+            FirmwareUpdateResult result, String errorMessage) {
+        return new FirmwareUpdateResultInfo(thingUID, result, errorMessage);
     }
 
     /**
@@ -63,10 +74,20 @@ public final class FirmwareUpdateResultInfo {
     }
 
     /**
+     * Returns the thing UID.
+     *
+     * @return the thing UID
+     */
+    public ThingUID getThingUID() {
+        return thingUID;
+    }
+
+    /**
      * Returns the error message in case of result is {@link FirmwareUpdateResult#ERROR}.
      *
      * @return the error message in case of erroneous firmware updates (is null for successful firmware updates)
      */
+    @Nullable
     public String getErrorMessage() {
         return errorMessage;
     }
@@ -81,7 +102,7 @@ public final class FirmwareUpdateResultInfo {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(@Nullable Object obj) {
         if (this == obj) {
             return true;
         }

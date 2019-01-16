@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -49,7 +49,6 @@ public interface ItemUIProvider {
      *
      * @param itemType the class of the item or null, if unknown
      * @param itemName the item name to get the default widget for
-     *
      * @return a widget implementation that can be used for the given item or null, if no default is available for the
      *         type
      */

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,8 +16,10 @@ import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertThat;
 
 import java.math.BigDecimal;
-import java.net.*;
-import java.util.*;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Arrays;
+import java.util.Collections;
 
 import org.eclipse.smarthome.config.core.ConfigDescriptionParameter.Type;
 import org.junit.Test;
@@ -27,36 +29,31 @@ import org.junit.Test;
  * @author Simon Kaufmann - initial contribution and API.
  *
  */
-class ConfigUtilTest {
-    private Map<String, Object> m(String a, Object b) {
-        Map<String, Object> m = new HashMap<>();
-        m.put(a, b);
-        return m;
-    }
-
-    private static class L<T> extends ArrayList<T> {
-        L(T... args) {
-            for (T arg : args) {
-                add(arg);
-            }
-        }
-    };
+public class ConfigUtilTest {
 
     @Test
     public void firstDesciptionWinsForNormalization() throws URISyntaxException {
         ConfigDescription configDescriptionInteger = new ConfigDescription(new URI("thing:fooThing"),
-                new L<>(new ConfigDescriptionParameter("foo", Type.INTEGER)));
+                Arrays.asList(new ConfigDescriptionParameter("foo", Type.INTEGER)));
 
         ConfigDescription configDescriptionString = new ConfigDescription(new URI("thingType:fooThing"),
-                new L<>(new ConfigDescriptionParameter("foo", Type.TEXT)));
+                Arrays.asList(new ConfigDescriptionParameter("foo", Type.TEXT)));
 
-        assertThat(ConfigUtil.normalizeTypes(m("foo", "1"), new L<>(configDescriptionInteger)).get("foo"),
+        assertThat(
+                ConfigUtil.normalizeTypes(Collections.singletonMap("foo", "1"), Arrays.asList(configDescriptionInteger))
+                        .get("foo"),
                 is(instanceOf(BigDecimal.class)));
-        assertThat(ConfigUtil.normalizeTypes(m("foo", "1"), new L<>(configDescriptionString)).get("foo"),
+        assertThat(
+                ConfigUtil.normalizeTypes(Collections.singletonMap("foo", "1"), Arrays.asList(configDescriptionString))
+                        .get("foo"),
                 is(instanceOf(String.class)));
-        assertThat(ConfigUtil.normalizeTypes(m("foo", "1"), new L<>(configDescriptionInteger, configDescriptionString))
-                .get("foo"), is(instanceOf(BigDecimal.class)));
-        assertThat(ConfigUtil.normalizeTypes(m("foo", "1"), new L<>(configDescriptionString, configDescriptionInteger))
-                .get("foo"), is(instanceOf(String.class)));
+        assertThat(
+                ConfigUtil.normalizeTypes(Collections.singletonMap("foo", "1"),
+                        Arrays.asList(configDescriptionInteger, configDescriptionString)).get("foo"),
+                is(instanceOf(BigDecimal.class)));
+        assertThat(
+                ConfigUtil.normalizeTypes(Collections.singletonMap("foo", "1"),
+                        Arrays.asList(configDescriptionString, configDescriptionInteger)).get("foo"),
+                is(instanceOf(String.class)));
     }
 }

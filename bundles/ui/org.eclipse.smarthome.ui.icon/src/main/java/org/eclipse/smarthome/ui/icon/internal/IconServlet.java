@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,23 +16,28 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
+import org.eclipse.smarthome.io.http.servlet.SmartHomeServlet;
 import org.eclipse.smarthome.ui.icon.IconProvider;
 import org.eclipse.smarthome.ui.icon.IconSet.Format;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.annotations.Modified;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.http.HttpContext;
 import org.osgi.service.http.HttpService;
-import org.osgi.service.http.NamespaceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,16 +46,17 @@ import org.slf4j.LoggerFactory;
  *
  * @author Kai Kreuzer - Initial contribution
  */
-public class IconServlet extends HttpServlet {
+@Component
+public class IconServlet extends SmartHomeServlet {
 
     private static final long serialVersionUID = 2880642275858634578L;
 
     private final Logger logger = LoggerFactory.getLogger(IconServlet.class);
 
     private static final String SERVLET_NAME = "/icon";
-    private static final String PARAM_ICONSET = "iconset";
-    private static final String PARAM_FORMAT = "format";
-    private static final String PARAM_STATE = "state";
+    static final String PARAM_ICONSET = "iconset";
+    static final String PARAM_FORMAT = "format";
+    static final String PARAM_STATE = "state";
 
     private long startupTime;
 
@@ -60,14 +66,16 @@ public class IconServlet extends HttpServlet {
 
     private List<IconProvider> iconProvider = new ArrayList<>();
 
+    @Reference
     public void setHttpService(HttpService httpService) {
-        this.httpService = httpService;
+        super.setHttpService(httpService);
     }
 
     public void unsetHttpService(HttpService httpService) {
-        this.httpService = null;
+        super.unsetHttpService(httpService);
     }
 
+    @Reference(cardinality = ReferenceCardinality.AT_LEAST_ONE, policy = ReferencePolicy.DYNAMIC)
     public void addIconProvider(IconProvider iconProvider) {
         this.iconProvider.add(iconProvider);
     }
@@ -76,22 +84,20 @@ public class IconServlet extends HttpServlet {
         this.iconProvider.remove(iconProvider);
     }
 
+    @Activate
     protected void activate(Map<String, Object> config) {
-        try {
-            logger.debug("Starting up icon servlet at " + SERVLET_NAME);
-
-            Hashtable<String, String> props = new Hashtable<String, String>();
-            httpService.registerServlet(SERVLET_NAME, this, props, createHttpContext());
-        } catch (NamespaceException e) {
-            logger.error("Error during servlet startup", e);
-        } catch (ServletException e) {
-            logger.error("Error during servlet startup", e);
-        }
+        super.activate(SERVLET_NAME);
         startupTime = System.currentTimeMillis();
 
         modified(config);
     }
 
+    @Deactivate
+    protected void deactivate() {
+        super.deactivate(SERVLET_NAME);
+    }
+
+    @Modified
     protected void modified(Map<String, Object> config) {
         Object iconSetId = config.get("default");
         if (iconSetId instanceof String) {
@@ -99,19 +105,8 @@ public class IconServlet extends HttpServlet {
         }
     }
 
-    /**
-     * Creates a {@link HttpContext}
-     *
-     * @return a {@link HttpContext}
-     */
-    protected HttpContext createHttpContext() {
-        HttpContext defaultHttpContext = httpService.createDefaultHttpContext();
-        return defaultHttpContext;
-    }
-
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-
         if (req.getDateHeader("If-Modified-Since") > startupTime) {
             resp.setStatus(304);
             return;

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -50,7 +50,6 @@ import org.osgi.service.cm.ConfigurationAdmin;
  * Tests for {@link VoiceManagerImpl}
  *
  * @author Mihaela Memova - initial contribution
- *
  * @author Velin Yordanov - migrated tests from groovy to java
  *
  */
@@ -371,6 +370,7 @@ public class VoiceManagerTest extends JavaOSGiTest {
         BundleContext context = bundleContext;
         ttsService = new TTSServiceStub(context);
         registerService(ttsService);
+        Locale locale = Locale.getDefault();
 
         boolean isVoiceStubInTheOptions = false;
 
@@ -383,10 +383,10 @@ public class VoiceManagerTest extends JavaOSGiTest {
             String optionValue = option.getValue();
             String optionLabel = option.getLabel();
             String voiceStubId = voice.getUID();
-            String voiceLabel = voice.getLabel();
+            String expectedLabel = String.format("%s - %s - %s", ttsService.getLabel(locale),
+                    voice.getLocale().getDisplayName(locale), voice.getLabel());
 
-            if (optionValue.equals(voiceStubId)
-                    && optionLabel.equals(voiceLabel + " - " + voice.getLocale().getDisplayName())) {
+            if (optionValue.equals(voiceStubId) && optionLabel.equals(expectedLabel)) {
                 isVoiceStubInTheOptions = true;
             }
         }

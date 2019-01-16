@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,6 +12,8 @@
  */
 package org.eclipse.smarthome.core.thing.binding.firmware;
 
+import org.eclipse.jdt.annotation.NonNullByDefault;
+
 /**
  * The {@link ProgressStep} enumeration defines the possible progress steps for a firmware update. The actual sequence
  * of the firmware update is defined by the operation {@link ProgressCallback#defineSequence(ProgressStep...)}.
@@ -19,6 +21,7 @@ package org.eclipse.smarthome.core.thing.binding.firmware;
  * @author Thomas Höfer - Initial contribution
  * @author Chris Jackson - Add WAITING
  */
+@NonNullByDefault
 public enum ProgressStep {
 
     /**

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -27,6 +27,10 @@ import org.eclipse.osgi.framework.console.CommandProvider;
 import org.eclipse.smarthome.io.console.Console;
 import org.eclipse.smarthome.io.console.ConsoleInterpreter;
 import org.eclipse.smarthome.io.console.extensions.ConsoleCommandExtension;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
 
 /**
  * This class provides access to Eclipse SmartHome functionality through the OSGi console
@@ -37,16 +41,18 @@ import org.eclipse.smarthome.io.console.extensions.ConsoleCommandExtension;
  * @author Markus Rathgeb - Split console interface and specific implementation
  *
  */
+@Component
 public class ConsoleSupportEclipse implements CommandProvider {
 
     private final String BASE = "smarthome";
 
-    private SortedMap<String, ConsoleCommandExtension> consoleCommandExtensions = Collections
+    private final SortedMap<String, ConsoleCommandExtension> consoleCommandExtensions = Collections
             .synchronizedSortedMap(new TreeMap<String, ConsoleCommandExtension>());
 
     public ConsoleSupportEclipse() {
     }
 
+    @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
     public void addConsoleCommandExtension(ConsoleCommandExtension consoleCommandExtension) {
         consoleCommandExtensions.put(consoleCommandExtension.getCommand(), consoleCommandExtension);
     }
@@ -74,7 +80,6 @@ public class ConsoleSupportEclipse implements CommandProvider {
      * @return null, return parameter is not used
      */
     public Object _smarthome(final CommandInterpreter interpreter) {
-
         final Console console = new OSGiConsole(BASE, interpreter);
 
         final String cmd = interpreter.nextArgument();

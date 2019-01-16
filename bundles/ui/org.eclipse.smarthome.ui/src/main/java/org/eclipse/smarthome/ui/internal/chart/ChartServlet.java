@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,25 +18,31 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Hashtable;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
+import javax.imageio.IIOException;
 import javax.imageio.ImageIO;
 import javax.imageio.stream.ImageOutputStream;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.lang.BooleanUtils;
 import org.eclipse.smarthome.core.items.ItemNotFoundException;
+import org.eclipse.smarthome.io.http.servlet.SmartHomeServlet;
 import org.eclipse.smarthome.ui.chart.ChartProvider;
-import org.eclipse.smarthome.ui.items.ItemUIRegistry;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.annotations.Modified;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.http.HttpContext;
 import org.osgi.service.http.HttpService;
-import org.osgi.service.http.NamespaceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,14 +65,15 @@ import org.slf4j.LoggerFactory;
  * @author Holger Reichert - Support for themes, DPI, legend hiding
  *
  */
-public class ChartServlet extends HttpServlet {
+@Component(immediate = true, service = ChartServlet.class, configurationPid = "org.eclipse.smarthome.chart", property = {
+        "service.pid=org.eclipse.smarthome.chart", "service.config.description.uri=system:chart",
+        "service.config.label=Charts", "service.config.category=system" })
+public class ChartServlet extends SmartHomeServlet {
 
     private static final long serialVersionUID = 7700873790924746422L;
     private static final int CHART_HEIGHT = 240;
     private static final int CHART_WIDTH = 480;
     private static final String DATE_FORMAT = "yyyyMMddHHmm";
-
-    private final Logger logger = LoggerFactory.getLogger(ChartServlet.class);
 
     private String providerName = "default";
     private int defaultHeight = CHART_HEIGHT;
@@ -95,26 +102,31 @@ public class ChartServlet extends HttpServlet {
         PERIODS.put("Y", 31536000000L);
     }
 
-    protected HttpService httpService;
-    protected ItemUIRegistry itemUIRegistry;
-    static protected Map<String, ChartProvider> chartProviders = new HashMap<String, ChartProvider>();
+    protected static Map<String, ChartProvider> chartProviders = new ConcurrentHashMap<String, ChartProvider>();
 
+    @Override
+    @Reference
     public void setHttpService(HttpService httpService) {
-        this.httpService = httpService;
+        super.setHttpService(httpService);
     }
 
+    @Override
     public void unsetHttpService(HttpService httpService) {
-        this.httpService = null;
+        super.unsetHttpService(httpService);
     }
 
-    public void setItemUIRegistry(ItemUIRegistry itemUIRegistry) {
-        this.itemUIRegistry = itemUIRegistry;
+    @Override
+    @Reference
+    public void setHttpContext(HttpContext httpContext) {
+        super.setHttpContext(httpContext);
     }
 
-    public void unsetItemUIRegistry(ItemUIRegistry itemUIRegistry) {
-        this.itemUIRegistry = null;
+    @Override
+    public void unsetHttpContext(HttpContext httpContext) {
+        super.unsetHttpContext(httpContext);
     }
 
+    @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
     public void addChartProvider(ChartProvider provider) {
         chartProviders.put(provider.getName(), provider);
     }
@@ -123,30 +135,22 @@ public class ChartServlet extends HttpServlet {
         chartProviders.remove(provider.getName());
     }
 
-    static public Map<String, ChartProvider> getChartProviders() {
+    public static Map<String, ChartProvider> getChartProviders() {
         return chartProviders;
     }
 
+    @Activate
     protected void activate(Map<String, Object> config) {
-        try {
-            logger.debug("Starting up chart servlet at " + SERVLET_NAME);
-
-            Hashtable<String, String> props = new Hashtable<String, String>();
-            httpService.registerServlet(SERVLET_NAME, this, props, createHttpContext());
-
-        } catch (NamespaceException e) {
-            logger.error("Error during chart servlet startup", e);
-        } catch (ServletException e) {
-            logger.error("Error during chart servlet startup", e);
-        }
-
+        super.activate(SERVLET_NAME);
         applyConfig(config);
     }
 
+    @Deactivate
     protected void deactivate() {
-        httpService.unregister(SERVLET_NAME);
+        super.deactivate(SERVLET_NAME);
     }
 
+    @Modified
     protected void modified(Map<String, Object> config) {
         applyConfig(config);
     }
@@ -168,53 +172,76 @@ public class ChartServlet extends HttpServlet {
 
         final String defaultHeightString = Objects.toString(config.get("defaultHeight"), null);
         if (defaultHeightString != null) {
-            defaultHeight = Integer.parseInt(defaultHeightString);
+            try {
+                defaultHeight = Integer.parseInt(defaultHeightString);
+            } catch (NumberFormatException e) {
+                logger.warn("'{}' is not a valid integer value for the defaultHeight parameter.", defaultHeightString);
+            }
         }
 
         final String defaultWidthString = Objects.toString(config.get("defaultWidth"), null);
         if (defaultWidthString != null) {
-            defaultWidth = Integer.parseInt(defaultWidthString);
+            try {
+                defaultWidth = Integer.parseInt(defaultWidthString);
+            } catch (NumberFormatException e) {
+                logger.warn("'{}' is not a valid integer value for the defaultWidth parameter.", defaultWidthString);
+            }
         }
 
         final String scaleString = Objects.toString(config.get("scale"), null);
         if (scaleString != null) {
-            scale = Double.parseDouble(scaleString);
-            // Set scale to normal if the custom value is unrealistically low
-            if (scale < 0.1) {
-                scale = 1.0;
+            try {
+                scale = Double.parseDouble(scaleString);
+                // Set scale to normal if the custom value is unrealistically low
+                if (scale < 0.1) {
+                    scale = 1.0;
+                }
+            } catch (NumberFormatException e) {
+                logger.warn("'{}' is not a valid number value for the scale parameter.", scaleString);
             }
         }
 
         final String maxWidthString = Objects.toString(config.get("maxWidth"), null);
         if (maxWidthString != null) {
-            maxWidth = Integer.parseInt(maxWidthString);
+            try {
+                maxWidth = Integer.parseInt(maxWidthString);
+            } catch (NumberFormatException e) {
+                logger.warn("'{}' is not a valid integer value for the maxWidth parameter.", maxWidthString);
+            }
         }
-
     }
 
+    @SuppressWarnings({ "null" })
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
         logger.debug("Received incoming chart request: {}", req);
 
         int width = defaultWidth;
-        try {
-            width = Integer.parseInt(req.getParameter("w"));
-        } catch (Exception e) {
+        String w = req.getParameter("w");
+        if (w != null) {
+            try {
+                width = Integer.parseInt(w);
+            } catch (NumberFormatException e) {
+                logger.debug("Ignoring invalid value '{}' for HTTP request parameter 'w'", w);
+            }
         }
         int height = defaultHeight;
-        try {
-            String h = req.getParameter("h");
-            if (h != null) {
+        String h = req.getParameter("h");
+        if (h != null) {
+            try {
                 Double d = Double.parseDouble(h) * scale;
                 height = d.intValue();
+            } catch (NumberFormatException e) {
+                logger.debug("Ignoring invalid value '{}' for HTTP request parameter 'h'", h);
             }
-        } catch (Exception e) {
         }
 
         // To avoid ambiguity you are not allowed to specify period, begin and end time at the same time.
         if (req.getParameter("period") != null && req.getParameter("begin") != null
                 && req.getParameter("end") != null) {
-            throw new ServletException("Do not specify the three parameters period, begin and end at the same time.");
+            res.sendError(HttpServletResponse.SC_BAD_REQUEST,
+                    "Do not specify the three parameters period, begin and end at the same time.");
+            return;
         }
 
         // Read out the parameter period, begin and end and save them.
@@ -231,7 +258,9 @@ public class ChartServlet extends HttpServlet {
             try {
                 timeBegin = new SimpleDateFormat(DATE_FORMAT).parse(req.getParameter("begin"));
             } catch (ParseException e) {
-                throw new ServletException("Begin and end must have this format: " + DATE_FORMAT + ".");
+                res.sendError(HttpServletResponse.SC_BAD_REQUEST,
+                        "Begin and end must have this format: " + DATE_FORMAT + ".");
+                return;
             }
         }
 
@@ -239,7 +268,9 @@ public class ChartServlet extends HttpServlet {
             try {
                 timeEnd = new SimpleDateFormat(DATE_FORMAT).parse(req.getParameter("end"));
             } catch (ParseException e) {
-                throw new ServletException("Begin and end must have this format: " + DATE_FORMAT + ".");
+                res.sendError(HttpServletResponse.SC_BAD_REQUEST,
+                        "Begin and end must have this format: " + DATE_FORMAT + ".");
+                return;
             }
         }
 
@@ -263,7 +294,8 @@ public class ChartServlet extends HttpServlet {
 
         ChartProvider provider = getChartProviders().get(providerName);
         if (provider == null) {
-            throw new ServletException("Could not get chart provider.");
+            res.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Could not get chart provider.");
+            return;
         }
 
         // Read out the parameter 'dpi'
@@ -272,10 +304,12 @@ public class ChartServlet extends HttpServlet {
             try {
                 dpi = Integer.valueOf(req.getParameter("dpi"));
             } catch (NumberFormatException e) {
-                throw new ServletException("dpi parameter is invalid");
+                res.sendError(HttpServletResponse.SC_BAD_REQUEST, "dpi parameter is invalid");
+                return;
             }
             if (dpi <= 0) {
-                throw new ServletException("dpi parameter is <= 0");
+                res.sendError(HttpServletResponse.SC_BAD_REQUEST, "dpi parameter is <= 0");
+                return;
             }
         }
 
@@ -307,6 +341,10 @@ public class ChartServlet extends HttpServlet {
         } catch (IllegalArgumentException e) {
             logger.warn("Illegal argument in chart: {}", e.getMessage());
             res.sendError(HttpServletResponse.SC_BAD_REQUEST, "Illegal argument in chart: " + e.getMessage());
+        } catch (IIOException e) {
+            // this can happen if the request is terminated while the image is streamed, see
+            // https://github.com/openhab/openhab-distro/issues/684
+            logger.debug("Failed writing image to response stream", e);
         } catch (RuntimeException e) {
             if (logger.isDebugEnabled()) {
                 // we also attach the stack trace
@@ -316,16 +354,6 @@ public class ChartServlet extends HttpServlet {
             }
             res.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
         }
-    }
-
-    /**
-     * Creates a {@link HttpContext}
-     *
-     * @return a {@link HttpContext}
-     */
-    protected HttpContext createHttpContext() {
-        HttpContext defaultHttpContext = httpService.createDefaultHttpContext();
-        return defaultHttpContext;
     }
 
     @Override

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,6 +28,7 @@ public class MarketplaceExtension extends Extension {
     // extension types from marketplace
     public static final String EXT_TYPE_RULE_TEMPLATE = "ruletemplate";
     public static final String EXT_TYPE_BINDING = "binding";
+    public static final String EXT_TYPE_VOICE = "voice";
 
     // extension package formats from marketplace
     public static final String EXT_FORMAT_BUNDLE = "bundle";

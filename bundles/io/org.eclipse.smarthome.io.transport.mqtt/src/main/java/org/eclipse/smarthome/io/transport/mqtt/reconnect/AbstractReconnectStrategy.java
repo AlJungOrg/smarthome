@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,6 +12,8 @@
  */
 package org.eclipse.smarthome.io.transport.mqtt.reconnect;
 
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.io.transport.mqtt.MqttBrokerConnection;
 import org.eclipse.smarthome.io.transport.mqtt.MqttConnectionObserver;
 
@@ -21,22 +23,23 @@ import org.eclipse.smarthome.io.transport.mqtt.MqttConnectionObserver;
  *
  * @author David Graeff - Initial contribution
  */
+@NonNullByDefault
 public abstract class AbstractReconnectStrategy {
-    protected MqttBrokerConnection brokerConnection;
+    protected @Nullable MqttBrokerConnection brokerConnection;
 
     /**
      * Will be called by {@see MqttBrokerConnection.setReconnectPolicy()}.
      *
-     * @param brokerConnection The broker connection
+     * @param mqttBrokerConnectionImpl The broker connection
      */
-    public void setBrokerConnection(MqttBrokerConnection brokerConnection) {
-        this.brokerConnection = brokerConnection;
+    public void setBrokerConnection(MqttBrokerConnection mqttBrokerConnectionImpl) {
+        this.brokerConnection = mqttBrokerConnectionImpl;
     }
 
     /**
      * Return the brokerConnection object that this reconnect policy is assigned to.
      */
-    public MqttBrokerConnection getBrokerConnection() {
+    public @Nullable MqttBrokerConnection getBrokerConnection() {
         return brokerConnection;
     }
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,7 +24,7 @@ import org.eclipse.smarthome.core.thing.dto.ChannelDTO;
  */
 public class EnrichedChannelDTO extends ChannelDTO {
 
-    final public Set<String> linkedItems;
+    public final Set<String> linkedItems;
 
     public EnrichedChannelDTO(ChannelDTO channelDTO, Set<String> linkedItems) {
         this.uid = channelDTO.uid;

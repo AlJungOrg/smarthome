@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
 @Component
 public class DTOMapperImpl implements DTOMapper {
 
-    private final Logger logger = LoggerFactory.getLogger(DTOMapper.class);
+    private final Logger logger = LoggerFactory.getLogger(DTOMapperImpl.class);
 
     @Override
     public <T> Stream<T> limitToFields(Stream<T> itemStream, String fields) {

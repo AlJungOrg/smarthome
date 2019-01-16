@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -41,15 +41,14 @@ import org.slf4j.LoggerFactory;
 @Component(configurationPid = "org.eclipse.smarthome.io.rest.proxyfilter", immediate = true, service = ProxyFilter.class)
 public class ProxyFilter implements ContainerRequestFilter {
 
-    private static final String PROTO_PROXY_HEADER = "x-forwarded-proto";
+    static final String PROTO_PROXY_HEADER = "x-forwarded-proto";
 
-    private static final String HOST_PROXY_HEADER = "x-forwarded-host";
+    static final String HOST_PROXY_HEADER = "x-forwarded-host";
 
     private final transient Logger logger = LoggerFactory.getLogger(ProxyFilter.class);
 
     @Override
     public void filter(ContainerRequestContext ctx) throws IOException {
-
         String host = getValue(ctx.getHeaders(), HOST_PROXY_HEADER);
         String scheme = getValue(ctx.getHeaders(), PROTO_PROXY_HEADER);
 

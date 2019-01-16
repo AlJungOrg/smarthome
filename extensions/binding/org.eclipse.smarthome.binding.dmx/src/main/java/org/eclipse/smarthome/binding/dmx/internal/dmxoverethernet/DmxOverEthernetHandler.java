@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -49,7 +49,7 @@ public abstract class DmxOverEthernetHandler extends DmxBridgeHandler {
 
     @Override
     protected void openConnection() {
-        if (!this.thing.getStatus().equals(ThingStatus.ONLINE)) {
+        if (getThing().getStatus() != ThingStatus.ONLINE) {
             try {
                 if (senderNode.getAddress() == null) {
                     if (senderNode.getPort() == 0) {
@@ -66,7 +66,8 @@ public abstract class DmxOverEthernetHandler extends DmxBridgeHandler {
                 updateStatus(ThingStatus.ONLINE);
                 logger.debug("opened socket {} in bridge {}", senderNode, this.thing.getUID());
             } catch (SocketException e) {
-                logger.debug("could not open socket {} in bridge {}", senderNode, this.thing.getUID());
+                logger.debug("could not open socket {} in bridge {}: {}", senderNode, this.thing.getUID(),
+                        e.getMessage());
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, "opening UDP socket failed");
             }
         }
@@ -75,14 +76,18 @@ public abstract class DmxOverEthernetHandler extends DmxBridgeHandler {
     @Override
     protected void closeConnection() {
         if (socket != null) {
+            logger.debug("closing socket {} in bridge {}", senderNode, this.thing.getUID());
             socket.close();
             socket = null;
+        } else {
+            logger.debug("socket was already closed when calling closeConnection in bridge {}", this.thing.getUID());
         }
+        updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, "UDP socket closed");
     }
 
     @Override
     protected void sendDmxData() {
-        if (this.thing.getStatus().equals(ThingStatus.ONLINE)) {
+        if (getThing().getStatus() == ThingStatus.ONLINE) {
             boolean needsSending = false;
             long now = System.currentTimeMillis();
             universe.calculateBuffer(now);
@@ -108,7 +113,8 @@ public abstract class DmxOverEthernetHandler extends DmxBridgeHandler {
                     try {
                         socket.send(sendPacket);
                     } catch (IOException e) {
-                        logger.debug("Could not send to {} in {}: {}", receiverNode, this.thing.getUID(), e);
+                        logger.debug("Could not send to {} in {}: {}", receiverNode, this.thing.getUID(),
+                                e.getMessage());
                         closeConnection(ThingStatusDetail.COMMUNICATION_ERROR, "could not send DMX data");
                     }
                 }

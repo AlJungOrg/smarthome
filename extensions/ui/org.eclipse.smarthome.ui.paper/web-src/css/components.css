@@ -242,19 +242,19 @@ md-slider.md-default-theme.hue .md-thumb:after {
 }
 
 .card .clabel {
-	padding: 8px;
-	text-align: center;
+    padding: 8px 8px 8px 15px;
 }
 
 .card.text-left .clabel {
 	text-align: left;
 }
 
-.card .clabel h3 {
+.card span.clabel {
 	text-overflow: ellipsis;
 	overflow: hidden;
 	white-space: nowrap;
 	line-height: 120%;
+	font-size: 20px
 }
 
 .card .cbody {
@@ -337,6 +337,11 @@ md-slider.md-default-theme.hue .md-thumb:after {
 	float: right;
 }
 
+.item-label-container {
+	display: flex;
+	align-items: center;
+}
+
 .extensions .card .item-content {
 	padding-top: 5px;
 }
@@ -359,9 +364,6 @@ md-slider.md-default-theme.hue .md-thumb:after {
 
 .item-content .description {
 	width: 100%;
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
 }
 
 .item-content .description h3 {
@@ -679,6 +681,12 @@ md-progress-circular.md-default-theme .md-inner .md-left .md-half-circle
 
 .includeConfig .advButton {
     margin-left: 15px;
+}
+
+.channel-group-name {
+	margin-bottom: 5px;
+    margin-top: 10px;
+    font-weight: bolder;
 }
 
 .channels>div>div>.channel {
@@ -1007,6 +1015,10 @@ md-chips strong {
 	outline: 0;
 }
 
+.thing.disabled .description {
+    color: grey;
+}
+
 .material-icons.color-remove {
 	font-size: 12px;
 	margin-top: 10px;
@@ -1109,6 +1121,10 @@ md-dialog-content .dayParameter {
     font-size:10px;
 }
 
+.icontrol {
+	margin-bottom: 15px;
+}
+
 .icontrol .control-button {
 	min-height: 35px;
 	min-width: 35px;
@@ -1138,8 +1154,26 @@ md-dialog-content .dayParameter {
 	outline: 0;
 }
 
-.rules .disabled {
-background-color: #b8030c;
+.rules .disabled .description {
+	color: grey;
+}
+
+.rules .disabled .run-rule {
+	color: grey;
+}
+
+.rules .disabled .run-rule:hover {
+	color: grey;
+	box-shadow: none;
+	cursor: default;
+}
+
+.rules .enabled .description {
+	color: black;
+}
+
+.rules .uninitialized {
+background-color: #777;
 }
 
 .rules .idle {
@@ -1352,16 +1386,11 @@ input[type=number].multiSel::-webkit-outer-spin-button {
 	cursor:pointer;
 }
 
-.textControl {
+.text-control {
 	height: 100%;
 }
 
-.textControl .state {
-	font-size: 30px;
-	font-weight: 300;
-}
-
-.textControl .minDimension {
+.text-control .minDimension {
 	min-height: 40px;
 	min-width: 140px;
 }
@@ -1473,6 +1502,10 @@ md-progress-circular.firmware {
     padding-bottom: 0;
 }
 
+.multi-services.white-bg {
+    padding-top: 80px;
+}
+
 search-field {
 	display: flex;
 	width: 100%;
@@ -1480,4 +1513,25 @@ search-field {
 
 search-field i {
 	margin-top: 4px;
+}
+
+md-input-container .md-input.location-input {
+	float: none;
+}
+
+.items .item form[name=locationForm] md-input-container {
+    margin: -25px 0 0 0;
+}
+
+.location-edit {
+	margin-top: 10px;
+}
+
+.map-container {
+	margin-top: 10px;
+}
+
+.map-container > .map {
+	height: 300px; 
+	width: 100%;
 }

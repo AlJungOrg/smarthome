@@ -1,12 +1,26 @@
+/**
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ */
 package org.eclipse.smarthome.io.rest.core.internal.channel;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.mockito.MockitoAnnotations.initMocks;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Locale;
 import java.util.Set;
 
@@ -19,12 +33,11 @@ import org.eclipse.smarthome.core.thing.type.ChannelKind;
 import org.eclipse.smarthome.core.thing.type.ChannelType;
 import org.eclipse.smarthome.core.thing.type.ChannelTypeRegistry;
 import org.eclipse.smarthome.core.thing.type.ChannelTypeUID;
+import org.eclipse.smarthome.io.rest.LocaleServiceImpl;
 import org.hamcrest.core.IsCollectionContaining;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
-
-import com.google.common.collect.Lists;
 
 public class ChannelTypeResourceTest {
 
@@ -40,7 +53,7 @@ public class ChannelTypeResourceTest {
     public void setup() {
         initMocks(this);
         channelTypeResource = new ChannelTypeResource();
-
+        channelTypeResource.setLocaleService(new LocaleServiceImpl());
         channelTypeResource.setChannelTypeRegistry(channelTypeRegistry);
         channelTypeResource.setProfileTypeRegistry(profileTypeRegistry);
     }
@@ -62,10 +75,10 @@ public class ChannelTypeResourceTest {
 
         TriggerProfileType profileType = mock(TriggerProfileType.class);
         when(profileType.getUID()).thenReturn(profileTypeUID);
-        when(profileType.getSupportedChannelTypeUIDs()).thenReturn(Lists.newArrayList(uid));
-        when(profileType.getSupportedItemTypes()).thenReturn(Lists.newArrayList("Switch", "Dimmer"));
+        when(profileType.getSupportedChannelTypeUIDs()).thenReturn(Collections.singletonList(uid));
+        when(profileType.getSupportedItemTypes()).thenReturn(Arrays.asList("Switch", "Dimmer"));
 
-        when(profileTypeRegistry.getProfileTypes()).thenReturn(Lists.newArrayList(profileType));
+        when(profileTypeRegistry.getProfileTypes()).thenReturn(Collections.singletonList(profileType));
 
         Response response = channelTypeResource.getLinkableItemTypes(uid.getAsString());
 

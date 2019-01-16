@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -44,6 +44,17 @@ public class StringListTypeTest {
         assertEquals("value,with,foo", call4.getValue(3));
         assertEquals(",,foo", call4.getValue(5));
         assertEquals(serialized, call4.toString());
+    }
+
+    @Test
+    public void testWithEmptyConstituents() {
+        StringListType call1 = new StringListType(",0699222222");
+        assertEquals("", call1.getValue(0));
+        assertEquals("0699222222", call1.getValue(1));
+
+        StringListType call2 = new StringListType("0699222222,");
+        assertEquals("0699222222", call2.getValue(0));
+        assertEquals("", call2.getValue(1));
     }
 
     @Test

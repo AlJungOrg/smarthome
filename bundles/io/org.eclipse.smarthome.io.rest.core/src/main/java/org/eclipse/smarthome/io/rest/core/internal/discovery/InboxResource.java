@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -44,6 +44,8 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -58,7 +60,7 @@ import io.swagger.annotations.ApiResponses;
  * @author Dennis Nobel - Initial contribution
  * @author Kai Kreuzer - refactored for using the OSGi JAX-RS connector and removed ThingSetupManager
  * @author Yordan Zhelev - Added Swagger annotations
- * @author Chris Jackson - Updated to use JSONResponse. Fixed null response from approve.
+ * @author Chris Jackson - Updated to use JSONResponse. Fixed null response from approve. Improved error reporting.
  * @author Franck Dechavanne - Added DTOs to ApiResponses
  */
 @Path(InboxResource.PATH_INBOX)
@@ -66,6 +68,7 @@ import io.swagger.annotations.ApiResponses;
 @Api(value = InboxResource.PATH_INBOX)
 @Component(service = { RESTResource.class, InboxResource.class })
 public class InboxResource implements RESTResource {
+    private final Logger logger = LoggerFactory.getLogger(InboxResource.class);
 
     /** The URI path to this resource */
     public static final String PATH_INBOX = "inbox";
@@ -89,7 +92,7 @@ public class InboxResource implements RESTResource {
     @Consumes(MediaType.TEXT_PLAIN)
     @ApiOperation(value = "Approves the discovery result by adding the thing to the registry.")
     @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
-            @ApiResponse(code = 404, message = "Thing not found in the inbox."),
+            @ApiResponse(code = 404, message = "Thing unable to be approved."),
             @ApiResponse(code = 409, message = "No binding found that supports this thing.") })
     public Response approve(@HeaderParam(HttpHeaders.ACCEPT_LANGUAGE) @ApiParam(value = "language") String language,
             @PathParam("thingUID") @ApiParam(value = "thingUID", required = true) String thingUID,
@@ -100,7 +103,8 @@ public class InboxResource implements RESTResource {
         try {
             thing = inbox.approve(thingUIDObject, notEmptyLabel);
         } catch (IllegalArgumentException e) {
-            return JSONResponse.createErrorResponse(Status.NOT_FOUND, "Thing not found in inbox");
+            logger.error("Thing {} unable to be approved: {}", thingUID, e.getLocalizedMessage());
+            return JSONResponse.createErrorResponse(Status.NOT_FOUND, "Thing unable to be approved.");
         }
 
         // inbox.approve returns null if no handler is found that supports this thing
@@ -108,7 +112,7 @@ public class InboxResource implements RESTResource {
             return JSONResponse.createErrorResponse(Status.CONFLICT, "No binding found that can create the thing");
         }
 
-        return Response.ok().build();
+        return Response.ok(null, MediaType.TEXT_PLAIN).build();
     }
 
     @DELETE
@@ -118,7 +122,7 @@ public class InboxResource implements RESTResource {
             @ApiResponse(code = 404, message = "Discovery result not found in the inbox.") })
     public Response delete(@PathParam("thingUID") @ApiParam(value = "thingUID", required = true) String thingUID) {
         if (inbox.remove(new ThingUID(thingUID))) {
-            return Response.ok().build();
+            return Response.ok(null, MediaType.TEXT_PLAIN).build();
         } else {
             return JSONResponse.createErrorResponse(Status.NOT_FOUND, "Thing not found in inbox");
         }
@@ -139,7 +143,7 @@ public class InboxResource implements RESTResource {
     @ApiResponses(value = { @ApiResponse(code = 200, message = "OK") })
     public Response ignore(@PathParam("thingUID") @ApiParam(value = "thingUID", required = true) String thingUID) {
         inbox.setFlag(new ThingUID(thingUID), DiscoveryResultFlag.IGNORED);
-        return Response.ok().build();
+        return Response.ok(null, MediaType.TEXT_PLAIN).build();
     }
 
     @POST
@@ -148,7 +152,7 @@ public class InboxResource implements RESTResource {
     @ApiResponses(value = { @ApiResponse(code = 200, message = "OK") })
     public Response unignore(@PathParam("thingUID") @ApiParam(value = "thingUID", required = true) String thingUID) {
         inbox.setFlag(new ThingUID(thingUID), DiscoveryResultFlag.NEW);
-        return Response.ok().build();
+        return Response.ok(null, MediaType.TEXT_PLAIN).build();
     }
 
     @Override

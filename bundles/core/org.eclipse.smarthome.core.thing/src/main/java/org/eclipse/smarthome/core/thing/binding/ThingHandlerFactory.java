@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -49,9 +49,7 @@ public interface ThingHandlerFactory {
      * <p>
      *
      * @param thing the thing for which a new handler must be registered
-     *
      * @return the created thing handler instance, not null
-     *
      * @throws IllegalStateException if the handler instance could not be created
      */
     ThingHandler registerHandler(Thing thing);
@@ -73,7 +71,6 @@ public interface ThingHandlerFactory {
      * @param configuration configuration
      * @param thingUID thing uid, which can be null
      * @param bridgeUID bridge uid, which can be null
-     *
      * @return created thing
      */
     @Nullable

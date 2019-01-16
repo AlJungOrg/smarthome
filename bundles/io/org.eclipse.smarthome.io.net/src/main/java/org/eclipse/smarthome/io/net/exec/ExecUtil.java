@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
  * @author Kai Kreuzer - added exception logging
  */
 public class ExecUtil {
-
+    private static Logger logger = LoggerFactory.getLogger(ExecUtil.class);
     /**
      * Use this to separate between command and parameter, and also between parameters.
      */
@@ -50,12 +50,10 @@ public class ExecUtil {
      * <p>
      * A possible {@link IOException} gets logged but no further processing is done.
      *
-     * @param commandLine
-     *            the command line to execute
+     * @param commandLine the command line to execute
      * @see http://www.peterfriese.de/running-applescript-from-java/
      */
     public static void executeCommandLine(String commandLine) {
-        Logger logger = LoggerFactory.getLogger(ExecUtil.class);
         try {
             if (commandLine.contains(CMD_LINE_DELIMITER)) {
                 String[] cmdArray = commandLine.split(CMD_LINE_DELIMITER);
@@ -80,10 +78,8 @@ public class ExecUtil {
      * <p>
      * A possible {@link IOException} gets logged but no further processing is done.
      *
-     * @param commandLine
-     *            the command line to execute
-     * @param timeout
-     *            timeout for execution in milliseconds
+     * @param commandLine the command line to execute
+     * @param timeout timeout for execution in milliseconds
      * @return response data from executed command line
      */
     public static String executeCommandLineAndWaitResponse(String commandLine, int timeout) {
@@ -114,7 +110,6 @@ public class ExecUtil {
         executor.setStreamHandler(streamHandler);
         executor.setWatchdog(watchdog);
 
-        Logger logger = LoggerFactory.getLogger(ExecUtil.class);
         try {
             executor.execute(cmdLine, resultHandler);
             logger.debug("executed commandLine '{}'", commandLine);

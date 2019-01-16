@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,8 +21,8 @@ package org.eclipse.smarthome.binding.weatherunderground.internal.config;
 public class WeatherUndergroundConfiguration {
 
     public static final String LOCATION = "location";
+    public static final String LANGUAGE = "language";
 
-    public String apikey;
     public String location;
     public String language;
     public Integer refresh;

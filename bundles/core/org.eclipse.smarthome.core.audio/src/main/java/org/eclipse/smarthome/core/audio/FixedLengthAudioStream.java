@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,7 +21,7 @@ import java.io.InputStream;
  * @author Kai Kreuzer - Initial contribution and API
  *
  */
-abstract public class FixedLengthAudioStream extends AudioStream {
+public abstract class FixedLengthAudioStream extends AudioStream {
 
     /**
      * Provides the length of the stream in bytes.

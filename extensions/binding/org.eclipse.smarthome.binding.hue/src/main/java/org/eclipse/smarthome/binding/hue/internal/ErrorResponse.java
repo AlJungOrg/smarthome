@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,7 +23,7 @@ import com.google.gson.reflect.TypeToken;
  * @author Denis Dudnik - moved Jue library source code inside the smarthome Hue binding
  */
 class ErrorResponse {
-    public final static Type gsonType = new TypeToken<List<ErrorResponse>>() {
+    public static final Type GSON_TYPE = new TypeToken<List<ErrorResponse>>() {
     }.getType();
 
     public class Error {
@@ -35,14 +35,23 @@ class ErrorResponse {
     private Error error;
 
     public Integer getType() {
+        if (error == null) {
+            return null;
+        }
         return error.type;
     }
 
     public String getAddress() {
+        if (error == null) {
+            return null;
+        }
         return error.address;
     }
 
     public String getDescription() {
+        if (error == null) {
+            return null;
+        }
         return error.description;
     }
 }

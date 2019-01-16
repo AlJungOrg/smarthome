@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -132,7 +132,7 @@ public class AudioPlayer extends Thread {
         }
         final int sampleSizeInBits = bitDepth.intValue();
 
-        final int channels = 1; // TODO: Is this always true?
+        final int channels = 1;
 
         final int frameSize = sampleSizeInBits / 8;
 

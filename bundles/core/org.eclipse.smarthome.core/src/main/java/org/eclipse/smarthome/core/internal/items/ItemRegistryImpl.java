@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,14 +16,13 @@ import static java.util.stream.Collectors.toList;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.eclipse.smarthome.core.common.registry.AbstractRegistry;
 import org.eclipse.smarthome.core.common.registry.Provider;
 import org.eclipse.smarthome.core.events.EventPublisher;
+import org.eclipse.smarthome.core.i18n.UnitProvider;
 import org.eclipse.smarthome.core.items.GenericItem;
 import org.eclipse.smarthome.core.items.GroupItem;
 import org.eclipse.smarthome.core.items.Item;
@@ -31,16 +30,21 @@ import org.eclipse.smarthome.core.items.ItemNotFoundException;
 import org.eclipse.smarthome.core.items.ItemNotUniqueException;
 import org.eclipse.smarthome.core.items.ItemProvider;
 import org.eclipse.smarthome.core.items.ItemRegistry;
+import org.eclipse.smarthome.core.items.ItemStateConverter;
 import org.eclipse.smarthome.core.items.ItemUtil;
 import org.eclipse.smarthome.core.items.ManagedItemProvider;
+import org.eclipse.smarthome.core.items.MetadataRegistry;
 import org.eclipse.smarthome.core.items.RegistryHook;
 import org.eclipse.smarthome.core.items.events.ItemEventFactory;
-import org.eclipse.smarthome.core.types.StateDescriptionProvider;
+import org.eclipse.smarthome.core.service.StateDescriptionService;
 import org.osgi.service.component.ComponentContext;
+import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This is the main implementing class of the {@link ItemRegistry} interface. It
@@ -55,9 +59,14 @@ import org.osgi.service.component.annotations.ReferencePolicy;
 @Component(immediate = true)
 public class ItemRegistryImpl extends AbstractRegistry<Item, String, ItemProvider> implements ItemRegistry {
 
-    private final List<StateDescriptionProvider> stateDescriptionProviders = Collections
-            .synchronizedList(new ArrayList<StateDescriptionProvider>());
+    private final Logger logger = LoggerFactory.getLogger(ItemRegistryImpl.class);
+
     private final List<RegistryHook<Item>> registryHooks = new CopyOnWriteArrayList<>();
+    private StateDescriptionService stateDescriptionService;
+    private MetadataRegistry metadataRegistry;
+
+    private UnitProvider unitProvider;
+    private ItemStateConverter itemStateConverter;
 
     public ItemRegistryImpl() {
         super(ItemProvider.class);
@@ -181,16 +190,10 @@ public class ItemRegistryImpl extends AbstractRegistry<Item, String, ItemProvide
     private void injectServices(Item item) {
         if (item instanceof GenericItem) {
             GenericItem genericItem = (GenericItem) item;
-            genericItem.setEventPublisher(eventPublisher);
-            genericItem.setStateDescriptionProviders(stateDescriptionProviders);
-        }
-    }
-
-    private void clearServices(Item item) {
-        if (item instanceof GenericItem) {
-            GenericItem genericItem = (GenericItem) item;
-            genericItem.setEventPublisher(null);
-            genericItem.setStateDescriptionProviders(null);
+            genericItem.setEventPublisher(getEventPublisher());
+            genericItem.setStateDescriptionService(stateDescriptionService);
+            genericItem.setUnitProvider(unitProvider);
+            genericItem.setItemStateConverter(itemStateConverter);
         }
     }
 
@@ -224,15 +227,22 @@ public class ItemRegistryImpl extends AbstractRegistry<Item, String, ItemProvide
 
     @Override
     protected void onRemoveElement(Item element) {
-        clearServices(element);
+        if (element instanceof GenericItem) {
+            ((GenericItem) element).dispose();
+        }
         removeFromGroupItems(element, element.getGroupNames());
     }
 
     @Override
-    protected void onUpdateElement(Item oldItem, Item item) {
-        clearServices(oldItem);
-        injectServices(item);
+    protected void beforeUpdateElement(Item existingElement) {
+        if (existingElement instanceof GenericItem) {
+            ((GenericItem) existingElement).dispose();
+        }
+    }
 
+    @Override
+    protected void onUpdateElement(Item oldItem, Item item) {
+        // don't use #initialize and retain order of items in groups:
         List<String> oldNames = oldItem.getGroupNames();
         List<String> newNames = item.getGroupNames();
         List<String> commonNames = oldNames.stream().filter(name -> newNames.contains(name)).collect(toList());
@@ -243,6 +253,7 @@ public class ItemRegistryImpl extends AbstractRegistry<Item, String, ItemProvide
         if (item instanceof GroupItem) {
             addMembersToGroupItem((GroupItem) item);
         }
+        injectServices(item);
     }
 
     @Override
@@ -259,6 +270,36 @@ public class ItemRegistryImpl extends AbstractRegistry<Item, String, ItemProvide
         super.unsetEventPublisher(eventPublisher);
         for (Item item : getItems()) {
             ((GenericItem) item).setEventPublisher(null);
+        }
+    }
+
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
+    protected void setUnitProvider(UnitProvider unitProvider) {
+        this.unitProvider = unitProvider;
+        for (Item item : getItems()) {
+            ((GenericItem) item).setUnitProvider(unitProvider);
+        }
+    }
+
+    protected void unsetUnitProvider(UnitProvider unitProvider) {
+        this.unitProvider = null;
+        for (Item item : getItems()) {
+            ((GenericItem) item).setUnitProvider(null);
+        }
+    }
+
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
+    protected void setItemStateConverter(ItemStateConverter itemStateConverter) {
+        this.itemStateConverter = itemStateConverter;
+        for (Item item : getItems()) {
+            ((GenericItem) item).setItemStateConverter(itemStateConverter);
+        }
+    }
+
+    protected void unsetItemStateConverter(ItemStateConverter itemStateConverter) {
+        this.itemStateConverter = null;
+        for (Item item : getItems()) {
+            ((GenericItem) item).setItemStateConverter(null);
         }
     }
 
@@ -284,7 +325,7 @@ public class ItemRegistryImpl extends AbstractRegistry<Item, String, ItemProvide
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T extends GenericItem> Collection<T> getItemsByTag(Class<T> typeFilter, String... tags) {
+    public <T extends Item> Collection<T> getItemsByTag(Class<T> typeFilter, String... tags) {
         Collection<T> filteredItems = new ArrayList<T>();
 
         Collection<Item> items = getItemsByTag(tags);
@@ -309,11 +350,9 @@ public class ItemRegistryImpl extends AbstractRegistry<Item, String, ItemProvide
 
     @Override
     public Item remove(String itemName, boolean recursive) {
-        if (this.managedProvider != null) {
-            return ((ManagedItemProvider) this.managedProvider).remove(itemName, recursive);
-        } else {
-            throw new IllegalStateException("ManagedProvider is not available");
-        }
+        return ((ManagedItemProvider) getManagedProvider()
+                .orElseThrow(() -> new IllegalStateException("ManagedProvider is not available"))).remove(itemName,
+                        recursive);
     }
 
     @Override
@@ -358,6 +397,11 @@ public class ItemRegistryImpl extends AbstractRegistry<Item, String, ItemProvide
         for (RegistryHook<Item> registryHook : registryHooks) {
             registryHook.afterRemoving(element);
         }
+        if (provider instanceof ManagedItemProvider) {
+            // remove our metadata for that item
+            logger.debug("Item {} was removed, trying to clean up corresponding metadata", element.getUID());
+            metadataRegistry.removeItemMetadata(element.getName());
+        }
     }
 
     @Override
@@ -380,6 +424,7 @@ public class ItemRegistryImpl extends AbstractRegistry<Item, String, ItemProvide
         registryHooks.remove(hook);
     }
 
+    @Activate
     protected void activate(final ComponentContext componentContext) {
         super.activate(componentContext.getBundleContext());
     }
@@ -389,29 +434,20 @@ public class ItemRegistryImpl extends AbstractRegistry<Item, String, ItemProvide
         super.deactivate();
     }
 
-    @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
-    protected void addStateDescriptionProvider(StateDescriptionProvider provider) {
-        synchronized (stateDescriptionProviders) {
-            stateDescriptionProviders.add(provider);
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
+    protected void setStateDescriptionService(StateDescriptionService stateDescriptionService) {
+        this.stateDescriptionService = stateDescriptionService;
 
-            Collections.sort(stateDescriptionProviders, new Comparator<StateDescriptionProvider>() {
-                // sort providers by service ranking in a descending order
-                @Override
-                public int compare(StateDescriptionProvider provider1, StateDescriptionProvider provider2) {
-                    return provider2.getRank().compareTo(provider1.getRank());
-                }
-            });
-
-            for (Item item : getItems()) {
-                ((GenericItem) item).setStateDescriptionProviders(stateDescriptionProviders);
-            }
+        for (Item item : getItems()) {
+            ((GenericItem) item).setStateDescriptionService(stateDescriptionService);
         }
     }
 
-    protected void removeStateDescriptionProvider(StateDescriptionProvider provider) {
-        stateDescriptionProviders.remove(provider);
+    protected void unsetStateDescriptionService(StateDescriptionService stateDescriptionService) {
+        this.stateDescriptionService = null;
+
         for (Item item : getItems()) {
-            ((GenericItem) item).setStateDescriptionProviders(stateDescriptionProviders);
+            ((GenericItem) item).setStateDescriptionService(null);
         }
     }
 
@@ -422,6 +458,15 @@ public class ItemRegistryImpl extends AbstractRegistry<Item, String, ItemProvide
 
     protected void unsetManagedProvider(ManagedItemProvider provider) {
         super.unsetManagedProvider(provider);
+    }
+
+    @Reference
+    protected void setMetadataRegistry(MetadataRegistry metadataRegistry) {
+        this.metadataRegistry = metadataRegistry;
+    }
+
+    protected void unsetMetadataRegistry(MetadataRegistry metadataRegistry) {
+        this.metadataRegistry = null;
     }
 
 }

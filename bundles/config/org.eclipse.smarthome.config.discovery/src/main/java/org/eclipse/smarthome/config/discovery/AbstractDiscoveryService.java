@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,6 +16,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
@@ -57,8 +58,7 @@ public abstract class AbstractDiscoveryService implements DiscoveryService {
 
     private final Logger logger = LoggerFactory.getLogger(AbstractDiscoveryService.class);
 
-    static protected final ScheduledExecutorService scheduler = ThreadPoolManager
-            .getScheduledPool(DISCOVERY_THREADPOOL_NAME);
+    protected final ScheduledExecutorService scheduler = ThreadPoolManager.getScheduledPool(DISCOVERY_THREADPOOL_NAME);
 
     private final Set<DiscoveryListener> discoveryListeners = new CopyOnWriteArraySet<>();
     protected @Nullable ScanListener scanListener = null;
@@ -67,8 +67,8 @@ public abstract class AbstractDiscoveryService implements DiscoveryService {
 
     private final Map<ThingUID, DiscoveryResult> cachedResults = new HashMap<>();
 
-    final private Set<ThingTypeUID> supportedThingTypes;
-    final private int timeout;
+    private final Set<ThingTypeUID> supportedThingTypes;
+    private final int timeout;
 
     private long timestampOfLastScan = 0L;
 
@@ -82,28 +82,19 @@ public abstract class AbstractDiscoveryService implements DiscoveryService {
     /**
      * Creates a new instance of this class with the specified parameters.
      *
-     * @param supportedThingTypes
-     *            the list of Thing types which are supported (can be null)
-     *
-     * @param timeout
-     *            the discovery timeout in seconds after which the discovery
-     *            service automatically stops its forced discovery process (>=
-     *            0).
-     *
-     * @param backgroundDiscoveryEnabledByDefault
-     *            defines, whether the default for this discovery service is to
+     * @param supportedThingTypes the list of Thing types which are supported (can be null)
+     * @param timeout the discovery timeout in seconds after which the discovery
+     *            service automatically stops its forced discovery process (>= 0).
+     * @param backgroundDiscoveryEnabledByDefault defines, whether the default for this discovery service is to
      *            enable background discovery or not.
-     *
-     * @throws IllegalArgumentException
-     *             if the timeout < 0
+     * @throws IllegalArgumentException if the timeout < 0
      */
     public AbstractDiscoveryService(@Nullable Set<ThingTypeUID> supportedThingTypes, int timeout,
             boolean backgroundDiscoveryEnabledByDefault) throws IllegalArgumentException {
-
         if (supportedThingTypes == null) {
             this.supportedThingTypes = Collections.emptySet();
         } else {
-            this.supportedThingTypes = supportedThingTypes;
+            this.supportedThingTypes = Collections.unmodifiableSet(new HashSet<>(supportedThingTypes));
         }
 
         if (timeout < 0) {
@@ -116,13 +107,12 @@ public abstract class AbstractDiscoveryService implements DiscoveryService {
     }
 
     /**
-     * Creates a new instance of this class with the specified parameters.
+     * Creates a new instance of this class with the specified parameters and background discovery enabled.
      *
      * @param supportedThingTypes the list of Thing types which are supported (can be null)
-     *
      * @param timeout the discovery timeout in seconds after which the discovery service
      *            automatically stops its forced discovery process (>= 0).
-     *
+     *            If set to 0, disables the automatic stop.
      * @throws IllegalArgumentException if the timeout < 0
      */
     public AbstractDiscoveryService(@Nullable Set<ThingTypeUID> supportedThingTypes, int timeout)
@@ -131,11 +121,11 @@ public abstract class AbstractDiscoveryService implements DiscoveryService {
     }
 
     /**
-     * Creates a new instance of this class with the specified parameters.
+     * Creates a new instance of this class with the specified parameters and background discovery enabled.
      *
      * @param timeout the discovery timeout in seconds after which the discovery service
      *            automatically stops its forced discovery process (>= 0).
-     *
+     *            If set to 0, disables the automatic stop.
      * @throws IllegalArgumentException if the timeout < 0
      */
     public AbstractDiscoveryService(int timeout) throws IllegalArgumentException {
@@ -190,7 +180,6 @@ public abstract class AbstractDiscoveryService implements DiscoveryService {
     @Override
     public synchronized void startScan(@Nullable ScanListener listener) {
         synchronized (this) {
-
             // we first stop any currently running scan and its scheduled stop
             // call
             stopScan();
@@ -253,7 +242,7 @@ public abstract class AbstractDiscoveryService implements DiscoveryService {
      * The abstract class schedules a call of {@link #stopScan()} after {@link #getScanTimeout()} seconds. If this
      * behavior is not appropriate, the {@link #startScan(ScanListener))} method should be overridden.
      */
-    abstract protected void startScan();
+    protected abstract void startScan();
 
     /**
      * This method cleans up after a scan, i.e. it removes listeners and other required operations.
@@ -268,42 +257,42 @@ public abstract class AbstractDiscoveryService implements DiscoveryService {
     /**
      * Notifies the registered {@link DiscoveryListener}s about a discovered device.
      *
-     * @param discoveryResult
-     *            Holds the information needed to identify the discovered device.
+     * @param discoveryResult Holds the information needed to identify the discovered device.
      */
-    protected void thingDiscovered(DiscoveryResult discoveryResult) {
+    protected void thingDiscovered(final DiscoveryResult discoveryResult) {
+        final DiscoveryResult discoveryResultNew;
         if (this.i18nProvider != null && this.localeProvider != null) {
             Bundle bundle = FrameworkUtil.getBundle(this.getClass());
 
             String defaultLabel = discoveryResult.getLabel();
 
-            String key = I18nUtil.isConstant(defaultLabel) ? I18nUtil.stripConstant(defaultLabel)
-                    : inferKey(discoveryResult, "label");
+            String key = I18nUtil.stripConstantOr(defaultLabel, () -> inferKey(discoveryResult, "label"));
 
             String label = this.i18nProvider.getText(bundle, key, defaultLabel, this.localeProvider.getLocale());
 
-            discoveryResult = new DiscoveryResultImpl(discoveryResult.getThingTypeUID(), discoveryResult.getThingUID(),
-                    discoveryResult.getBridgeUID(), discoveryResult.getProperties(),
+            discoveryResultNew = new DiscoveryResultImpl(discoveryResult.getThingTypeUID(),
+                    discoveryResult.getThingUID(), discoveryResult.getBridgeUID(), discoveryResult.getProperties(),
                     discoveryResult.getRepresentationProperty(), label, discoveryResult.getTimeToLive());
+        } else {
+            discoveryResultNew = discoveryResult;
         }
         for (DiscoveryListener discoveryListener : discoveryListeners) {
             try {
-                discoveryListener.thingDiscovered(this, discoveryResult);
+                discoveryListener.thingDiscovered(this, discoveryResultNew);
             } catch (Exception e) {
                 logger.error("An error occurred while calling the discovery listener {}.",
                         discoveryListener.getClass().getName(), e);
             }
         }
         synchronized (cachedResults) {
-            cachedResults.put(discoveryResult.getThingUID(), discoveryResult);
+            cachedResults.put(discoveryResultNew.getThingUID(), discoveryResultNew);
         }
     }
 
     /**
      * Notifies the registered {@link DiscoveryListener}s about a removed device.
      *
-     * @param thingUID
-     *            The UID of the removed thing.
+     * @param thingUID The UID of the removed thing.
      */
     protected void thingRemoved(ThingUID thingUID) {
         for (DiscoveryListener discoveryListener : discoveryListeners) {
@@ -325,8 +314,7 @@ public abstract class AbstractDiscoveryService implements DiscoveryService {
      * full scan, this method could be called {@link #getTimestampOfLastScan()}
      * as timestamp.
      *
-     * @param timestamp
-     *            timestamp, older results will be removed
+     * @param timestamp timestamp, older results will be removed
      */
     protected void removeOlderResults(long timestamp) {
         removeOlderResults(timestamp, null, null);
@@ -338,10 +326,8 @@ public abstract class AbstractDiscoveryService implements DiscoveryService {
      * full scan, this method could be called {@link #getTimestampOfLastScan()}
      * as timestamp.
      *
-     * @param timestamp
-     *            timestamp, older results will be removed
-     * @param bridgeUID
-     *            if not {@code null} only results of that bridge are being removed
+     * @param timestamp timestamp, older results will be removed
+     * @param bridgeUID if not {@code null} only results of that bridge are being removed
      */
     protected void removeOlderResults(long timestamp, @Nullable ThingUID bridgeUID) {
         removeOlderResults(timestamp, null, bridgeUID);
@@ -352,15 +338,12 @@ public abstract class AbstractDiscoveryService implements DiscoveryService {
      * given timestamp. To remove all left over results after a full scan, this
      * method could be called {@link #getTimestampOfLastScan()} as timestamp.
      *
-     * @param timestamp
-     *            timestamp, older results will be removed
-     * @param thingTypeUIDs
-     *            collection of {@code ThingType}s, only results of these
+     * @param timestamp timestamp, older results will be removed
+     * @param thingTypeUIDs collection of {@code ThingType}s, only results of these
      *            {@code ThingType}s will be removed; if {@code null} then
      *            {@link DiscoveryService#getSupportedThingTypes()} will be used
      *            instead
-     * @param bridgeUID
-     *            if not {@code null} only results of that bridge are being removed
+     * @param bridgeUID if not {@code null} only results of that bridge are being removed
      */
     protected void removeOlderResults(long timestamp, @Nullable Collection<ThingTypeUID> thingTypeUIDs,
             @Nullable ThingUID bridgeUID) {
@@ -413,8 +396,7 @@ public abstract class AbstractDiscoveryService implements DiscoveryService {
      * enabled, the method {@link AbstractDiscoveryService#stopBackgroundDiscovery()} is called. In
      * all other cases, nothing happens.
      *
-     * @param configProperties
-     *            configuration properties
+     * @param configProperties configuration properties
      */
     protected void modified(@Nullable Map<String, @Nullable Object> configProperties) {
         if (configProperties != null) {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -92,8 +92,6 @@ public class WelcomeHomeCommands extends AbstractConsoleCommandExtension {
             activate(params, console);
         } else if (COMMAND_ACTIVATE_L.equalsIgnoreCase(command) || COMMAND_ACTIVATE_L_SHORT.equalsIgnoreCase(command)) {
             activateLights(params, console);
-        } else {
-
         }
     }
 
@@ -144,7 +142,6 @@ public class WelcomeHomeCommands extends AbstractConsoleCommandExtension {
      *            provides the output of the command.
      */
     private void activate(String[] params, Console console) {
-
         // parsing command parameter values
         if (params.length < 2) {
             console.println("Missing required parameters");

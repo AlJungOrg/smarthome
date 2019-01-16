@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -51,7 +51,7 @@ public class ReadyServiceImpl implements ReadyService {
             boolean isNew = markers.add(readyMarker);
             if (isNew) {
                 notifyTrackers(readyMarker, tracker -> tracker.onReadyMarkerAdded(readyMarker));
-                logger.debug("Added ready marker {}", readyMarker);
+                logger.trace("Added ready marker {}", readyMarker);
             }
         } finally {
             rwlTrackers.readLock().unlock();
@@ -65,7 +65,7 @@ public class ReadyServiceImpl implements ReadyService {
             boolean isRemoved = markers.remove(readyMarker);
             if (isRemoved) {
                 notifyTrackers(readyMarker, tracker -> tracker.onReadyMarkerRemoved(readyMarker));
-                logger.debug("Removed ready marker {}", readyMarker);
+                logger.trace("Removed ready marker {}", readyMarker);
             }
         } finally {
             rwlTrackers.readLock().unlock();
@@ -98,6 +98,8 @@ public class ReadyServiceImpl implements ReadyService {
                 trackers.put(readyTracker, filter);
                 notifyTracker(readyTracker, marker -> readyTracker.onReadyMarkerAdded(marker));
             }
+        } catch (RuntimeException e) {
+            logger.error("Registering tracker '" + readyTracker + "' failed!", e);
         } finally {
             rwlTrackers.writeLock().unlock();
         }

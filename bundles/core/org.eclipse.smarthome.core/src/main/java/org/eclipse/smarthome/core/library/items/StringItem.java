@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,7 +16,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.eclipse.jdt.annotation.NonNull;
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.core.items.GenericItem;
 import org.eclipse.smarthome.core.library.CoreItemFactory;
 import org.eclipse.smarthome.core.library.types.DateTimeType;
@@ -34,6 +35,7 @@ import org.eclipse.smarthome.core.types.UnDefType;
  * @author Kai Kreuzer - Initial contribution and API
  *
  */
+@NonNullByDefault
 public class StringItem extends GenericItem {
 
     private static List<Class<? extends State>> acceptedDataTypes = new ArrayList<Class<? extends State>>();
@@ -48,7 +50,7 @@ public class StringItem extends GenericItem {
         acceptedCommandTypes.add(StringType.class);
     }
 
-    public StringItem(@NonNull String name) {
+    public StringItem(String name) {
         super(CoreItemFactory.STRING, name);
     }
 
@@ -67,12 +69,12 @@ public class StringItem extends GenericItem {
     }
 
     @Override
-    public State getStateAs(Class<? extends State> typeClass) {
+    public <T extends State> @Nullable T getStateAs(Class<T> typeClass) {
         ArrayList<Class<? extends State>> list = new ArrayList<Class<? extends State>>();
         list.add(typeClass);
         State convertedState = TypeParser.parseState(list, state.toString());
-        if (convertedState != null) {
-            return convertedState;
+        if (typeClass.isInstance(convertedState)) {
+            return typeClass.cast(convertedState);
         } else {
             return super.getStateAs(typeClass);
         }

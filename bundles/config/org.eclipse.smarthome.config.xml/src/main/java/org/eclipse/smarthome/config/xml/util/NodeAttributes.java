@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -37,11 +37,9 @@ public class NodeAttributes implements NodeName {
      * @param nodeName the name of the node this object belongs to (must neither be null, nor empty)
      * @param attributes the map of all attributes of the node this object belongs to
      *            by key-value pairs (could be null or empty)
-     *
      * @throws IllegalArgumentException if the name of the node is null or empty
      */
     public NodeAttributes(String nodeName, Map<String, String> attributes) throws IllegalArgumentException {
-
         if ((nodeName == null) || (nodeName.isEmpty())) {
             throw new IllegalArgumentException("The name of the node must neither be null nor empty!");
         }

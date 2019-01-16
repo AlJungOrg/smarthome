@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,15 +13,20 @@
 package org.eclipse.smarthome.core.library;
 
 import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.Assert.assertThat;
 
 import java.util.Arrays;
 import java.util.List;
 
+import javax.measure.quantity.Temperature;
+
 import org.eclipse.smarthome.core.items.GenericItem;
+import org.eclipse.smarthome.core.library.items.NumberItem;
 import org.junit.Before;
 import org.junit.Test;
 
+@SuppressWarnings("null")
 public class CoreItemFactoryTest {
 
     private CoreItemFactory coreItemFactory;
@@ -42,6 +47,14 @@ public class CoreItemFactoryTest {
             assertThat(item.getType(), is(itemTypeName));
             assertThat(item.getName(), is(itemTypeName.toLowerCase()));
         }
+    }
+
+    @Test
+    public void createNumberItemWithDimension() {
+        NumberItem numberItem = (NumberItem) coreItemFactory.createItem(CoreItemFactory.NUMBER + ":Temperature",
+                "myNumberItem");
+
+        assertThat(numberItem.getDimension(), equalTo(Temperature.class));
     }
 
     @Test

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,6 +11,9 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 package org.eclipse.smarthome.core.transform;
+
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 
 /**
  * A TransformationProcessor transforms a given input and returns the transformed
@@ -27,26 +30,24 @@ package org.eclipse.smarthome.core.transform;
  * @author Kai Kreuzer - Initial contribution and API
  *
  */
+@NonNullByDefault
 public interface TransformationService {
-    
-    
+
     public static final String TRANSFORM_FOLDER_NAME = "transform";
+    public static final String TRANSFORM_PROFILE_SCOPE = "transform";
 
     /**
      * Transforms the input <code>source</code> by means of the given <code>function</code> and returns the transformed
-     * output. If the transformation couldn't be completed
-     * for any reason, one should return the unchanged <code>source</code>. This
-     * method should never return <code>null</code>. In case of any error an {@link TransformationException} should be
-     * thrown.
-     * 
+     * output. The transformation may return <code>null</code> to express its operation resulted in a <code>null</code>
+     * output. In case of any error an {@link TransformationException} should be thrown.
+     *
      * @param function the function to be used to transform the input
      * @param source the input to be transformed
-     * 
-     * @return the transformed result or the unchanged <code>source</code> if the
-     *         transformation couldn't be completed for any reason.
-     * 
+     * @return the transformed result or <code>null</code> if the
+     *         transformation's output is <code>null</code>.
      * @throws TransformationException if any error occurs
      */
+    @Nullable
     String transform(String function, String source) throws TransformationException;
 
 }

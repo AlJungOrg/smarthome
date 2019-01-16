@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,19 +16,16 @@ import java.util.Set;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
-import org.eclipse.smarthome.automation.Rule;
 import org.eclipse.smarthome.automation.Visibility;
 import org.eclipse.smarthome.core.common.registry.Identifiable;
 
 /**
- * The templates define types of shared, ready to use rule definitions, which
- * can be instantiated and configured to produce {@link Rule} instances . Each
- * Template has a unique id (UID).
+ * The templates define types of shared, ready to use definitions of automation objects, which
+ * can be instantiated and configured to produce automation instances. Each Template has a unique identifier (UID).
  * <p>
- * The {@link Template}s can be used by any creator of Rules, but they can be modified only by its owner. The template
- * modification is done by updating the {@link Template} through {@link TemplateRegistry}
+ * The {@link Template}s can be used by any creator of automation objects, but they can be modified only by its owner.
  * <p>
- * Templates can have <code>tags</code> - non-hierarchical keywords or terms for describing them.
+ * Templates can have {@code tags} - non-hierarchical keywords or terms for describing them.
  *
  * @author Yordan Mihaylov - Initial Contribution
  * @author Ana Dimova - Initial Contribution
@@ -38,46 +35,41 @@ import org.eclipse.smarthome.core.common.registry.Identifiable;
 public interface Template extends Identifiable<String> {
 
     /**
-     * This method is used for getting the type of Template. It is unique in scope
-     * of RuleEngine.
+     * Gets the unique identifier (UID) of a Template.
      *
-     * @return the unique id of Template.
+     * @return the identifier of the Template.
      */
     @Override
     public String getUID();
 
     /**
-     * Templates can have
-     * <ul>
-     * <li><code>tags</code> - non-hierarchical keywords or terms for describing them. The tags are
-     * used to filter the templates. This method is used for getting the assign tags to this Template.</li>
-     * </ul>
+     * Gets the assigned tags to a Template. The templates can have {@code tags} - non-hierarchical keywords or terms
+     * for describing them. The tags are used to filter the templates.
      *
-     * @return tags of the template
+     * @return the tags assigned to the template.
      */
     public Set<String> getTags();
 
     /**
-     * This method is used for getting the label of the Template. The label is a
-     * short, user friendly name of the Template defined by this descriptor.
+     * Gets the label of a Template. The label is a short, human-readable description of the Template defined by its
+     * creator.
      *
      * @return the label of the Template.
      */
     public @Nullable String getLabel();
 
     /**
-     * This method is used for getting the description of the Template. The
-     * description is a long, user friendly description of the Template defined by
-     * this descriptor.
+     * Gets the description of a Template. The description is a detailed, human-understandable description of the
+     * purpose of a Template, defined by its creator.
      *
      * @return the description of the Template.
      */
     public @Nullable String getDescription();
 
     /**
-     * This method is used to show visibility of the template
+     * Shows the visibility of a Template.
      *
-     * @return visibility of template
+     * @return the visibility of the Template.
      */
     public Visibility getVisibility();
 

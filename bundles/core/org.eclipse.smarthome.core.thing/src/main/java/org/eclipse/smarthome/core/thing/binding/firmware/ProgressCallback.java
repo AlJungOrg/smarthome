@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,26 +12,29 @@
  */
 package org.eclipse.smarthome.core.thing.binding.firmware;
 
+import org.eclipse.jdt.annotation.NonNullByDefault;
+
 /**
  * The {@link ProgressCallback} is injected into the
  * {@link FirmwareUpdateHandler#updateFirmware(Firmware, ProgressCallback)} operation in order to post progress
  * information about the firmware update process.
- * 
+ *
  * The progress of a firmware update can be defined by a sequence of {@link ProgressStep}s, a percentage progress or
  * both.
- * 
+ *
  * In order to use a sequence of {@link ProgressStep}s to indicate the update progress, it is necessary to first define
  * a sequence using the method {@link ProgressCallback#defineSequence(ProgressStep...)}. To indicate that the next
  * progress step is going to be executed the method {@link ProgressCallback#next()} has to be used.
- * 
+ *
  * For updates which are based on a percentage progress it is optional to define a sequence of {@link ProgressStep}s and
  * to use the {@link ProgressCallback#next()} method. In order to indicate that the percentage progress has changed, the
  * method {@link ProgressCallback#update(progress)} has to be used. It allows to update the percentage progress to a
  * value between 0 and 100.
- * 
+ *
  * @author Thomas Höfer - Initial contribution
  * @author Christop Knauf - Added canceled, pending and update
  */
+@NonNullByDefault
 public interface ProgressCallback {
 
     /**
@@ -47,7 +50,6 @@ public interface ProgressCallback {
      *
      * @param sequence the progress steps describing the sequence of the firmware update process (must not be null
      *            or empty)
-     *
      * @throws IllegalArgumentException if given sequence is null or empty
      */
     void defineSequence(ProgressStep... sequence);
@@ -73,7 +75,6 @@ public interface ProgressCallback {
      *
      * @param errorMessageKey the key of the error message to be internationalized (must not be null or empty)
      * @param arguments the arguments to be injected into the internationalized error message (can be null)
-     *
      * @throws IllegalArgumentException if given error message key is null or empty
      * @throws IllegalStateException if update is already finished
      */
@@ -81,21 +82,21 @@ public interface ProgressCallback {
 
     /**
      * Callback operation to indicate that the firmware update was successful.
-     * 
+     *
      * @throws IllegalStateException if update is finished
      */
     void success();
 
     /**
      * Callback operation to indicate that the firmware update is pending.
-     * 
+     *
      * @throws IllegalStateException if update is finished
      */
     void pending();
 
     /**
      * Callback operation to indicate that the firmware update was canceled.
-     * 
+     *
      * @throws IllegalStateException if update is finished
      */
     void canceled();
@@ -104,9 +105,8 @@ public interface ProgressCallback {
      * Callback operation to update the percentage progress of the firmware update.
      * This method can be used to provide detailed progress information additional to the sequence or even without a
      * previous defined sequence.
-     * 
+     *
      * @param progress the progress between 0 and 100
-     * 
      * @throws IllegalArgumentException if given progress is < 0 or > 100
      * @throws IllegalArgumentException if given progress is smaller than old progress
      * @throws IllegalStateException if update is finished

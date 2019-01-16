@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,8 +13,7 @@
 package org.eclipse.smarthome.config.core.status;
 
 import java.util.Arrays;
-
-import com.google.common.base.Preconditions;
+import java.util.Objects;
 
 /**
  * The {@link ConfigStatusMessage} is a domain object for a configuration status message. It contains the name
@@ -143,8 +142,8 @@ public final class ConfigStatusMessage {
         private Integer statusCode;
 
         private Builder(String parameterName, Type type) {
-            Preconditions.checkNotNull(parameterName, "Parameter name must not be null.");
-            Preconditions.checkNotNull(type, "Type must not be null.");
+            Objects.requireNonNull(parameterName, "Parameter name must not be null.");
+            Objects.requireNonNull(type, "Type must not be null.");
             this.parameterName = parameterName;
             this.type = type;
         }
@@ -154,7 +153,6 @@ public final class ConfigStatusMessage {
          * {@link Type#INFORMATION}.
          *
          * @param parameterName the name of the configuration parameter (must not be null)
-         *
          * @return the new builder instance
          */
         public static Builder information(String parameterName) {
@@ -165,7 +163,6 @@ public final class ConfigStatusMessage {
          * Creates a builder for the construction of a {@link ConfigStatusMessage} having type {@link Type#WARNING}.
          *
          * @param parameterName the name of the configuration parameter (must not be null)
-         *
          * @return the new builder instance
          */
         public static Builder warning(String parameterName) {
@@ -176,7 +173,6 @@ public final class ConfigStatusMessage {
          * Creates a builder for the construction of a {@link ConfigStatusMessage} having type {@link Type#ERROR}.
          *
          * @param parameterName the name of the configuration parameter (must not be null)
-         *
          * @return the new builder instance
          */
         public static Builder error(String parameterName) {
@@ -187,7 +183,6 @@ public final class ConfigStatusMessage {
          * Creates a builder for the construction of a {@link ConfigStatusMessage} having type {@link Type#PENDING}.
          *
          * @param parameterName the name of the configuration parameter (must not be null)
-         *
          * @return the new builder instance
          */
         public static Builder pending(String parameterName) {
@@ -198,7 +193,6 @@ public final class ConfigStatusMessage {
          * Adds the given arguments (to be injected into the internationalized message) to the builder.
          *
          * @param arguments the arguments to be added
-         *
          * @return the updated builder instance
          */
         public Builder withArguments(Object... arguments) {
@@ -210,7 +204,6 @@ public final class ConfigStatusMessage {
          * Adds the given status code to the builder.
          *
          * @param statusCode the status code to be added
-         *
          * @return the updated builder
          */
         public Builder withStatusCode(Integer statusCode) {
@@ -222,7 +215,6 @@ public final class ConfigStatusMessage {
          * Adds the given message key suffix for the creation of {@link ConfigStatusMessage#messageKey}.
          *
          * @param messageKeySuffix the message key suffix to be added
-         *
          * @return the updated builder
          */
         public Builder withMessageKeySuffix(String messageKeySuffix) {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,8 +28,7 @@ public class StrippedThingTypeDTOMapper {
     /**
      * Maps thing type into stripped thing type data transfer object.
      *
-     * @param thingType
-     *            the thing type to be mapped
+     * @param thingType the thing type to be mapped
      * @return the stripped thing type DTO object
      */
     public static StrippedThingTypeDTO map(ThingType thingType, Locale locale) {

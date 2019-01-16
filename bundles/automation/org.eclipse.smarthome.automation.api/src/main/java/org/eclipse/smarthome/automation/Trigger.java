@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,23 +16,26 @@ import org.eclipse.smarthome.automation.type.Input;
 import org.eclipse.smarthome.automation.type.Output;
 import org.eclipse.smarthome.automation.type.TriggerType;
 import org.eclipse.smarthome.config.core.ConfigDescriptionParameter;
-import org.eclipse.smarthome.config.core.Configuration;
 
 /**
- * Trigger modules are used in the 'ON' section of {@link Rule} definition. They
- * defines what fires the {@link Rule} (what starts execution of the {@link Rule}). The triggers don't have
- * {@link Input} elements. They only
- * have: {@link ConfigDescriptionParameter}s and {@link Output}s defined by {@link TriggerType}.
+ * This interface represents automation {@code Trigger} modules which define what phenomenon will start the execution
+ * of the {@link Rule} and trigger it when an exact phenomenon occurs. Each of them can independently trigger the rule.
+ * <p>
+ * The triggers do not receive information from other modules of the Rule so they don't have {@link Input}s.
+ * <p>
+ * The triggers can be configured.
+ * <p>
+ * The triggers have {@link Output}s to provide information about the occurred phenomenon to the {@link Condition}s and
+ * {@link Action}s of the Rule.
+ * <p>
+ * Building elements of conditions as {@link ConfigDescriptionParameter}s and {@link Input}s are defined by
+ * {@link TriggerType}.
+ * <p>
+ * Trigger modules are placed in <b>triggers</b> section of the {@link Rule} definition.
  *
+ * @see Module
  * @author Yordan Mihaylov - Initial Contribution
  */
-public class Trigger extends Module {
-
-    public Trigger() {
-    }
-
-    public Trigger(String id, String typeUID, Configuration configuration) {
-        super(id, typeUID, configuration);
-    }
+public interface Trigger extends Module {
 
 }

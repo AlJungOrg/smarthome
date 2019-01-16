@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -32,7 +32,7 @@ import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.thing.binding.ThingHandler;
 import org.eclipse.smarthome.core.thing.events.ThingStatusInfoChangedEvent;
 import org.eclipse.smarthome.core.thing.type.ChannelType;
-import org.eclipse.smarthome.core.thing.type.TypeResolver;
+import org.eclipse.smarthome.core.thing.type.ChannelTypeRegistry;
 import org.eclipse.smarthome.core.thing.util.ThingHandlerHelper;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
@@ -71,6 +71,7 @@ public class ThingLinkManager extends AbstractTypedEventSubscriber<ThingStatusIn
     private ManagedThingProvider managedThingProvider;
     private ItemRegistry itemRegistry;
     private ItemChannelLinkRegistry itemChannelLinkRegistry;
+    private ChannelTypeRegistry channelTypeRegistry;
 
     private boolean autoLinks = true;
 
@@ -79,7 +80,7 @@ public class ThingLinkManager extends AbstractTypedEventSubscriber<ThingStatusIn
     }
 
     @Activate
-    protected void activate(ComponentContext context) {
+    public void activate(ComponentContext context) {
         modified(context);
         itemRegistry.addRegistryChangeListener(itemRegistryChangeListener);
         itemChannelLinkRegistry.addRegistryChangeListener(itemChannelLinkRegistryChangeListener);
@@ -96,7 +97,7 @@ public class ThingLinkManager extends AbstractTypedEventSubscriber<ThingStatusIn
     }
 
     @Deactivate
-    protected void deactivate() {
+    public void deactivate() {
         itemRegistry.removeRegistryChangeListener(itemRegistryChangeListener);
         itemChannelLinkRegistry.removeRegistryChangeListener(itemChannelLinkRegistryChangeListener);
         managedThingProvider.removeProviderChangeListener(managedThingProviderListener);
@@ -136,6 +137,15 @@ public class ThingLinkManager extends AbstractTypedEventSubscriber<ThingStatusIn
 
     protected void unsetManagedThingProvider(ManagedThingProvider managedThingProvider) {
         this.managedThingProvider = null;
+    }
+
+    @Reference
+    protected void setChannelTypeRegistry(ChannelTypeRegistry channelTypeRegistry) {
+        this.channelTypeRegistry = channelTypeRegistry;
+    }
+
+    protected void unsetChannelTypeRegistry(ChannelTypeRegistry channelTypeRegistry) {
+        this.channelTypeRegistry = null;
     }
 
     public boolean isAutoLinksEnabled() {
@@ -238,7 +248,7 @@ public class ThingLinkManager extends AbstractTypedEventSubscriber<ThingStatusIn
         private void createLinkIfNotAdvanced(Channel channel) {
             if (autoLinks) {
                 if (channel.getChannelTypeUID() != null) {
-                    ChannelType type = TypeResolver.resolve(channel.getChannelTypeUID());
+                    ChannelType type = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
                     if (type != null && type.isAdvanced()) {
                         return;
                     }

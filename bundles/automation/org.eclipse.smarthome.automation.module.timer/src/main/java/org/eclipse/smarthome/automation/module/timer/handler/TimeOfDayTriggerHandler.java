@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,9 +14,10 @@ package org.eclipse.smarthome.automation.module.timer.handler;
 
 import java.text.ParseException;
 
+import org.eclipse.smarthome.automation.ModuleHandlerCallback;
 import org.eclipse.smarthome.automation.Trigger;
 import org.eclipse.smarthome.automation.handler.BaseTriggerModuleHandler;
-import org.eclipse.smarthome.automation.handler.RuleEngineCallback;
+import org.eclipse.smarthome.automation.handler.TriggerHandlerCallback;
 import org.eclipse.smarthome.automation.module.timer.factory.TimerModuleHandlerFactory;
 import org.eclipse.smarthome.core.scheduler.Expression;
 import org.eclipse.smarthome.core.scheduler.ExpressionThreadPoolManager;
@@ -58,8 +59,8 @@ public class TimeOfDayTriggerHandler extends BaseTriggerModuleHandler implements
     }
 
     @Override
-    public synchronized void setRuleEngineCallback(RuleEngineCallback ruleCallback) {
-        super.setRuleEngineCallback(ruleCallback);
+    public synchronized void setCallback(ModuleHandlerCallback callback) {
+        super.setCallback(callback);
         scheduleJob();
     }
 
@@ -71,7 +72,7 @@ public class TimeOfDayTriggerHandler extends BaseTriggerModuleHandler implements
 
     @Override
     public void run() {
-        ruleEngineCallback.triggered(module, null);
+        ((TriggerHandlerCallback) callback).triggered(module, null);
     }
 
     @Override

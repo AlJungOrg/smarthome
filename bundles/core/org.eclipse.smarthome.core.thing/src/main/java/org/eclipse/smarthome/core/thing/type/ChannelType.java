@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,6 +16,8 @@ import java.net.URI;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+
+import org.apache.commons.lang.StringUtils;
 import org.eclipse.smarthome.config.core.ConfigDescription;
 import org.eclipse.smarthome.core.thing.Channel;
 import org.eclipse.smarthome.core.types.EventDescription;
@@ -40,35 +42,27 @@ public class ChannelType extends AbstractDescriptionType {
     private final StateDescription state;
     private final EventDescription event;
     private final URI configDescriptionURI;
+    private final AutoUpdatePolicy autoUpdatePolicy;
 
     /**
-     * Creates a new instance of this class with the specified parameters.
-     *
-     * @param uid the unique identifier which identifies this Channel type within
-     *            the overall system (must neither be null, nor empty)
-     *
-     * @param advanced true if this channel type contains advanced features, otherwise false
-     * @param itemType the item type of this Channel type, e.g. {@code ColorItem} (must neither be null nor empty)
-     * @param label the human readable label for the according type
-     *            (must neither be null nor empty)
-     * @param description the human readable description for the according type
-     *            (could be null or empty)
-     * @param category the category of this Channel type, e.g. {@code TEMPERATURE} (could be null or empty)
-     * @param tags all tags of this {@link ChannelType}, e.g. {@code Alarm} (could be null or empty)
-     * @param state the restrictions of an item state which gives information how to interpret it
-     *            (could be null)
-     * @param configDescriptionURI the link to the concrete ConfigDescription (could be null)
-     * @throws IllegalArgumentException if the UID or the item type is null or empty,
-     *             or the the meta information is null
+     * @deprecated Use the {@link ChannelTypeBuilder} instead.
      */
+    @Deprecated
     public ChannelType(ChannelTypeUID uid, boolean advanced, String itemType, String label, String description,
             String category, Set<String> tags, StateDescription state, URI configDescriptionURI) {
         this(uid, advanced, itemType, ChannelKind.STATE, label, description, category, tags, state, null,
                 configDescriptionURI);
+    }
 
-        if ((itemType == null) || (itemType.isEmpty())) {
-            throw new IllegalArgumentException("The item type must neither be null nor empty!");
-        }
+    /**
+     * @deprecated Use the {@link ChannelTypeBuilder} instead.
+     */
+    @Deprecated
+    public ChannelType(ChannelTypeUID uid, boolean advanced, String itemType, ChannelKind kind, String label,
+            String description, String category, Set<String> tags, StateDescription state, EventDescription event,
+            URI configDescriptionURI) throws IllegalArgumentException {
+        this(uid, advanced, itemType, kind, label, description, category, tags, state, event, configDescriptionURI,
+                null);
     }
 
     /**
@@ -88,20 +82,20 @@ public class ChannelType extends AbstractDescriptionType {
      * @param state the restrictions of an item state which gives information how to interpret it
      *            (could be null)
      * @param configDescriptionURI the link to the concrete ConfigDescription (could be null)
+     * @param autoUpdatePolicy the {@link AutoUpdatePolicy} to use.
      * @throws IllegalArgumentException if the UID or the item type is null or empty,
      *             or the the meta information is null
      */
     public ChannelType(ChannelTypeUID uid, boolean advanced, String itemType, ChannelKind kind, String label,
             String description, String category, Set<String> tags, StateDescription state, EventDescription event,
-            URI configDescriptionURI) throws IllegalArgumentException {
-
+            URI configDescriptionURI, AutoUpdatePolicy autoUpdatePolicy) throws IllegalArgumentException {
         super(uid, label, description);
 
         if (kind == null) {
             throw new IllegalArgumentException("Kind must not be null!");
         }
 
-        if (kind == ChannelKind.STATE && (itemType == null || itemType.isEmpty())) {
+        if (kind == ChannelKind.STATE && StringUtils.isBlank(itemType)) {
             throw new IllegalArgumentException("If the kind is 'state', the item type must be set!");
         }
         if (kind == ChannelKind.TRIGGER && itemType != null) {
@@ -122,6 +116,7 @@ public class ChannelType extends AbstractDescriptionType {
         this.category = category;
         this.state = state;
         this.event = event;
+        this.autoUpdatePolicy = autoUpdatePolicy;
     }
 
     @Override
@@ -209,6 +204,15 @@ public class ChannelType extends AbstractDescriptionType {
      */
     public String getCategory() {
         return category;
+    }
+
+    /**
+     * Returns the {@link AutoUpdatePolicy} of for channels of this type.
+     *
+     * @return the {@link AutoUpdatePolicy}
+     */
+    public AutoUpdatePolicy getAutoUpdatePolicy() {
+        return autoUpdatePolicy;
     }
 
 }

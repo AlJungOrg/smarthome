@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -120,7 +120,6 @@ public class MapDbStorage<T> implements DeletableStorage<T> {
      * @return the JSON document prepended with the qualified type name of {@code value}
      */
     private String serialize(T value) {
-
         if (value == null) {
             throw new IllegalArgumentException("Cannot serialize NULL");
         }
@@ -144,7 +143,6 @@ public class MapDbStorage<T> implements DeletableStorage<T> {
      */
     @SuppressWarnings("unchecked")
     public @Nullable T deserialize(@Nullable String json) {
-
         if (json == null) {
             // nothing to deserialize
             return null;

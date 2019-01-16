@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,6 +15,9 @@ package org.eclipse.smarthome.binding.lifx.internal.protocol;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
+
 /**
  * A static factory for registering packet types that may be received and
  * dispatched to client cod * request types, like {@code PowerStateRequest}) or types received only via UDP
@@ -25,16 +28,18 @@ import java.util.Map;
  * @author Karel Goderis - Enhancement for the V2 LIFX Firmware and LAN Protocol Specification
  * @author Wouter Born - Support LIFX 2016 product line-up and infrared functionality
  */
+@NonNullByDefault
 public class PacketFactory {
 
-    private static PacketFactory instance;
+    private static @Nullable PacketFactory instance;
 
-    public static synchronized  PacketFactory getInstance() {
-        if (instance == null) {
-            instance = new PacketFactory();
+    public static synchronized PacketFactory getInstance() {
+        PacketFactory result = instance;
+        if (result == null) {
+            result = new PacketFactory();
+            instance = result;
         }
-
-        return instance;
+        return result;
     }
 
     private final Map<Integer, PacketHandler<?>> handlers;
@@ -140,11 +145,11 @@ public class PacketFactory {
      * @param packetType the packet type of the handler to retrieve
      * @return a packet handler, or null
      */
-    public PacketHandler<?> getHandler(int packetType) {
+    public @Nullable PacketHandler<?> getHandler(int packetType) {
         return handlers.get(packetType);
     }
 
-    public static PacketHandler<?> createHandler(int packetType) {
+    public static @Nullable PacketHandler<?> createHandler(int packetType) {
         return getInstance().getHandler(packetType);
     }
 

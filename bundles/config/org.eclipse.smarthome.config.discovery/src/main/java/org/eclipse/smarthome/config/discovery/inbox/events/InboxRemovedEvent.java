@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,7 +25,7 @@ public class InboxRemovedEvent extends AbstractInboxEvent {
     /**
      * The inbox removed event type.
      */
-    public final static String TYPE = InboxRemovedEvent.class.getSimpleName();
+    public static final String TYPE = InboxRemovedEvent.class.getSimpleName();
 
     /**
      * Constructs a new inbox removed event object.

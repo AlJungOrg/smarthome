@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -41,7 +41,6 @@ public class EnrichedThingDTOMapper extends ThingDTOMapper {
      * @param firmwareStatus the firmwareStatus to be used for the enriched object
      * @param linkedItemsMap the map of linked items to be injected into the enriched object
      * @param editable true if this thing can be edited
-     *
      * @return the enriched thing DTO object
      */
     public static EnrichedThingDTO map(Thing thing, ThingStatusInfo thingStatusInfo, FirmwareStatusDTO firmwareStatus,

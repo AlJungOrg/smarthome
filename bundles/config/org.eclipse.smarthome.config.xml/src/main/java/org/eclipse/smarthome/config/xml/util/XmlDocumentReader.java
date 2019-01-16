@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -76,9 +76,7 @@ public abstract class XmlDocumentReader<T> {
      * This method returns {@code null} if the given URL is {@code null}.
      *
      * @param xmlURL the URL pointing to the XML document to be read (could be null)
-     *
      * @return the conversion result object (could be null)
-     *
      * @throws ConversionException if the specified document contains invalid content
      */
     @SuppressWarnings("unchecked")

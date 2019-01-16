@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,7 +16,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.eclipse.smarthome.automation.Action;
-import org.eclipse.smarthome.automation.RuleRegistry;
 import org.eclipse.smarthome.automation.handler.ActionHandler;
 import org.eclipse.smarthome.automation.handler.BaseModuleHandler;
 import org.eclipse.smarthome.config.core.Configuration;
@@ -38,7 +37,8 @@ import org.slf4j.LoggerFactory;
  * }
  * </pre>
  *
- * @author Benedikt Niehues initial contribution
+ * @author Benedikt Niehues - Initial contribution
+ * @author Kai Kreuzer - use rule engine instead of registry
  *
  */
 public class RunRuleActionHandler extends BaseModuleHandler<Action> implements ActionHandler {
@@ -46,13 +46,13 @@ public class RunRuleActionHandler extends BaseModuleHandler<Action> implements A
     /**
      * The UID for this handler for identification in the factory.
      */
-    public final static String UID = "core.RunRuleAction";
+    public static final String UID = "core.RunRuleAction";
 
     /**
      * the key for the 'rulesUIDs' property of the {@link Action}.
      */
-    private final static String RULE_UIDS_KEY = "ruleUIDs";
-    private final static String CONSIDER_CONDITIONS_KEY = "considerConditions";
+    private static final String RULE_UIDS_KEY = "ruleUIDs";
+    private static final String CONSIDER_CONDITIONS_KEY = "considerConditions";
 
     /**
      * The logger
@@ -70,17 +70,12 @@ public class RunRuleActionHandler extends BaseModuleHandler<Action> implements A
      */
     private boolean considerConditions = true;
 
-    /**
-     * the {@link RuleRegistry} is used to run rules.
-     */
-    private RuleRegistry ruleRegistry;
-
     @SuppressWarnings("unchecked")
-    public RunRuleActionHandler(final Action module, final RuleRegistry ruleRegistry) {
+    public RunRuleActionHandler(final Action module) {
         super(module);
         final Configuration config = module.getConfiguration();
-        if (config == null) {
-            throw new IllegalArgumentException("'Configuration' can not be null.");
+        if (config.getProperties().isEmpty()) {
+            throw new IllegalArgumentException("'Configuration' can not be empty.");
         }
 
         ruleUIDs = (List<String>) config.get(RULE_UIDS_KEY);
@@ -90,18 +85,16 @@ public class RunRuleActionHandler extends BaseModuleHandler<Action> implements A
         if (config.get(CONSIDER_CONDITIONS_KEY) != null && config.get(CONSIDER_CONDITIONS_KEY) instanceof Boolean) {
             this.considerConditions = ((Boolean) config.get(CONSIDER_CONDITIONS_KEY)).booleanValue();
         }
-
-        this.ruleRegistry = ruleRegistry;
     }
 
     @Override
     public Map<String, Object> execute(Map<String, Object> context) {
         // execute each rule after the other; at the moment synchronously
         for (String uid : ruleUIDs) {
-            if (ruleRegistry != null) {
-                ruleRegistry.runNow(uid, considerConditions, context);
+            if (callback != null) {
+                callback.runNow(uid, considerConditions, context);
             } else {
-                logger.warn("Action is not applied to {} because RuleRegistry is not available.", uid);
+                logger.warn("Action is not applied to {} because rule engine is not available.", uid);
             }
         }
         // no outputs from this module

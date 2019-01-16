@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,7 +12,8 @@
  */
 package org.eclipse.smarthome.core.thing;
 
-import org.eclipse.jdt.annotation.NonNull;
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.config.core.Configuration;
 
 /**
@@ -21,6 +22,7 @@ import org.eclipse.smarthome.config.core.Configuration;
  *
  * @author Andre Fuechsel - initial contribution
  */
+@NonNullByDefault
 public interface ThingTypeMigrationService {
 
     /**
@@ -29,9 +31,8 @@ public interface ThingTypeMigrationService {
      * @param thing {@link Thing} whose type should be changed
      * @param thingTypeUID new {@link ThingTypeUID}
      * @param configuration new configuration
-     *
      * @throws RuntimeException, if the new thing type is not registered in the registry
      */
-    void migrateThingType(@NonNull Thing thing, @NonNull ThingTypeUID thingTypeUID, Configuration configuration);
+    void migrateThingType(Thing thing, ThingTypeUID thingTypeUID, @Nullable Configuration configuration);
 
 }

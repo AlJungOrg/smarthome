@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,7 +15,7 @@ package org.eclipse.smarthome.binding.dmx.internal.action;
 /**
  * The {@link FadeDirection} gives the direction for fading
  *
- * @author Jan N. Klug
+ * @author Jan N. Klug - Initial contribution
  */
 enum FadeDirection {
     UP,

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,8 +21,8 @@ public interface StatusInfoCallback {
 
     /**
      * The method is called when the rule has update of its status.
-     * 
-     * @param ruleUID UID of the {@link Rule}
+     *
+     * @param ruleUID    UID of the {@link Rule}
      * @param statusInfo new status info releated to the {@link Rule}
      */
     void statusInfoChanged(String ruleUID, RuleStatusInfo statusInfo);

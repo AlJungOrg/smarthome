@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,8 +15,6 @@ package org.eclipse.smarthome.core.thing.xml.test;
 import java.io.File;
 import java.net.URL;
 
-import org.eclipse.smarthome.core.thing.type.ChannelType;
-import org.eclipse.smarthome.core.thing.xml.internal.ChannelTypeXmlResult;
 import org.eclipse.smarthome.core.thing.xml.internal.ThingDescriptionList;
 import org.eclipse.smarthome.core.thing.xml.internal.ThingDescriptionReader;
 import org.junit.Test;
@@ -38,16 +36,5 @@ public class Example {
 
         ThingDescriptionReader reader = new ThingDescriptionReader();
         ThingDescriptionList thingList = (ThingDescriptionList) reader.readFromXML(channelsURL);
-
-        thingList.stream().forEach(it -> {
-            if (it instanceof ChannelTypeXmlResult) {
-                ChannelType channelType = ((ChannelTypeXmlResult) it).toChannelType();
-
-                System.out.println(channelType + ", advanced=" + channelType.isAdvanced() + ", itemType="
-                        + channelType.getItemType() + ", label=" + channelType.getLabel() + ", description="
-                        + channelType.getDescription() + ", category=" + channelType.getCategory() + ", tags="
-                        + channelType.getTags() + ", state=" + channelType.getState());
-            }
-        });
     }
 }

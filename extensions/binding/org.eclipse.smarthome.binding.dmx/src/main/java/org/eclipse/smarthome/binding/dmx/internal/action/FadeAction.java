@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,8 +21,8 @@ import org.eclipse.smarthome.core.library.types.PercentType;
  * state in the given amount of time. After the fade, the new state is held for
  * a given or indefinite time.
  *
- * @author Davy Vanherbergen
- * @author Jan N. Klug
+ * @author Davy Vanherbergen - Initial contribution
+ * @author Jan N. Klug - Refactoring for ESH
  */
 public class FadeAction extends BaseAction {
     /** Time in ms to hold the target value. -1 is indefinite */

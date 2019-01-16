@@ -15,9 +15,4 @@
 
   <name>Eclipse SmartHome MapDB Persistence</name>
 
-  <properties>
-    <bundle.symbolicName>org.eclipse.smarthome.persistence.mapdb</bundle.symbolicName>
-    <bundle.namespace>org.eclipse.smarthome.persistence.mapdb</bundle.namespace>
-  </properties>
-
 </project>
