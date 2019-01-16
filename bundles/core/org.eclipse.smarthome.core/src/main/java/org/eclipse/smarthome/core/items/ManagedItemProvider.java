@@ -12,6 +12,8 @@
  */
 package org.eclipse.smarthome.core.items;
 
+import static java.util.stream.Collectors.toList;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -36,9 +38,6 @@ import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Splitter;
-import com.google.common.collect.ImmutableList;
 
 /**
  * {@link ManagedItemProvider} is an OSGi service, that allows to add or remove
@@ -237,11 +236,13 @@ public class ManagedItemProvider extends AbstractManagedProvider<Item, String, P
 
     private void migratePersistedItem(PersistedItem persistedItem) {
         if (persistedItem.groupFunction != null) {
-            Iterator<String> parts = Splitter.on(';').split(persistedItem.groupFunction).iterator();
-            persistedItem.functionName = parts.next();
-            persistedItem.functionParams = ImmutableList.copyOf(parts);
-            persistedItem.baseItemType = "Switch";
-            persistedItem.groupFunction = null;
+            String[] parts = persistedItem.groupFunction.split(";");
+            if (parts.length > 0) {
+                persistedItem.functionName = parts[0];
+                persistedItem.functionParams = Arrays.stream(parts).skip(1).collect(toList());
+                persistedItem.baseItemType = "Switch";
+                persistedItem.groupFunction = null;
+            }
         }
     }
 

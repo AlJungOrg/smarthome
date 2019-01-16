@@ -220,13 +220,13 @@ public interface ArithmeticGroupFunction extends GroupFunction {
          * @{inheritDoc
          */
         @Override
-        public State getStateAs(Set<Item> items, Class<? extends State> stateClass) {
+        public <T extends State> T getStateAs(Set<Item> items, Class<T> stateClass) {
             State state = calculate(items);
             if (stateClass.isInstance(state)) {
-                return state;
+                return stateClass.cast(state);
             } else {
                 if (stateClass == DecimalType.class) {
-                    return new DecimalType(count(items, activeState));
+                    return stateClass.cast(new DecimalType(count(items, activeState)));
                 } else {
                     return null;
                 }
@@ -562,10 +562,10 @@ public interface ArithmeticGroupFunction extends GroupFunction {
         }
 
         @Override
-        public State getStateAs(Set<Item> items, Class<? extends State> stateClass) {
+        public <T extends State> T getStateAs(Set<Item> items, Class<T> stateClass) {
             State state = calculate(items);
             if (stateClass.isInstance(state)) {
-                return state;
+                return stateClass.cast(state);
             } else {
                 return null;
             }

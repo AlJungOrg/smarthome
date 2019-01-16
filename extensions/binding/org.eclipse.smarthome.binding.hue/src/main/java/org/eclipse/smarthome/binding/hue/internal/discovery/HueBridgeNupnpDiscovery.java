@@ -25,6 +25,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.config.discovery.AbstractDiscoveryService;
 import org.eclipse.smarthome.config.discovery.DiscoveryResult;
 import org.eclipse.smarthome.config.discovery.DiscoveryResultBuilder;
@@ -104,6 +105,7 @@ public class HueBridgeNupnpDiscovery extends AbstractDiscoveryService {
      * @param ip
      * @return DiscoveryResult
      */
+    @Nullable
     public DiscoveryResult addDiscovery(String ip) {
         BridgeJsonParameters bridge;
         try {
@@ -125,7 +127,7 @@ public class HueBridgeNupnpDiscovery extends AbstractDiscoveryService {
                 ThingUID uid = new ThingUID(THING_TYPE_BRIDGE, serialNumber);
                 DiscoveryResult result = DiscoveryResultBuilder.create(uid)
                     .withProperties(buildProperties(host, serialNumber))
-                    .withLabel(LABEL_PATTERN.replace("IP", host)).withRepresentationProperty(SERIAL_NUMBER).build();
+                    .withLabel(LABEL_PATTERN.replace("IP", host)).withRepresentationProperty(PROPERTY_SERIAL_NUMBER).build();
                 thingDiscovered(result);
                 return result;
             }
