@@ -1,7 +1,7 @@
 Manifest-Version: 1.0
 Bundle-ClassPath: .
 Bundle-ManifestVersion: 2
-Bundle-Name: DigitalSTROM Binding
+Bundle-Name: Eclipse SmartHome DigitalSTROM Binding
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Bundle-SymbolicName: org.eclipse.smarthome.binding.digitalstrom;singleto
  n:=true
@@ -11,14 +11,14 @@ Export-Package:
  org.eclipse.smarthome.binding.digitalstrom,
  org.eclipse.smarthome.binding.digitalstrom.handler
 Import-Package: 
- com.google.common.collect,
  com.google.gson,
  javax.jmdns,
  javax.net.ssl,
- javax.xml.bind,
  org.apache.commons.io,
  org.apache.commons.lang,
  org.eclipse.jdt.annotation;resolution:=optional,
+ org.eclipse.smarthome.binding.digitalstrom,
+ org.eclipse.smarthome.binding.digitalstrom.handler,
  org.eclipse.smarthome.config.core,
  org.eclipse.smarthome.config.discovery,
  org.eclipse.smarthome.config.discovery.mdns,
@@ -36,3 +36,4 @@ Import-Package:
  org.osgi.service.component,
  org.slf4j
 Service-Component: OSGI-INF/*.xml
+Automatic-Module-Name: org.eclipse.smarthome.binding.digitalstrom

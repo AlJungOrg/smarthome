@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,11 +28,11 @@ public enum ZoneSceneEnum implements Scene {
     WAKEUP((short) 70);
 
     private final short sceneNumber;
-    static final HashMap<Short, ZoneSceneEnum> zoneScenes = new HashMap<Short, ZoneSceneEnum>();
+    static final HashMap<Short, ZoneSceneEnum> ZONE_SCENES = new HashMap<Short, ZoneSceneEnum>();
 
     static {
         for (ZoneSceneEnum zs : ZoneSceneEnum.values()) {
-            zoneScenes.put(zs.getSceneNumber(), zs);
+            ZONE_SCENES.put(zs.getSceneNumber(), zs);
         }
     }
 
@@ -43,25 +43,25 @@ public enum ZoneSceneEnum implements Scene {
     /**
      * Returns the {@link ZoneSceneEnum} of the given scene number.
      *
-     * @param sceneNumber
+     * @param sceneNumber of the {@link ZoneSceneEnum}
      * @return ZoneSceneEnum
      */
     public static ZoneSceneEnum getZoneScene(short sceneNumber) {
-        return zoneScenes.get(sceneNumber);
+        return ZONE_SCENES.get(sceneNumber);
     }
 
     /**
      * Returns true, if the given scene number contains in digitalSTROM zone scenes, otherwise false.
      *
-     * @param sceneNumber
+     * @param sceneNumber to be checked
      * @return true, if contains, otherwise false
      */
     public static boolean containsScene(Short sceneNumber) {
-        return zoneScenes.keySet().contains(sceneNumber);
+        return ZONE_SCENES.keySet().contains(sceneNumber);
     }
 
     @Override
-    public short getSceneNumber() {
+    public Short getSceneNumber() {
         return this.sceneNumber;
     }
 }

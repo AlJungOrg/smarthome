@@ -12,6 +12,7 @@ Import-Package: com.google.inject,
  org.eclipse.lsp4j.launch,
  org.eclipse.lsp4j.services,
  org.eclipse.smarthome.config.core,
+ org.eclipse.smarthome.core.common,
  org.eclipse.xtext,
  org.eclipse.xtext.ide,
  org.eclipse.xtext.ide.server,
@@ -19,6 +20,7 @@ Import-Package: com.google.inject,
  org.eclipse.xtext.resource.impl,
  org.eclipse.xtext.util,
  org.eclipse.xtext.workspace,
+ org.osgi.framework,
  org.slf4j
 Require-Bundle: org.eclipse.smarthome.model.item.ide,
  org.eclipse.smarthome.model.persistence.ide,
@@ -33,3 +35,4 @@ Require-Bundle: org.eclipse.smarthome.model.item.ide,
  org.eclipse.smarthome.model.sitemap,
  org.eclipse.smarthome.model.thing
 Service-Component: OSGI-INF/*.xml
+Automatic-Module-Name: org.eclipse.smarthome.model.lsp

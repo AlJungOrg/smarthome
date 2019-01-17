@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,31 +12,40 @@
  */
 package org.eclipse.smarthome.binding.astro.internal.model;
 
+import javax.measure.quantity.Angle;
+
 import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.lang.builder.ToStringStyle;
+import org.eclipse.smarthome.core.library.types.QuantityType;
+import org.eclipse.smarthome.core.library.unit.SmartHomeUnits;
 
 /**
  * Holds the calculated azimuth and elevation.
  *
  * @author Gerhard Riegler - Initial contribution
+ * @author Gaël L'hopital - Added shade length
+ * @author Christoph Weitkamp - Introduced UoM
  */
 public class Position {
+
     private double azimuth;
     private double elevation;
+    private double shadeLength;
 
     public Position() {
     }
 
-    public Position(double azimuth, double elevation) {
+    public Position(double azimuth, double elevation, double shadeLength) {
         this.azimuth = azimuth;
         this.elevation = elevation;
+        this.shadeLength = shadeLength;
     }
 
     /**
      * Returns the azimuth.
      */
-    public double getAzimuth() {
-        return azimuth;
+    public QuantityType<Angle> getAzimuth() {
+        return new QuantityType<Angle>(azimuth, SmartHomeUnits.DEGREE_ANGLE);
     }
 
     /**
@@ -49,7 +58,11 @@ public class Position {
     /**
      * Returns the elevation.
      */
-    public double getElevation() {
+    public QuantityType<Angle> getElevation() {
+        return new QuantityType<Angle>(elevation, SmartHomeUnits.DEGREE_ANGLE);
+    }
+
+    public double getElevationAsDouble() {
         return elevation;
     }
 
@@ -60,10 +73,23 @@ public class Position {
         this.elevation = elevation;
     }
 
+    /**
+     * Returns the shade length.
+     */
+    public double getShadeLength() {
+        return shadeLength;
+    }
+
+    /**
+     * Sets the shade length.
+     */
+    public void setShadeLength(double shadeLength) {
+        this.shadeLength = shadeLength;
+    }
+
     @Override
     public String toString() {
         return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE).append("azimuth", azimuth)
-                .append("elevation", elevation).toString();
+                .append("elevation", elevation).append("shadeLength", shadeLength).toString();
     }
-
 }

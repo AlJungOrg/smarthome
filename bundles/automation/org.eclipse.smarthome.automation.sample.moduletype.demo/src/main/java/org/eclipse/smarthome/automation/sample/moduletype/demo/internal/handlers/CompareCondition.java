@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -51,7 +51,7 @@ public class CompareCondition extends BaseModuleHandler<Condition> implements Co
      * This constant is used by {@link HandlerFactory} to create a correct handler instance. It must be the same as in
      * JSON definition of the module type.
      */
-    public final static String UID = "CompareCondition";
+    public static final String UID = "CompareCondition";
 
     /**
      * Describes all possible operators which this handler can perform

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -41,11 +41,13 @@ import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
+import org.osgi.service.component.annotations.Component;
 
 /**
  *
  * @author Sebastian Janzen - Initial contribution
  */
+@Component
 @Path("/log")
 @Api(value = LogHandler.PATH_LOG)
 @Produces(MediaType.APPLICATION_JSON)
@@ -54,7 +56,7 @@ public class LogHandler implements RESTResource {
     private final Logger logger = LoggerFactory.getLogger(LogHandler.class);
     public static final String PATH_LOG = "log";
 
-    private final static String TEMPLATE_INTERNAL_ERROR = "{\"error\":\"%s\",\"severity\":\"%s\"}";
+    private static final String TEMPLATE_INTERNAL_ERROR = "{\"error\":\"%s\",\"severity\":\"%s\"}";
 
     /**
      * Rolling array to store the last LOG_BUFFER_LIMIT messages. Those can be fetched e.g. by a
@@ -106,7 +108,6 @@ public class LogHandler implements RESTResource {
             Collections.reverse(result);
             return Response.ok(result).build();
         }
-
     }
 
     @POST
@@ -133,7 +134,7 @@ public class LogHandler implements RESTResource {
             LOG_BUFFER.pollLast(); // Remove last element of Deque
         }
 
-        return Response.ok().build();
+        return Response.ok(null, MediaType.TEXT_PLAIN).build();
     }
 
     /**

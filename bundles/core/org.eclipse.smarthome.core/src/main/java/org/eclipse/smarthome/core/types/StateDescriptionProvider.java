@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,16 +18,17 @@ import java.util.Locale;
  * A {@link StateDescriptionProvider} provides localized {@link StateDescription}s for items.
  *
  * @author Dennis Nobel - Initial contribution
+ *
+ * @deprecated Use {@link StateDescriptionFragmentProvider} instead and provide only the known fields.
  */
+@Deprecated
 public interface StateDescriptionProvider {
 
     /**
      * Returns the state description for an item name
      *
-     * @param itemName
-     *            item name (must not be null)
-     * @param locale
-     *            locale (can be null)
+     * @param itemName item name (must not be null)
+     * @param locale locale (can be null)
      * @return state description or null if no state description could be found
      */
     StateDescription getStateDescription(String itemName, Locale locale);

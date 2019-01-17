@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,18 +12,29 @@
  */
 package org.eclipse.smarthome.automation.handler;
 
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.smarthome.automation.ModuleHandlerCallback;
+
 /**
  * A common interface for all module Handler interfaces. The Handler interfaces are
- * bridge between RuleEngine and external modules used by the RuleEngine.
+ * bridge between RuleManager and external modules used by the RuleManager.
  *
  * @author Yordan Mihaylov - Initial Contribution
  * @see ModuleHandlerFactory
  */
+@NonNullByDefault
 public interface ModuleHandler {
 
     /**
-     * The method is called by RuleEngine to free resources when {@link ModuleHandler} is released.
+     * The method is called by RuleManager to free resources when {@link ModuleHandler} is released.
      */
     public void dispose();
+
+    /**
+     * The callback is injected to the handler through this method.
+     *
+     * @param callback a {@link ModuleHandlerCallback} instance
+     */
+    void setCallback(ModuleHandlerCallback callback);
 
 }

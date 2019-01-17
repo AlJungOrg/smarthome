@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -49,7 +49,7 @@ public class Activator implements BundleActivator {
         rulesProvider = new WelcomeHomeRulesProvider();
         rulesProvider.register(context);
 
-        handlerFactory = new WelcomeHomeHandlerFactory(context);
+        handlerFactory = new WelcomeHomeHandlerFactory();
         handlerFactory.register(context);
 
         commands = new WelcomeHomeCommands(context, rulesProvider, handlerFactory);

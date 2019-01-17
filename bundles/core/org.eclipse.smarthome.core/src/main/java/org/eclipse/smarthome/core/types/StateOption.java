@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,12 +25,9 @@ public final class StateOption {
     /**
      * Creates a {@link StateOption} object.
      *
-     * @param value
-     *            value of the item
-     * @param label
-     *            label
-     * @throws IllegalArgumentException
-     *             if value is null
+     * @param value value of the item
+     * @param label label
+     * @throws IllegalArgumentException if value is null
      */
     public StateOption(String value, String label) {
         if (value == null) {

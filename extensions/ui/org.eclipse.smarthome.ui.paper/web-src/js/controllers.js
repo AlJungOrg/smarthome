@@ -1,4 +1,5 @@
-angular.module('PaperUI.controllers', [ 'PaperUI.constants' ]).controller('BodyController', function($rootScope, $scope, $http, $location, eventService, toastService, discoveryResultRepository, thingTypeRepository, bindingRepository, restConfig, util) {
+angular.module('PaperUI.controllers', [ 'PaperUI.constants' ])//
+.controller('BodyController', function($rootScope, $scope, $http, $location, $timeout, eventService, toastService, discoveryResultRepository, thingTypeRepository, bindingRepository, itemRepository, restConfig, util, titleService) {
     $scope.scrollTop = 0;
     $(window).scroll(function() {
         $scope.$apply(function(scope) {
@@ -8,10 +9,18 @@ angular.module('PaperUI.controllers', [ 'PaperUI.constants' ]).controller('BodyC
     $scope.isBigTitle = function() {
         return $scope.scrollTop < 80 && !$rootScope.simpleHeader;
     }
+
+    titleService.onTitle(function(title) {
+        $rootScope.title = title;
+    })
+    titleService.onSubtitles(function(subtitles) {
+        $scope.subtitles = subtitles;
+    })
+
     $scope.setTitle = function(title) {
         $rootScope.title = title;
     }
-    $scope.subtitles = [];
+
     $scope.setSubtitle = function(args) {
         $scope.subtitles = [];
         $.each(args, function(i, subtitle) {
@@ -74,82 +83,6 @@ angular.module('PaperUI.controllers', [ 'PaperUI.constants' ]).controller('BodyC
             prevAudioUrl = audioUrl;
         }
     });
-    eventService.onEvent('smarthome/items/*/state', function(topic, stateObject) {
-
-        var itemName = topic.split('/')[2];
-        var state = stateObject.value;
-
-        console.log('Item ' + itemName + ' updated: ' + state);
-
-        if ($rootScope.itemUpdates[itemName] + 500 > new Date().getTime()) {
-            console.log('Ignoring update for ' + itemName + ', because update was probably triggered through UI.');
-            return;
-        }
-
-        var changeStateRecursively = function(item) {
-            var updateState = true;
-            if (item.name === itemName) {
-                // ignore ON and OFF update for Dimmer
-                if (item.type === 'Dimmer') {
-                    if (state === 'ON' || state == 'OFF') {
-                        updateState = false;
-                    }
-                }
-                if (item.type === "Number" || item.groupType === "Number") {
-                    var parsedValue = Number(state);
-                    if (!isNaN(parsedValue)) {
-                        state = parsedValue;
-                    }
-                }
-                if (item.type === "Rollershutter") {
-                    if (stateObject.type == "Percent" || stateObject.type == "Decimal") {
-                        state = parseInt(stateObject.value);
-                    }
-                }
-                if (updateState) {
-                    $scope.$apply(function(scope) {
-                        item.state = state;
-                        item.stateText = util.getItemStateText(item);
-                    });
-                } else {
-                    console.log('Ignoring state ' + state + ' for ' + itemName)
-                }
-            }
-            if (item.members) {
-                $.each(item.members, function(i, memberItem) {
-                    changeStateRecursively(memberItem);
-                });
-            }
-        }
-        var index = getItemIndex(itemName);
-        if (index !== -1) {
-            changeStateRecursively($rootScope.data.items[index]);
-        }
-    });
-
-    eventService.onEvent('smarthome/items/*/statechanged', function(topic, stateObject) {
-        var itemName = topic.split('/')[2];
-        if (itemName && (stateObject.type == "Percent" || stateObject.type == "Decimal")) {
-            var index = getItemIndex(itemName);
-            if (index !== -1) {
-                $scope.$apply(function(scope) {
-                    $rootScope.data.items[index].state = parseFloat(stateObject.value);
-                    $rootScope.data.items[index].stateText = util.getItemStateText($rootScope.data.items[index]);
-                });
-            }
-        }
-    });
-
-    function getItemIndex(itemName) {
-        if ($rootScope.data.items) {
-            for (var it = 0; it < $rootScope.data.items.length; it++) {
-                if ($rootScope.data.items[it].name == itemName) {
-                    return it;
-                }
-            }
-        }
-        return -1;
-    }
 
     $scope.getNumberOfNewDiscoveryResults = function() {
         var numberOfNewDiscoveryResults = 0;

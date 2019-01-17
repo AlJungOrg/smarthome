@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -82,7 +82,7 @@ public abstract class AbstractResourceBundleProvider<E> {
      * This static field provides a root directory for automation object resources in the bundle resources.
      * It is common for all resources - {@link ModuleType}s, {@link RuleTemplate}s and {@link Rule}s.
      */
-    protected static String PATH = "ESH-INF/automation";
+    protected static final String ROOT_DIRECTORY = "ESH-INF/automation";
 
     /**
      * This field holds a reference to the service instance for internationalization support within the platform.
@@ -224,7 +224,7 @@ public abstract class AbstractResourceBundleProvider<E> {
         this.i18nProvider = i18nProvider;
     }
 
-    protected void removeTranslationProvider(TranslationProvider i18nProvider) {
+    protected void unsetTranslationProvider(TranslationProvider i18nProvider) {
         this.i18nProvider = null;
     }
 

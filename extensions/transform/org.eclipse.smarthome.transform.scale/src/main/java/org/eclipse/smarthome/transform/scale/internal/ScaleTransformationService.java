@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -26,9 +26,11 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.eclipse.smarthome.core.library.types.QuantityType;
 import org.eclipse.smarthome.core.transform.AbstractFileTransformationService;
 import org.eclipse.smarthome.core.transform.TransformationException;
 import org.eclipse.smarthome.core.transform.TransformationService;
+import org.osgi.service.component.annotations.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,6 +41,7 @@ import org.slf4j.LoggerFactory;
  * @author Gaël L'hopital
  * @author Markus Rathgeb - drop usage of Guava
  */
+@Component(immediate = true, service = TransformationService.class, property = { "smarthome.transform=SCALE" })
 public class ScaleTransformationService extends AbstractFileTransformationService<Map<Range, String>> {
 
     private final Logger logger = LoggerFactory.getLogger(ScaleTransformationService.class);
@@ -82,24 +85,32 @@ public class ScaleTransformationService extends AbstractFileTransformationServic
      * The method transforms the input <code>source</code> by matching searching
      * the range where it fits i.e. [min..max]=value or ]min..max]=value
      *
-     * @param properties
-     *            the list of properties defining all the available ranges
-     * @param source
-     *            the input to transform
+     * @param properties the list of properties defining all the available ranges
+     * @param source     the input to transform
      *
      */
     @Override
     protected String internalTransform(Map<Range, String> data, String source) throws TransformationException {
-
         try {
             final BigDecimal value = new BigDecimal(source);
 
-            return data.entrySet().stream().filter(e -> e.getKey().contains(value)).findFirst().map(Map.Entry::getValue)
-                    .orElseThrow(() -> new TransformationException("No matching range for '" + source + "'"));
-
+            return getScaleResult(data, source, value);
         } catch (NumberFormatException e) {
-            throw new TransformationException("Scale can only be used with numeric inputs");
+            // Scale can only be used with numeric inputs, so lets try to see if ever its a valid quantity type
+            try {
+                final QuantityType<?> quantity = new QuantityType<>(source);
+                return getScaleResult(data, source, quantity.toBigDecimal());
+            } catch (NumberFormatException e2) {
+                throw new TransformationException("Scale can only be used with numeric inputs or valid quantity types");
+            }
         }
+    }
+
+    private String getScaleResult(Map<Range, String> data, String source, final BigDecimal value)
+            throws TransformationException {
+        return data.entrySet().stream().filter(entry -> entry.getKey().contains(value)).findFirst()
+                .map(Map.Entry::getValue)
+                .orElseThrow(() -> new TransformationException("No matching range for '" + source + "'"));
     }
 
     @Override
@@ -114,7 +125,6 @@ public class ScaleTransformationService extends AbstractFileTransformationServic
                 final String value = properties.getProperty(entry);
                 final Matcher matcher = LIMITS_PATTERN.matcher(entry);
                 if (matcher.matches() && (matcher.groupCount() == 4)) {
-
                     final boolean lowerInclusive = matcher.group(1).equals("]") ? false : true;
                     final boolean upperInclusive = matcher.group(4).equals("[") ? false : true;
 
@@ -127,11 +137,9 @@ public class ScaleTransformationService extends AbstractFileTransformationServic
                         final Range range = Range.range(lowValue, lowerInclusive, highValue, upperInclusive);
 
                         data.put(range, value);
-
                     } catch (NumberFormatException ex) {
                         throw new TransformationException("Error parsing bounds: " + lowLimit + ".." + highLimit);
                     }
-
                 } else {
                     logger.warn("Scale transform file '{}' does not comply with syntax for entry : '{}', '{}'",
                             filename, entry, value);

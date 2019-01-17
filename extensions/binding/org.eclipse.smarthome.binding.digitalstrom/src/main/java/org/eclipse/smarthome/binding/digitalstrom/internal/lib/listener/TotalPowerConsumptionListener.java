@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,14 +25,21 @@ public interface TotalPowerConsumptionListener {
     /**
      * This method is called whenever the total power consumption of the digitalSTROM-System has changed.
      *
-     * @param newPowerConsumption
+     * @param newPowerConsumption of the digitalSTROM-System
      */
-    public void onTotalPowerConsumptionChanged(int newPowerConsumption);
+    void onTotalPowerConsumptionChanged(int newPowerConsumption);
 
     /**
-     * This method is called whenever the total energy meter value of the digitalSTROM-System has changed.
+     * This method is called whenever the total energy meter value in Wh of the digitalSTROM-System has changed.
      *
-     * @param newPowerConsumption
+     * @param newEnergyMeterValue of the digitalSTROM-System
      */
-    public void onEnergyMeterValueChanged(int newEnergyMeterValue);
+    void onEnergyMeterValueChanged(int newEnergyMeterValue);
+
+    /**
+     * This method is called whenever the total energy meter value in Ws of the digitalSTROM-System has changed.
+     *
+     * @param newEnergyMeterValue of the digitalSTROM-System
+     */
+    void onEnergyMeterWsValueChanged(int newEnergyMeterValue);
 }

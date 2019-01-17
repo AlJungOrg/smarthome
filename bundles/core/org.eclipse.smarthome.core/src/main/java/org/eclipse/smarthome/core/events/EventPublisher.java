@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,7 +24,6 @@ public interface EventPublisher {
      * Posts an event through the event bus in an asynchronous way.
      * 
      * @param event the event posted through the event bus
-     * 
      * @throws IllegalArgumentException if the event is null
      * @throws IllegalArgumentException if one of the event properties type, payload or topic is null
      * @throws IllegalStateException if the underlying event bus module is not available

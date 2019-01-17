@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,13 +14,18 @@ package org.eclipse.smarthome.binding.astro.internal.model;
 
 import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.lang.builder.ToStringStyle;
+import org.eclipse.smarthome.core.library.dimension.Intensity;
+import org.eclipse.smarthome.core.library.types.QuantityType;
+import org.eclipse.smarthome.core.library.unit.SmartHomeUnits;
 
 /**
  * Holds the calculated direct, diffuse and total
  *
  * @author Gaël L'hopital - Initial contribution
+ * @author Christoph Weitkamp - Introduced UoM
  */
 public class Radiation {
+
     private double direct;
     private double diffuse;
     private double total;
@@ -58,22 +63,22 @@ public class Radiation {
     /**
      * Returns the total radiation.
      */
-    public double getTotal() {
-        return total;
+    public QuantityType<Intensity> getTotal() {
+        return new QuantityType<Intensity>(total, SmartHomeUnits.IRRADIANCE);
     }
 
     /**
      * Returns the direct radiation.
      */
-    public double getDirect() {
-        return direct;
+    public QuantityType<Intensity> getDirect() {
+        return new QuantityType<Intensity>(direct, SmartHomeUnits.IRRADIANCE);
     }
 
     /**
      * Returns the diffuse radiation.
      */
-    public double getDiffuse() {
-        return diffuse;
+    public QuantityType<Intensity> getDiffuse() {
+        return new QuantityType<Intensity>(diffuse, SmartHomeUnits.IRRADIANCE);
     }
 
     @Override

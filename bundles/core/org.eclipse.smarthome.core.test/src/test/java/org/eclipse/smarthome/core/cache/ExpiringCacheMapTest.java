@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,13 +22,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import org.apache.commons.lang.RandomStringUtils;
-import org.junit.Test;
 import org.junit.Before;
+import org.junit.Test;
 
 /**
  * Test class for the {@link ExpiringCacheMap} class.
  *
- * @author Christoph Weitkamp - Initial contribution.
+ * @author Christoph Weitkamp - Initial contribution
  * @author Martin van Wingerden - Added tests for putIfAbsentAndGet
  */
 public class ExpiringCacheMapTest {
@@ -45,28 +45,17 @@ public class ExpiringCacheMapTest {
     private static final String SECOND_TEST_KEY = "SECOND_TEST_KEY";
 
     private ExpiringCacheMap<String, String> subject;
-    
+
     @Before
     public void setUp() {
         subject = new ExpiringCacheMap<>(CACHE_EXPIRY);
-    }
-    
-    
-    @Test(expected = IllegalArgumentException.class)
-    public void testPutIllegalArgumentException1() throws IllegalArgumentException {
-        subject.put(FIRST_TEST_KEY, (Supplier<String>) null);
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void testPutIllegalArgumentException2() throws IllegalArgumentException {
-        subject.put(FIRST_TEST_KEY, (ExpiringCache<String>) null);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testPutIllegalArgumentException3() throws IllegalArgumentException {
         subject.put(null, CACHE_ACTION);
     }
-    
+
     @Test
     public void testPut() {
         subject.put(FIRST_TEST_KEY, PREDICTABLE_CACHE_ACTION_1);
@@ -91,6 +80,21 @@ public class ExpiringCacheMapTest {
 
         assertEquals(RESPONSE_1, response);
         assertNotEquals(RESPONSE_2, response);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testPutValueIllegalArgumentException1() throws IllegalArgumentException {
+        subject.putValue("KEY_NOT_FOUND", "test");
+    }
+
+    @Test
+    public void testPutValue() {
+        subject.put(FIRST_TEST_KEY, CACHE_ACTION);
+
+        subject.putValue(FIRST_TEST_KEY, "test");
+
+        String value = subject.get(FIRST_TEST_KEY);
+        assertEquals("test", value);
     }
 
     @Test

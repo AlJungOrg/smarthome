@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -57,24 +57,19 @@ public class WemoLinkDiscoveryService extends AbstractDiscoveryService implement
 
     private final Logger logger = LoggerFactory.getLogger(WemoLinkDiscoveryService.class);
 
-    public final static Set<ThingTypeUID> SUPPORTED_THING_TYPES = Collections.singleton(THING_TYPE_MZ100);
+    public static final Set<ThingTypeUID> SUPPORTED_THING_TYPES = Collections.singleton(THING_TYPE_MZ100);
 
     public static final String NORMALIZE_ID_REGEX = "[^a-zA-Z0-9_]";
 
     /**
      * Maximum time to search for devices in seconds.
      */
-    private final static int SEARCH_TIME = 20;
-
-    /**
-     * Initial delay for scanning job in seconds.
-     */
-    private final static int INITIAL_DELAY = 5;
+    private static final int SEARCH_TIME = 20;
 
     /**
      * Scan interval for scanning job in seconds.
      */
-    private final static int SCAN_INTERVAL = 120;
+    private static final int SCAN_INTERVAL = 120;
 
     /**
      * The handler for WeMo Link bridge
@@ -96,9 +91,14 @@ public class WemoLinkDiscoveryService extends AbstractDiscoveryService implement
      */
     private UpnpIOService service;
 
-    public WemoLinkDiscoveryService(WemoBridgeHandler wemoBridgeHandler, UpnpIOService upnpIOService) {
+    private final WemoHttpCall wemoHttpCaller;
+
+    public WemoLinkDiscoveryService(WemoBridgeHandler wemoBridgeHandler, UpnpIOService upnpIOService,
+            WemoHttpCall wemoHttpCaller) {
         super(SEARCH_TIME);
         this.wemoBridgeHandler = wemoBridgeHandler;
+
+        this.wemoHttpCaller = wemoHttpCaller;
 
         if (upnpIOService != null) {
             this.service = upnpIOService;
@@ -118,11 +118,9 @@ public class WemoLinkDiscoveryService extends AbstractDiscoveryService implement
     }
 
     @Override
-    protected void startScan() {
-
+    public void startScan() {
         logger.trace("Starting WeMoEndDevice discovery on WeMo Link {}", wemoBridgeHandler.getThing().getUID());
         try {
-
             String devUDN = "uuid:" + wemoBridgeHandler.getThing().getConfiguration().get(UDN).toString();
             logger.trace("devUDN = '{}'", devUDN);
 
@@ -139,7 +137,7 @@ public class WemoLinkDiscoveryService extends AbstractDiscoveryService implement
                 String deviceURL = StringUtils.substringBefore(descriptorURL.toString(), "/setup.xml");
                 String wemoURL = deviceURL + "/upnp/control/bridge1";
 
-                String endDeviceRequest = WemoHttpCall.executeCall(wemoURL, soapHeader, content);
+                String endDeviceRequest = wemoHttpCaller.executeCall(wemoURL, soapHeader, content);
 
                 if (endDeviceRequest != null) {
                     logger.trace("endDeviceRequest answered '{}'", endDeviceRequest);
@@ -215,7 +213,6 @@ public class WemoLinkDiscoveryService extends AbstractDiscoveryService implement
 
                                     thingDiscovered(discoveryResult);
                                 }
-
                             } else {
                                 logger.debug("Discovered an unsupported device :");
                                 logger.debug("DeviceIndex : {}", getCharacterDataFromElement(line));
@@ -231,7 +228,6 @@ public class WemoLinkDiscoveryService extends AbstractDiscoveryService implement
                                 wemoBridgeHandler.getThing().getUID(), e);
                     }
                 }
-
             }
         } catch (Exception e) {
             logger.error("Failed to get endDevices for bridge '{}'", wemoBridgeHandler.getThing().getUID(), e);
@@ -243,8 +239,8 @@ public class WemoLinkDiscoveryService extends AbstractDiscoveryService implement
         logger.trace("Start WeMo device background discovery");
 
         if (scanningJob == null || scanningJob.isCancelled()) {
-            this.scanningJob = AbstractDiscoveryService.scheduler.scheduleWithFixedDelay(this.scanningRunnable,
-                    INITIAL_DELAY, SCAN_INTERVAL, TimeUnit.SECONDS);
+            this.scanningJob = scheduler.scheduleWithFixedDelay(this.scanningRunnable,
+                    LINK_DISCOVERY_SERVICE_INITIAL_DELAY, SCAN_INTERVAL, TimeUnit.SECONDS);
         } else {
             logger.trace("scanningJob active");
         }

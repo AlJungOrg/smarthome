@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -33,7 +33,7 @@ import org.eclipse.smarthome.core.thing.ThingUID;
 @NonNullByDefault
 public class DiscoveryResultBuilder {
 
-    final private ThingUID thingUID;
+    private final ThingUID thingUID;
 
     private @Nullable ThingUID bridgeUID;
     private final Map<String, Object> properties = new HashMap<>();
@@ -51,7 +51,6 @@ public class DiscoveryResultBuilder {
      * Creates a new builder for a given thing UID.
      *
      * @param thingUID the thing UID for which the builder should be created-
-     *
      * @return a new instance of a {@link DiscoveryResultBuilder}
      */
     public static DiscoveryResultBuilder create(ThingUID thingUID) {

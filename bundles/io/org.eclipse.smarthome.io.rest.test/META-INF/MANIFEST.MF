@@ -8,12 +8,7 @@ Bundle-Version: 0.10.0.qualifier
 Fragment-Host: org.eclipse.smarthome.io.rest
 Import-Package: 
  com.google.gson.annotations,
- groovy.lang,
  org.apache.commons.io,
- org.codehaus.groovy.reflection,
- org.codehaus.groovy.runtime,
- org.codehaus.groovy.runtime.callsite,
- org.codehaus.groovy.runtime.typehandling,
  org.eclipse.jdt.annotation;resolution:=optional,
  org.eclipse.smarthome.config.core,
  org.eclipse.smarthome.core.storage,
@@ -23,9 +18,12 @@ Import-Package:
  org.eclipse.smarthome.test,
  org.glassfish.jersey.uri.internal,
  org.hamcrest;core=split,
- org.junit;version="4.0.0",
- org.mockito
-Require-Bundle: 
- org.hamcrest,
+ org.hamcrest.core,
+ org.hamcrest.object,
  org.junit,
- org.mockito
+ org.mockito,
+ org.mockito.invocation,
+ org.mockito.junit,
+ org.mockito.stubbing,
+ org.mockito.verification
+Automatic-Module-Name: org.eclipse.smarthome.io.rest.test

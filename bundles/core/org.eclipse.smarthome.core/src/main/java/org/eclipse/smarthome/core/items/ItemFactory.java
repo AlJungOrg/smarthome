@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,13 +12,15 @@
  */
 package org.eclipse.smarthome.core.items;
 
-import org.eclipse.jdt.annotation.NonNull;
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 
 /**
  * This Factory creates concrete instances of the known ItemTypes.
  *
  * @author Thomas.Eichstaedt-Engelen
  */
+@NonNullByDefault
 public interface ItemFactory {
 
     /**
@@ -26,10 +28,10 @@ public interface ItemFactory {
      *
      * @param itemTypeName
      * @param itemName
-     *
      * @return a new Item of type <code>itemTypeName</code> or <code>null</code> if no matching class is known.
      */
-    GenericItem createItem(@NonNull String itemTypeName, @NonNull String itemName);
+    @Nullable
+    Item createItem(@Nullable String itemTypeName, String itemName);
 
     /**
      * Returns the list of all supported ItemTypes of this Factory.

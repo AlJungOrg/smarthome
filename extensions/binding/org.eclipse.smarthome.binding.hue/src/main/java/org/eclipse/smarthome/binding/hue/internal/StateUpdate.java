@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,8 +12,6 @@
  */
 package org.eclipse.smarthome.binding.hue.internal;
 
-import java.util.ArrayList;
-
 import org.eclipse.smarthome.binding.hue.internal.State.AlertMode;
 import org.eclipse.smarthome.binding.hue.internal.State.Effect;
 
@@ -23,24 +21,12 @@ import org.eclipse.smarthome.binding.hue.internal.State.Effect;
  * @author Q42, standalone Jue library (https://github.com/Q42/Jue)
  * @author Thomas Höfer - added unique id and changed range check for brightness and saturation
  * @author Denis Dudnik - moved Jue library source code inside the smarthome Hue binding, minor code cleanup
+ * @author Samuel Leisering - refactor configuration updates
  */
-public class StateUpdate {
-    ArrayList<Command> commands = new ArrayList<>();
+public class StateUpdate extends ConfigUpdate {
 
-    String toJson() {
-        StringBuilder json = new StringBuilder("{");
-
-        for (int i = 0; i < commands.size(); i++) {
-            json.append(commands.get(i).toJson());
-            if (i < commands.size() - 1) {
-                json.append(",");
-            }
-        }
-
-        json.append("}");
-
-        return json.toString();
-    }
+    private Integer colorTemperature;
+    private Integer brightness;
 
     /**
      * Turn light on.
@@ -84,7 +70,12 @@ public class StateUpdate {
         }
 
         commands.add(new Command("bri", brightness));
+        this.brightness = brightness;
         return this;
+    }
+
+    public Integer getBrightness() {
+        return this.brightness;
     }
 
     /**
@@ -157,7 +148,12 @@ public class StateUpdate {
         }
 
         commands.add(new Command("ct", colorTemperature));
+        this.colorTemperature = colorTemperature;
         return this;
+    }
+
+    public Integer getColorTemperature() {
+        return this.colorTemperature;
     }
 
     /**
@@ -199,4 +195,5 @@ public class StateUpdate {
         commands.add(new Command("transitiontime", timeMillis / 100));
         return this;
     }
+
 }

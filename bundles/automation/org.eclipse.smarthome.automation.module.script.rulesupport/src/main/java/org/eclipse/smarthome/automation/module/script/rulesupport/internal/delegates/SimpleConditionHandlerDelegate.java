@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,7 +20,7 @@ import org.eclipse.smarthome.automation.handler.ConditionHandler;
 import org.eclipse.smarthome.automation.module.script.rulesupport.shared.simple.SimpleConditionHandler;
 
 /**
- * The SimpleConditionHandlerDelegate allows the registration of {@link SimpleConditionHandler}s to the RuleEngine.
+ * The SimpleConditionHandlerDelegate allows the registration of {@link SimpleConditionHandler}s to the RuleManager.
  *
  * @author Simon Merschjohann
  *

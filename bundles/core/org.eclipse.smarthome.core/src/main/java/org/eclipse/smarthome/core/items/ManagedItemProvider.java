@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,6 +11,8 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 package org.eclipse.smarthome.core.items;
+
+import static java.util.stream.Collectors.toList;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -36,9 +38,6 @@ import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Splitter;
-import com.google.common.collect.ImmutableList;
 
 /**
  * {@link ManagedItemProvider} is an OSGi service, that allows to add or remove
@@ -77,6 +76,8 @@ public class ManagedItemProvider extends AbstractManagedProvider<Item, String, P
 
         public List<String> functionParams;
 
+        public String dimension;
+
         private String groupFunction; // for migrating old items
     }
 
@@ -91,12 +92,9 @@ public class ManagedItemProvider extends AbstractManagedProvider<Item, String, P
     /**
      * Removes an item and it´s member if recursive flag is set to true.
      *
-     * @param itemName
-     *            item name to remove
-     * @param recursive
-     *            if set to true all members of the item will be removed, too.
-     * @return
-     *         removed item or null if no item with that name exists
+     * @param itemName item name to remove
+     * @param recursive if set to true all members of the item will be removed, too.
+     * @return removed item or null if no item with that name exists
      */
     public Item remove(String itemName, boolean recursive) {
         Item item = get(itemName);
@@ -126,9 +124,9 @@ public class ManagedItemProvider extends AbstractManagedProvider<Item, String, P
         return memberNames;
     }
 
-    private GenericItem createItem(@NonNull String itemType, @NonNull String itemName) {
+    private Item createItem(@NonNull String itemType, @NonNull String itemName) {
         for (ItemFactory factory : this.itemFactories) {
-            GenericItem item = factory.createItem(itemType, itemName);
+            Item item = factory.createItem(itemType, itemName);
             if (item != null) {
                 return item;
             }
@@ -143,8 +141,7 @@ public class ManagedItemProvider extends AbstractManagedProvider<Item, String, P
      * Translates the Items class simple name into a type name understandable by
      * the {@link ItemFactory}s.
      *
-     * @param item
-     *            the Item to translate the name
+     * @param item the Item to translate the name
      * @return the translated ItemTypeName understandable by the {@link ItemFactory}s
      */
     private @NonNull String toItemFactoryName(Item item) {
@@ -162,11 +159,10 @@ public class ManagedItemProvider extends AbstractManagedProvider<Item, String, P
                 Entry<String, PersistedItem> entry = iterator.next();
                 String itemName = entry.getKey();
                 PersistedItem persistedItem = entry.getValue();
-                @SuppressWarnings("null")
-                ActiveItem item = itemFactory.createItem(persistedItem.itemType, itemName);
-                if (item != null) {
+                Item item = itemFactory.createItem(persistedItem.itemType, itemName);
+                if (item != null && item instanceof ActiveItem) {
                     iterator.remove();
-                    configureItem(persistedItem, item);
+                    configureItem(persistedItem, (ActiveItem) item);
                     notifyListenersAboutAddedElement(item);
                 } else {
                     logger.debug("The added item factory '{}' still could not instantiate item '{}'.", itemFactory,
@@ -196,13 +192,13 @@ public class ManagedItemProvider extends AbstractManagedProvider<Item, String, P
 
     @Override
     protected Item toElement(String itemName, PersistedItem persistedItem) {
-        ActiveItem item = null;
+        Item item = null;
 
         migratePersistedItem(persistedItem);
 
         if (persistedItem.itemType.equals(ITEM_TYPE_GROUP)) {
             if (persistedItem.baseItemType != null) {
-                GenericItem baseItem = createItem(persistedItem.baseItemType, itemName);
+                Item baseItem = createItem(persistedItem.baseItemType, itemName);
                 if (persistedItem.functionName != null) {
                     GroupFunction function = getGroupFunction(persistedItem, baseItem);
                     item = new GroupItem(itemName, baseItem, function);
@@ -216,7 +212,9 @@ public class ManagedItemProvider extends AbstractManagedProvider<Item, String, P
             item = createItem(persistedItem.itemType, itemName);
         }
 
-        configureItem(persistedItem, item);
+        if (item != null && item instanceof ActiveItem) {
+            configureItem(persistedItem, (ActiveItem) item);
+        }
 
         if (item == null) {
             failedToCreate.put(itemName, persistedItem);
@@ -227,7 +225,7 @@ public class ManagedItemProvider extends AbstractManagedProvider<Item, String, P
         return item;
     }
 
-    private GroupFunction getGroupFunction(PersistedItem persistedItem, GenericItem baseItem) {
+    private GroupFunction getGroupFunction(PersistedItem persistedItem, Item baseItem) {
         GroupFunctionDTO functionDTO = new GroupFunctionDTO();
         functionDTO.name = persistedItem.functionName;
         if (persistedItem.functionParams != null) {
@@ -238,11 +236,13 @@ public class ManagedItemProvider extends AbstractManagedProvider<Item, String, P
 
     private void migratePersistedItem(PersistedItem persistedItem) {
         if (persistedItem.groupFunction != null) {
-            Iterator<String> parts = Splitter.on(';').split(persistedItem.groupFunction).iterator();
-            persistedItem.functionName = parts.next();
-            persistedItem.functionParams = ImmutableList.copyOf(parts);
-            persistedItem.baseItemType = "Switch";
-            persistedItem.groupFunction = null;
+            String[] parts = persistedItem.groupFunction.split(";");
+            if (parts.length > 0) {
+                persistedItem.functionName = parts[0];
+                persistedItem.functionParams = Arrays.stream(parts).skip(1).collect(toList());
+                persistedItem.baseItemType = "Switch";
+                persistedItem.groupFunction = null;
+            }
         }
     }
 
@@ -269,7 +269,6 @@ public class ManagedItemProvider extends AbstractManagedProvider<Item, String, P
 
     @Override
     protected PersistedItem toPersistableElement(Item item) {
-
         PersistedItem persistedItem = new PersistedItem(
                 item instanceof GroupItem ? ITEM_TYPE_GROUP : toItemFactoryName(item));
 
@@ -296,9 +295,11 @@ public class ManagedItemProvider extends AbstractManagedProvider<Item, String, P
     private void addFunctionToPersisedItem(PersistedItem persistedItem, GroupItem groupItem) {
         if (groupItem.getFunction() != null) {
             GroupFunctionDTO functionDTO = ItemDTOMapper.mapFunction(groupItem.getFunction());
-            persistedItem.functionName = functionDTO.name;
-            if (functionDTO.params != null) {
-                persistedItem.functionParams = Arrays.asList(functionDTO.params);
+            if (functionDTO != null) {
+                persistedItem.functionName = functionDTO.name;
+                if (functionDTO.params != null) {
+                    persistedItem.functionParams = Arrays.asList(functionDTO.params);
+                }
             }
         }
     }

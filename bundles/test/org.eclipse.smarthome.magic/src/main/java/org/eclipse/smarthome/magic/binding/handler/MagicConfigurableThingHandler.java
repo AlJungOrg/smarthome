@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,7 +14,7 @@ package org.eclipse.smarthome.magic.binding.handler;
 
 import java.util.Map;
 
-import org.eclipse.jdt.annotation.NonNull;
+import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingStatus;
@@ -24,17 +24,18 @@ import org.eclipse.smarthome.core.types.Command;
 /**
  * Handler for thing with a configuration parameter
  *
- * @author Stefan Triller
+ * @author Stefan Triller - Initial contribution
  *
  */
+@NonNullByDefault
 public class MagicConfigurableThingHandler extends BaseThingHandler {
 
-    public MagicConfigurableThingHandler(@NonNull Thing thing) {
+    public MagicConfigurableThingHandler(Thing thing) {
         super(thing);
     }
 
     @Override
-    public void handleCommand(@NonNull ChannelUID channelUID, Command command) {
+    public void handleCommand(ChannelUID channelUID, Command command) {
     }
 
     @Override

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -48,7 +48,6 @@ public abstract class BaseBridgeHandler extends BaseThingHandler implements Brid
      * @return child thing with the given uid or null if thing was not found
      */
     public @Nullable Thing getThingByUID(ThingUID uid) {
-
         Bridge bridge = getThing();
 
         List<Thing> things = bridge.getThings();

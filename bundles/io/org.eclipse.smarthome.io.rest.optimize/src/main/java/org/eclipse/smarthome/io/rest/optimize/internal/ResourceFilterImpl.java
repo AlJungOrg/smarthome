@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -57,7 +57,7 @@ import com.eclipsesource.jaxrs.publisher.ResourceFilter;
  */
 public class ResourceFilterImpl implements ResourceFilter {
 
-    private static final Logger logger = LoggerFactory.getLogger(ResourceFilterImpl.class);
+    private final Logger logger = LoggerFactory.getLogger(ResourceFilterImpl.class);
 
     /**
      * All classes and interfaces which are considered to be relevant for JAX-RS.
@@ -140,7 +140,6 @@ public class ResourceFilterImpl implements ResourceFilter {
             line = reader.readLine();
         }
         return ret;
-
     }
 
 }

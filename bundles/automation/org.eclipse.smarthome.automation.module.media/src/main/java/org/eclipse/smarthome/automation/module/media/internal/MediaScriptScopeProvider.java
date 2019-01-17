@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,7 +29,7 @@ import org.osgi.service.component.annotations.Reference;
  * @author Kai Kreuzer - Initial contribution
  *
  */
-@Component(immediate = true)
+@Component
 public class MediaScriptScopeProvider implements ScriptExtensionProvider {
     Map<String, Object> elements = new HashMap<>();
 
@@ -68,7 +68,7 @@ public class MediaScriptScopeProvider implements ScriptExtensionProvider {
 
     @Override
     public Object get(String scriptIdentifier, String type) {
-        return elements.get("type");
+        return elements.get(type);
     }
 
     @Override

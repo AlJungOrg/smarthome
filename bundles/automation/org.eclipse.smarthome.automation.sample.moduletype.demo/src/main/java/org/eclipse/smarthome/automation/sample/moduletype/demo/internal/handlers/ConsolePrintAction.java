@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -43,7 +43,7 @@ public class ConsolePrintAction extends BaseModuleHandler<Action> implements Act
      * This constant is used by {@link HandlerFactory} to create a correct handler instance. It must be the same as in
      * JSON definition of the module type.
      */
-    public final static String UID = "ConsolePrintAction";
+    public static final String UID = "ConsolePrintAction";
 
     /**
      * This constant contains the name of the input for this {@link Action} handler.

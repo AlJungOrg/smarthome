@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,8 +17,8 @@ import org.eclipse.smarthome.binding.dmx.internal.multiverse.DmxChannel;
 /**
  * The {@link BaseAction} is the base class for Actions like faders, chasers, etc..
  *
- * @author Davy Vanherbergen
- * @author Jan N. Klug
+ * @author Davy Vanherbergen - Initial contribution
+ * @author Jan N. Klug - Refactoring for ESH
  */
 public abstract class BaseAction {
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -64,8 +64,7 @@ public class WelcomeHomeModuleTypeProvider implements ModuleTypeProvider {
      * To provide the {@link ModuleType}s should register the WelcomeHomeModuleTypeProvider as
      * {@link ModuleTypeProvider} service.
      *
-     * @param bc
-     *            is a bundle's execution context within the Framework.
+     * @param bc is a bundle's execution context within the Framework.
      */
     public void register(BundleContext bc) {
         providerReg = bc.registerService(ModuleTypeProvider.class.getName(), this, null);

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,7 +20,6 @@ import java.util.Map;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.config.core.ConfigDescription;
-import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingTypeUID;
 
@@ -54,8 +53,7 @@ public class ThingType extends AbstractDescriptionType {
     /**
      * @deprecated Use the {@link ThingTypeBuilder} instead.
      *
-     * @throws IllegalArgumentException
-     *             if the UID is null or empty, or the the meta information is null
+     * @throws IllegalArgumentException if the UID is null or empty, or the the meta information is null
      */
     @Deprecated
     public ThingType(String bindingId, String thingTypeId, String label) throws IllegalArgumentException {
@@ -67,11 +65,9 @@ public class ThingType extends AbstractDescriptionType {
      *
      * @deprecated Use the {@link ThingTypeBuilder} instead.
      *
-     * @throws IllegalArgumentException
-     *             if the UID is null or empty, or the the meta information is null
+     * @throws IllegalArgumentException if the UID is null or empty, or the the meta information is null
      */
     @Deprecated
-    @SuppressWarnings("null")
     public ThingType(ThingTypeUID uid, List<String> supportedBridgeTypeUIDs, String label, String description,
             List<ChannelDefinition> channelDefinitions, List<ChannelGroupDefinition> channelGroupDefinitions,
             Map<String, String> properties, URI configDescriptionURI) throws IllegalArgumentException {
@@ -85,11 +81,9 @@ public class ThingType extends AbstractDescriptionType {
      *
      * @deprecated Use the {@link ThingTypeBuilder} instead.
      *
-     * @throws IllegalArgumentException
-     *             if the UID is null or empty, or the the meta information is null
+     * @throws IllegalArgumentException if the UID is null or empty, or the the meta information is null
      */
     @Deprecated
-    @SuppressWarnings("null")
     public ThingType(ThingTypeUID uid, List<String> supportedBridgeTypeUIDs, String label, String description,
             String category, boolean listed, List<ChannelDefinition> channelDefinitions,
             List<ChannelGroupDefinition> channelGroupDefinitions, @Nullable Map<String, String> properties,
@@ -103,8 +97,7 @@ public class ThingType extends AbstractDescriptionType {
      *
      * @deprecated Use the {@link ThingTypeBuilder} instead.
      *
-     * @throws IllegalArgumentException
-     *             if the UID is null or empty, or the the meta information is null
+     * @throws IllegalArgumentException if the UID is null or empty, or the the meta information is null
      */
     @Deprecated
     public ThingType(ThingTypeUID uid, @Nullable List<String> supportedBridgeTypeUIDs, String label,
@@ -135,9 +128,7 @@ public class ThingType extends AbstractDescriptionType {
      * @param properties the properties this Thing type provides (could be null)
      * @param configDescriptionURI the link to the concrete ConfigDescription (could be null)
      * @param extensibleChannelTypeIds the channel-type ids this thing-type is extensible with (could be null or empty).
-     *
-     * @throws IllegalArgumentException
-     *             if the UID is null or empty, or the the meta information is null
+     * @throws IllegalArgumentException if the UID is null or empty, or the the meta information is null
      */
     ThingType(ThingTypeUID uid, @Nullable List<String> supportedBridgeTypeUIDs, String label,
             @Nullable String description, @Nullable String category, boolean listed,
@@ -145,7 +136,6 @@ public class ThingType extends AbstractDescriptionType {
             @Nullable List<ChannelGroupDefinition> channelGroupDefinitions, @Nullable Map<String, String> properties,
             @Nullable URI configDescriptionURI, @Nullable List<String> extensibleChannelTypeIds)
             throws IllegalArgumentException {
-
         super(uid, label, description);
 
         this.category = category;
@@ -256,38 +246,6 @@ public class ThingType extends AbstractDescriptionType {
      */
     public Map<String, String> getProperties() {
         return properties;
-    }
-
-    /**
-     * Returns a channel type UID for the given channel UID from the thing type. The channel UID must be a channel,
-     * which is defined in a thing, which thing types matches this thing type.
-     *
-     * @param channelUID channel UID
-     * @return channel type UID or null if no matching channel type UID could be found in the thing type
-     */
-    public @Nullable ChannelTypeUID getChannelTypeUID(ChannelUID channelUID) {
-        if (!channelUID.isInGroup()) {
-            for (ChannelDefinition channelDefinition : this.getChannelDefinitions()) {
-                if (channelDefinition.getId().equals(channelUID.getId())) {
-                    return channelDefinition.getChannelTypeUID();
-                }
-            }
-        } else {
-            List<ChannelGroupDefinition> channelGroupDefinitions = this.getChannelGroupDefinitions();
-            for (ChannelGroupDefinition channelGroupDefinition : channelGroupDefinitions) {
-                if (channelGroupDefinition.getId().equals(channelUID.getGroupId())) {
-                    ChannelGroupType channelGroupType = TypeResolver.resolve(channelGroupDefinition.getTypeUID());
-                    if (channelGroupType != null) {
-                        for (ChannelDefinition channelDefinition : channelGroupType.getChannelDefinitions()) {
-                            if (channelDefinition.getId().equals(channelUID.getIdWithoutGroup())) {
-                                return channelDefinition.getChannelTypeUID();
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return null;
     }
 
     public @Nullable String getCategory() {

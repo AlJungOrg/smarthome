@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,7 +14,6 @@ package org.eclipse.smarthome.binding.tradfri.handler;
 
 import static org.eclipse.smarthome.binding.tradfri.TradfriBindingConstants.*;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -30,6 +29,7 @@ import org.eclipse.californium.core.network.CoapEndpoint;
 import org.eclipse.californium.core.network.config.NetworkConfig;
 import org.eclipse.californium.scandium.DTLSConnector;
 import org.eclipse.californium.scandium.config.DtlsConnectorConfig;
+import org.eclipse.californium.scandium.dtls.InMemoryConnectionStore;
 import org.eclipse.californium.scandium.dtls.pskstore.StaticPskStore;
 import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.smarthome.binding.tradfri.TradfriBindingConstants;
@@ -39,6 +39,7 @@ import org.eclipse.smarthome.binding.tradfri.internal.TradfriCoapClient;
 import org.eclipse.smarthome.binding.tradfri.internal.TradfriCoapEndpoint;
 import org.eclipse.smarthome.binding.tradfri.internal.TradfriCoapHandler;
 import org.eclipse.smarthome.binding.tradfri.internal.config.TradfriGatewayConfig;
+import org.eclipse.smarthome.binding.tradfri.internal.model.TradfriVersion;
 import org.eclipse.smarthome.config.core.Configuration;
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.ChannelUID;
@@ -68,7 +69,7 @@ public class TradfriGatewayHandler extends BaseBridgeHandler implements CoapCall
 
     protected final Logger logger = LoggerFactory.getLogger(getClass());
 
-    private static final String MIN_SUPPORTED_VERSION = "1.2.42";
+    private static final TradfriVersion MIN_SUPPORTED_VERSION = new TradfriVersion("1.2.42");
 
     private TradfriCoapClient deviceClient;
     private String gatewayURI;
@@ -107,12 +108,16 @@ public class TradfriGatewayHandler extends BaseBridgeHandler implements CoapCall
                 establishConnection();
             }
         } else {
-            if (isOldFirmware()) {
-                /*
-                 * older firmware - fall back to authentication with security code
-                 * in this case the Thing configuration will not be persisted
-                 */
-                logger.warn("Gateway with old firmware - please consider upgrading to the latest version.");
+            String currentFirmware = thing.getProperties().get(Thing.PROPERTY_FIRMWARE_VERSION);
+            if (isNullOrEmpty(currentFirmware)
+                    || MIN_SUPPORTED_VERSION.compareTo(new TradfriVersion(currentFirmware)) > 0) {
+                // older firmware - fall back to authentication with security code
+                // in this case the Thing configuration will not be persisted
+                if (!isNullOrEmpty(currentFirmware)) {
+                    // show warning only if we already have set the firmware property
+                    logger.warn("Gateway with old firmware '{}' - please consider upgrading to the latest version.",
+                            currentFirmware);
+                }
 
                 Configuration editedConfig = editConfiguration();
                 editedConfig.put(TradfriBindingConstants.GATEWAY_CONFIG_IDENTITY, "");
@@ -121,7 +126,6 @@ public class TradfriGatewayHandler extends BaseBridgeHandler implements CoapCall
 
                 establishConnection();
             } else {
-                updateStatus(ThingStatus.UNKNOWN);
                 // Running async operation to retrieve new <'identity','key'> pair
                 scheduler.execute(() -> {
                     boolean success = obtainIdentityAndPreSharedKey();
@@ -150,7 +154,7 @@ public class TradfriGatewayHandler extends BaseBridgeHandler implements CoapCall
 
         DtlsConnectorConfig.Builder builder = new DtlsConnectorConfig.Builder(new InetSocketAddress(0));
         builder.setPskStore(new StaticPskStore(configuration.identity, configuration.preSharedKey.getBytes()));
-        dtlsConnector = new DTLSConnector(builder.build());
+        dtlsConnector = new DTLSConnector(builder.build(), new InMemoryConnectionStore(100, 60));
         endPoint = new TradfriCoapEndpoint(dtlsConnector, NetworkConfig.getStandard());
         deviceClient.setEndpoint(endPoint);
         updateStatus(ThingStatus.UNKNOWN);
@@ -251,13 +255,13 @@ public class TradfriGatewayHandler extends BaseBridgeHandler implements CoapCall
             scanJob.cancel(true);
             scanJob = null;
         }
-        if (deviceClient != null) {
-            deviceClient.shutdown();
-            deviceClient = null;
-        }
         if (endPoint != null) {
             endPoint.destroy();
             endPoint = null;
+        }
+        if (deviceClient != null) {
+            deviceClient.shutdown();
+            deviceClient = null;
         }
         super.dispose();
     }
@@ -310,11 +314,13 @@ public class TradfriGatewayHandler extends BaseBridgeHandler implements CoapCall
 
     private synchronized void requestGatewayInfo() {
         // we are reusing our coap client and merely temporarily set a gateway info to call
-        deviceClient.setURI(this.gatewayInfoURI);
+        deviceClient.setURI(gatewayInfoURI);
         deviceClient.asyncGet().thenAccept(data -> {
+            logger.debug("requestGatewayInfo response: {}", data);
             JsonObject json = new JsonParser().parse(data).getAsJsonObject();
             String firmwareVersion = json.get(VERSION).getAsString();
             getThing().setProperty(Thing.PROPERTY_FIRMWARE_VERSION, firmwareVersion);
+            updateStatus(ThingStatus.ONLINE, ThingStatusDetail.NONE);
         });
         // restore root URI
         deviceClient.setURI(gatewayURI);
@@ -337,14 +343,6 @@ public class TradfriGatewayHandler extends BaseBridgeHandler implements CoapCall
         // are we still connected at all?
         if (endPoint != null) {
             updateStatus(status, statusDetail);
-            if (dtlsConnector != null && status == ThingStatus.OFFLINE) {
-                try {
-                    dtlsConnector.stop();
-                    dtlsConnector.start();
-                } catch (IOException e) {
-                    logger.debug("Error restarting the DTLS connector: {}", e.getMessage());
-                }
-            }
         }
     }
 
@@ -368,16 +366,6 @@ public class TradfriGatewayHandler extends BaseBridgeHandler implements CoapCall
 
     private boolean isNullOrEmpty(String string) {
         return string == null || string.isEmpty();
-    }
-
-    /**
-     * Checks current firmware in the thing properties and compares it with the value of {@link #MIN_SUPPORTED_VERSION}
-     *
-     * @return true if current firmware is older than {@value #MIN_SUPPORTED_VERSION}
-     */
-    private boolean isOldFirmware() {
-        String currentFirmware = thing.getProperties().get(Thing.PROPERTY_FIRMWARE_VERSION);
-        return currentFirmware == null || MIN_SUPPORTED_VERSION.compareTo(currentFirmware) > 0;
     }
 
     @Override

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,6 +12,8 @@
  */
 package org.eclipse.smarthome.io.rest.core.internal.link;
 
+import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.annotation.security.RolesAllowed;
@@ -91,11 +93,32 @@ public class ItemChannelLinkResource implements RESTResource {
         return Response.ok(thingLinkManager.isAutoLinksEnabled()).build();
     }
 
+    @GET
+    @Path("/{itemName}/{channelUID}")
+    @ApiOperation(value = "Retrieves links.")
+    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
+            @ApiResponse(code = 404, message = "Content does not match the path") })
+    public Response getLink(@PathParam("itemName") @ApiParam(value = "itemName") String itemName,
+            @PathParam("channelUID") @ApiParam(value = "channelUID") String channelUid) {
+
+        List<ItemChannelLinkDTO> links = itemChannelLinkRegistry.getAll().stream()
+                .filter(link -> channelUid.equals(link.getLinkedUID().getAsString()))
+                .filter(link -> itemName.equals(link.getItemName())).map(this::toBeans).collect(Collectors.toList());
+
+        if (links.size() == 1) {
+            ItemChannelLinkDTO link = links.get(0);
+            return JSONResponse.createResponse(Status.OK, link, null);
+        }
+        return JSONResponse.createErrorResponse(Status.NOT_FOUND,
+                "No link found for item '" + itemName + "' + and channelUID '" + channelUid + "'");
+    }
+
     @PUT
     @Path("/{itemName}/{channelUID}")
     @ApiOperation(value = "Links item to a channel.")
     @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
-            @ApiResponse(code = 400, message = "Content does not match the path") })
+            @ApiResponse(code = 400, message = "Content does not match the path"),
+            @ApiResponse(code = 405, message = "Link is not editable") })
     public Response link(@PathParam("itemName") @ApiParam(value = "itemName") String itemName,
             @PathParam("channelUID") @ApiParam(value = "channelUID") String channelUid,
             @ApiParam(value = "link data", required = false) ItemChannelLinkDTO bean) {
@@ -114,9 +137,12 @@ public class ItemChannelLinkResource implements RESTResource {
         if (itemChannelLinkRegistry.get(link.getUID()) == null) {
             itemChannelLinkRegistry.add(link);
         } else {
-            itemChannelLinkRegistry.update(link);
+            ItemChannelLink oldLink = itemChannelLinkRegistry.update(link);
+            if (oldLink == null) {
+                return Response.status(Status.METHOD_NOT_ALLOWED).build();
+            }
         }
-        return Response.ok().build();
+        return Response.ok(null, MediaType.TEXT_PLAIN).build();
     }
 
     @DELETE
@@ -127,7 +153,6 @@ public class ItemChannelLinkResource implements RESTResource {
             @ApiResponse(code = 405, message = "Link not editable.") })
     public Response unlink(@PathParam("itemName") @ApiParam(value = "itemName") String itemName,
             @PathParam("channelUID") @ApiParam(value = "channelUID") String channelUid) {
-
         String linkId = AbstractLink.getIDFor(itemName, new ChannelUID(channelUid));
         if (itemChannelLinkRegistry.get(linkId) == null) {
             String message = "Link " + linkId + " does not exist!";
@@ -137,7 +162,7 @@ public class ItemChannelLinkResource implements RESTResource {
         ItemChannelLink result = itemChannelLinkRegistry
                 .remove(AbstractLink.getIDFor(itemName, new ChannelUID(channelUid)));
         if (result != null) {
-            return Response.ok().build();
+            return Response.ok(null, MediaType.TEXT_PLAIN).build();
         } else {
             return JSONResponse.createErrorResponse(Status.METHOD_NOT_ALLOWED, "Channel is read-only.");
         }

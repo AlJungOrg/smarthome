@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,29 +15,33 @@ package org.eclipse.smarthome.transform.regex.internal;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.core.transform.TransformationException;
 import org.eclipse.smarthome.core.transform.TransformationService;
+import org.osgi.service.component.annotations.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * <p>
  * The implementation of {@link TransformationService} which transforms the input by Regular Expressions.
- * 
+ *
  * <p>
  * <b>Note:</b> the given Regular Expression must contain exactly one group!
  *
  * @author Thomas.Eichstaedt-Engelen
  */
+@NonNullByDefault
+@Component(immediate = true, property = { "smarthome.transform=REGEX" })
 public class RegExTransformationService implements TransformationService {
 
     private final Logger logger = LoggerFactory.getLogger(RegExTransformationService.class);
 
-    private static final Pattern substPattern = Pattern.compile("^s/(.*?[^\\\\])/(.*?[^\\\\])/(.*)$");
+    private static final Pattern SUBSTR_PATTERN = Pattern.compile("^s/(.*?[^\\\\])/(.*?[^\\\\])/(.*)$");
 
     @Override
-    public String transform(String regExpression, String source) throws TransformationException {
-
+    public @Nullable String transform(String regExpression, String source) throws TransformationException {
         if (regExpression == null || source == null) {
             throw new TransformationException("the given parameters 'regex' and 'source' must not be null");
         }
@@ -46,7 +50,7 @@ public class RegExTransformationService implements TransformationService {
 
         String result = "";
 
-        Matcher substMatcher = substPattern.matcher(regExpression);
+        Matcher substMatcher = SUBSTR_PATTERN.matcher(regExpression);
         if (substMatcher.matches()) {
             logger.debug("Using substitution form of regex transformation");
             String regex = substMatcher.group(1);
@@ -72,7 +76,6 @@ public class RegExTransformationService implements TransformationService {
         matcher.reset();
 
         while (matcher.find()) {
-
             if (matcher.groupCount() == 0) {
                 logger.info(
                         "the given regular expression '^{}$' doesn't contain a group. No content will be extracted and returned!",

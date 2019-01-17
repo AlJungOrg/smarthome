@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,18 +14,17 @@ package org.eclipse.smarthome.core.cache;
 
 import static org.junit.Assert.*;
 
-import org.apache.commons.lang.RandomStringUtils;
-
-import org.junit.Test;
-import org.junit.Before;
-
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+
+import org.apache.commons.lang.RandomStringUtils;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * Test class for the {@link ExpiringCache} class.
  *
- * @author Christoph Weitkamp - Initial contribution.
+ * @author Christoph Weitkamp - Initial contribution
  */
 public class ExpiringCacheTest {
     private static final long CACHE_EXPIRY = TimeUnit.SECONDS.toMillis(2);
@@ -36,11 +35,6 @@ public class ExpiringCacheTest {
     @Before
     public void setUp() {
         subject = new ExpiringCache<>(CACHE_EXPIRY, CACHE_ACTION);
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void testIllegalArgumentException1() throws IllegalArgumentException {
-        new ExpiringCache<>(CACHE_EXPIRY, null);
     }
 
     @Test
@@ -54,6 +48,18 @@ public class ExpiringCacheTest {
 
         assertNotNull(value2);
         assertEquals(value1, value2);
+    }
+
+    @Test
+    public void testPutValue() {
+        String value1 = subject.getValue();
+
+        // put new value
+        subject.putValue("test");
+
+        String value2 = subject.getValue();
+        assertEquals("test", value2);
+        assertNotEquals(value1, value2);
     }
 
     @Test

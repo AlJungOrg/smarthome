@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,8 +21,11 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathFactory;
 
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.core.transform.TransformationException;
 import org.eclipse.smarthome.core.transform.TransformationService;
+import org.osgi.service.component.annotations.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -34,13 +37,14 @@ import org.xml.sax.InputSource;
  *
  * @author Thomas.Eichstaedt-Engelen
  */
+@NonNullByDefault
+@Component(immediate = true, property = { "smarthome.transform=XPATH" })
 public class XPathTransformationService implements TransformationService {
 
     private final Logger logger = LoggerFactory.getLogger(XPathTransformationService.class);
 
     @Override
-    public String transform(String xpathExpression, String source) throws TransformationException {
-
+    public @Nullable String transform(String xpathExpression, String source) throws TransformationException {
         if (xpathExpression == null || source == null) {
             throw new TransformationException("the given parameters 'xpath' and 'source' must not be null");
         }
@@ -76,7 +80,6 @@ public class XPathTransformationService implements TransformationService {
                 stringReader.close();
             }
         }
-
     }
 
 }

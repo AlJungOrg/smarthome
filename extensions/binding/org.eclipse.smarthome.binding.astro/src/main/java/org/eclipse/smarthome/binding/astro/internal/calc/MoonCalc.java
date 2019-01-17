@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -31,11 +31,11 @@ import org.eclipse.smarthome.binding.astro.internal.util.DateTimeUtils;
  * the moon.
  *
  * @author Gerhard Riegler - Initial contribution
+ * @author Christoph Weitkamp - Introduced UoM
  * @see based on the calculations of
  *      http://www.computus.de/mondphase/mondphase.htm azimuth/elevation and
  *      zodiac based on http://lexikon.astronomie.info/java/sunmoon/
  */
-
 public class MoonCalc {
     private static final double NEW_MOON = 0;
     private static final double FULL_MOON = 0.5;
@@ -93,12 +93,12 @@ public class MoonCalc {
         MoonDistance apogee = moon.getApogee();
         double apogeeJd = getApogee(julianDate, decimalYear);
         apogee.setDate(DateTimeUtils.toCalendar(apogeeJd));
-        apogee.setKilometer(getDistance(apogeeJd));
+        apogee.setDistance(getDistance(apogeeJd));
 
         MoonDistance perigee = moon.getPerigee();
         double perigeeJd = getPerigee(julianDate, decimalYear);
         perigee.setDate(DateTimeUtils.toCalendar(perigeeJd));
-        perigee.setKilometer(getDistance(perigeeJd));
+        perigee.setDistance(getDistance(perigeeJd));
 
         return moon;
     }
@@ -113,7 +113,7 @@ public class MoonCalc {
 
         MoonDistance distance = moon.getDistance();
         distance.setDate(Calendar.getInstance());
-        distance.setKilometer(getDistance(julianDate));
+        distance.setDistance(getDistance(julianDate));
     }
 
     /**
@@ -125,9 +125,15 @@ public class MoonCalc {
         double parentNewMoon = getPreviousPhase(calendar, julianDateEndOfDay, NEW_MOON);
         double age = Math.abs(parentNewMoon - julianDateEndOfDay);
         phase.setAge((int) age);
-        phase.setIllumination(getIllumination(DateTimeUtils.dateToJulianDate(calendar)));
 
-        int illumination = (int) phase.getIllumination();
+        long parentNewMoonMillis = DateTimeUtils.toCalendar(parentNewMoon).getTimeInMillis();
+        long ageRangeTimeMillis = phase.getNew().getTimeInMillis() - parentNewMoonMillis;
+        long ageCurrentMillis = System.currentTimeMillis() - parentNewMoonMillis;
+        double agePercent = ageCurrentMillis * 100.0 / ageRangeTimeMillis;
+        phase.setAgePercent(agePercent);
+        phase.setAgeDegree(3.6 * agePercent);
+        double illumination = getIllumination(DateTimeUtils.dateToJulianDate(calendar));
+        phase.setIllumination(illumination);
         boolean isWaxing = age < (29.530588853 / 2);
         if (DateTimeUtils.isSameDay(calendar, phase.getNew())) {
             phase.setName(MoonPhaseName.NEW);
@@ -190,7 +196,6 @@ public class MoonCalc {
             }
             yminus = yplus;
             hour += 2;
-
         } while (hour < 25 && (utrise == -1 || utset == -1));
 
         double rise = prepareTime(utrise);
@@ -240,14 +245,14 @@ public class MoonCalc {
      * Calculates the moon phase.
      */
     private double calcMoonPhase(double k, double mode) {
-        double k_mod = Math.floor(k) + mode;
-        double t = k_mod / 1236.85;
+        double kMod = Math.floor(k) + mode;
+        double t = kMod / 1236.85;
         double e = var_e(t);
-        double m = var_m(k_mod, t);
-        double m1 = var_m1(k_mod, t);
-        double f = var_f(k_mod, t);
-        double o = var_o(k_mod, t);
-        double jd = var_jde(k_mod, t);
+        double m = var_m(kMod, t);
+        double m1 = var_m1(kMod, t);
+        double f = var_f(kMod, t);
+        double o = var_o(kMod, t);
+        double jd = var_jde(kMod, t);
         if (mode == NEW_MOON) {
             jd += -.4072 * SN(m1) + .17241 * e * SN(m) + .01608 * SN(2 * m1) + .01039 * SN(2 * f)
                     + .00739 * e * SN(m1 - m) - .00514 * e * SN(m1 + m) + .00208 * e * e * SN(2 * m)
@@ -285,32 +290,32 @@ public class MoonCalc {
                     + .00002 * CS(2 * f);
             jd += (mode == FIRST_QUARTER) ? w : -w;
         }
-        return moonCorrection(jd, t, k_mod);
+        return moonCorrection(jd, t, kMod);
     }
 
     /**
      * Calculates the eclipse.
      */
     private double getEclipse(double k, double typ, int mode) {
-        double k_mod = Math.floor(k) + typ;
-        double t = k_mod / 1236.85;
-        double f = var_f(k_mod, t);
+        double kMod = Math.floor(k) + typ;
+        double t = kMod / 1236.85;
+        double f = var_f(kMod, t);
         double jd = 0;
         double ringTest = 0;
         if (SN(Math.abs(f)) <= .36) {
-            double o = var_o(k_mod, t);
+            double o = var_o(kMod, t);
             double f1 = f - .02665 * SN(o);
-            double a1 = 299.77 + .107408 * k_mod - .009173 * t * t;
+            double a1 = 299.77 + .107408 * kMod - .009173 * t * t;
             double e = var_e(t);
-            double m = var_m(k_mod, t);
-            double m1 = var_m1(k_mod, t);
+            double m = var_m(kMod, t);
+            double m1 = var_m1(kMod, t);
             double p = .207 * e * SN(m) + .0024 * e * SN(2 * m) - .0392 * SN(m1) + .0116 * SN(2 * m1)
                     - .0073 * e * SN(m1 + m) + .0067 * e * SN(m1 - m) + .0118 * SN(2 * f1);
             double q = 5.2207 - .0048 * e * CS(m) + .002 * e * CS(2 * m) - .3299 * CS(m1) - .006 * e * CS(m1 + m)
                     + .0041 * e * CS(m1 - m);
             double g = (p * CS(f1) + q * SN(f1)) * (1 - .0048 * CS(Math.abs(f1)));
             double u = .0059 + .0046 * e * CS(m) - .0182 * CS(m1) + .0004 * CS(2 * m1) - .0005 * CS(m + m1);
-            jd = var_jde(k_mod, t);
+            jd = var_jde(kMod, t);
             jd += (typ == ECLIPSE_TYPE_MOON) ? -.4065 * SN(m1) + .1727 * e * SN(m)
                     : -.4075 * SN(m1) + .1721 * e * SN(m);
 
@@ -785,8 +790,8 @@ public class MoonCalc {
      */
     private double toGMST(double jd) {
         double ut = (jd - 0.5 - Math.floor(jd - 0.5)) * 24.;
-        double jd_mod = Math.floor(jd - 0.5) + 0.5;
-        double t = (jd_mod - 2451545.0) / 36525.0;
+        double jdMod = Math.floor(jd - 0.5) + 0.5;
+        double t = (jdMod - 2451545.0) / 36525.0;
         double t0 = 6.697374558 + t * (2400.051336 + t * 0.000025862);
         return (mod(t0 + ut * 1.002737909, 24.));
     }

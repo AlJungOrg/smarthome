@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,21 +14,17 @@ package org.eclipse.smarthome.model.script.internal.engine.action;
 
 import org.eclipse.smarthome.model.persistence.extensions.PersistenceExtensions;
 import org.eclipse.smarthome.model.script.engine.action.ActionService;
+import org.osgi.service.component.annotations.Component;
 
 /**
  * This class registers an OSGi service for the Persistence action.
  *
  * @author Kai Kreuzer - Initial contribution and API
  */
+@Component
 public class PersistenceActionService implements ActionService {
 
     public PersistenceActionService() {
-    }
-
-    public void activate() {
-    }
-
-    public void deactivate() {
     }
 
     @Override

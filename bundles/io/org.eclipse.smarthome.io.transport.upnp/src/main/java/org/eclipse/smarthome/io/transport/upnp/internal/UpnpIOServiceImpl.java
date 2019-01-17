@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -70,16 +70,17 @@ public class UpnpIOServiceImpl implements UpnpIOService, RegistryListener {
 
     private final Logger logger = LoggerFactory.getLogger(UpnpIOServiceImpl.class);
 
+    private final ScheduledExecutorService scheduler = ThreadPoolManager.getScheduledPool(POOL_NAME);
+
     private final int DEFAULT_POLLING_INTERVAL = 60;
     private static final String POOL_NAME = "upnp-io";
 
     private UpnpService upnpService;
 
-    private final Set<UpnpIOParticipant> participants = new CopyOnWriteArraySet<>();
-    private final Map<UpnpIOParticipant, ScheduledFuture> pollingJobs = new ConcurrentHashMap<UpnpIOParticipant, ScheduledFuture>();
-    private final Map<UpnpIOParticipant, Boolean> currentStates = new ConcurrentHashMap<UpnpIOParticipant, Boolean>();
-    private final Map<Service, UpnpSubscriptionCallback> subscriptionCallbacks = new ConcurrentHashMap<Service, UpnpSubscriptionCallback>();
-    private final ScheduledExecutorService scheduler = ThreadPoolManager.getScheduledPool(POOL_NAME);
+    final Set<UpnpIOParticipant> participants = new CopyOnWriteArraySet<>();
+    final Map<UpnpIOParticipant, ScheduledFuture> pollingJobs = new ConcurrentHashMap<UpnpIOParticipant, ScheduledFuture>();
+    final Map<UpnpIOParticipant, Boolean> currentStates = new ConcurrentHashMap<UpnpIOParticipant, Boolean>();
+    final Map<Service, UpnpSubscriptionCallback> subscriptionCallbacks = new ConcurrentHashMap<Service, UpnpSubscriptionCallback>();
 
     public class UpnpSubscriptionCallback extends SubscriptionCallback {
 
@@ -239,7 +240,6 @@ public class UpnpIOServiceImpl implements UpnpIOService, RegistryListener {
                 logger.trace("Could not find an upnp device for participant '{}'", participant.getUDN());
             }
         }
-
     }
 
     private Service searchSubService(String serviceID, Device device) {

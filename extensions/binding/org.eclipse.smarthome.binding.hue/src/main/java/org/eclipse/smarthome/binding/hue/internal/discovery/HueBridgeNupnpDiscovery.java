@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,7 +12,8 @@
  */
 package org.eclipse.smarthome.binding.hue.internal.discovery;
 
-import static org.eclipse.smarthome.binding.hue.HueBindingConstants.*;
+import static org.eclipse.smarthome.binding.hue.internal.HueBindingConstants.*;
+import static org.eclipse.smarthome.core.thing.Thing.PROPERTY_SERIAL_NUMBER;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -24,12 +25,15 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.config.discovery.AbstractDiscoveryService;
 import org.eclipse.smarthome.config.discovery.DiscoveryResult;
 import org.eclipse.smarthome.config.discovery.DiscoveryResultBuilder;
+import org.eclipse.smarthome.config.discovery.DiscoveryService;
 import org.eclipse.smarthome.core.thing.ThingTypeUID;
 import org.eclipse.smarthome.core.thing.ThingUID;
 import org.eclipse.smarthome.io.net.http.HttpUtil;
+import org.osgi.service.component.annotations.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,6 +50,7 @@ import com.google.gson.reflect.TypeToken;
  * @author Andre Fuechsel - make {@link #startScan()} asynchronous
  */
 @NonNullByDefault
+@Component(service = DiscoveryService.class, immediate = true, configurationPid = "discovery.hue")
 public class HueBridgeNupnpDiscovery extends AbstractDiscoveryService {
 
     private static final String MODEL_NAME_PHILIPS_HUE = "<modelName>Philips hue";
@@ -74,12 +79,7 @@ public class HueBridgeNupnpDiscovery extends AbstractDiscoveryService {
 
     @Override
     protected void startScan() {
-        scheduler.schedule(new Runnable() {
-            @Override
-            public void run() {
-                discoverHueBridges();
-            }
-        }, 0, TimeUnit.SECONDS);
+        scheduler.schedule(this::discoverHueBridges, 0, TimeUnit.SECONDS);
     }
 
     /**
@@ -93,7 +93,8 @@ public class HueBridgeNupnpDiscovery extends AbstractDiscoveryService {
                 ThingUID uid = new ThingUID(THING_TYPE_BRIDGE, serialNumber);
                 DiscoveryResult result = DiscoveryResultBuilder.create(uid)
                         .withProperties(buildProperties(host, serialNumber))
-                        .withLabel(LABEL_PATTERN.replace("IP", host)).withRepresentationProperty(SERIAL_NUMBER).build();
+                        .withLabel(LABEL_PATTERN.replace("IP", host)).withRepresentationProperty(PROPERTY_SERIAL_NUMBER)
+                        .build();
                 thingDiscovered(result);
             }
         }
@@ -104,6 +105,7 @@ public class HueBridgeNupnpDiscovery extends AbstractDiscoveryService {
      * @param ip
      * @return DiscoveryResult
      */
+    @Nullable
     public DiscoveryResult addDiscovery(String ip) {
         BridgeJsonParameters bridge;
         try {
@@ -125,7 +127,7 @@ public class HueBridgeNupnpDiscovery extends AbstractDiscoveryService {
                 ThingUID uid = new ThingUID(THING_TYPE_BRIDGE, serialNumber);
                 DiscoveryResult result = DiscoveryResultBuilder.create(uid)
                     .withProperties(buildProperties(host, serialNumber))
-                    .withLabel(LABEL_PATTERN.replace("IP", host)).withRepresentationProperty(SERIAL_NUMBER).build();
+                    .withLabel(LABEL_PATTERN.replace("IP", host)).withRepresentationProperty(PROPERTY_SERIAL_NUMBER).build();
                 thingDiscovered(result);
                 return result;
             }
@@ -147,7 +149,7 @@ public class HueBridgeNupnpDiscovery extends AbstractDiscoveryService {
     private Map<String, Object> buildProperties(String host, String serialNumber) {
         Map<String, Object> properties = new HashMap<>(2);
         properties.put(HOST, host);
-        properties.put(SERIAL_NUMBER, serialNumber);
+        properties.put(PROPERTY_SERIAL_NUMBER, serialNumber);
         return properties;
     }
 

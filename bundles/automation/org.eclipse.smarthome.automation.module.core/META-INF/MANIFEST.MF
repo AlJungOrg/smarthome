@@ -5,17 +5,23 @@ Bundle-ManifestVersion: 2
 Bundle-Name: Eclipse SmartHome Automation Module Core
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Bundle-SymbolicName: org.eclipse.smarthome.automation.module.core
+Bundle-Vendor: Eclipse.org/SmartHome
 Bundle-Version: 0.10.0.qualifier
 Export-Package: 
  org.eclipse.smarthome.automation.module.core.factory,
- org.eclipse.smarthome.automation.module.core.handler
+ org.eclipse.smarthome.automation.module.core.handler,
+ org.eclipse.smarthome.automation.module.core.provider,
+ org.eclipse.smarthome.automation.module.core.provider.i18n
 Import-Package: 
  org.eclipse.jdt.annotation;resolution:=optional,
  org.eclipse.smarthome.automation,
+ org.eclipse.smarthome.automation.annotation,
  org.eclipse.smarthome.automation.handler,
  org.eclipse.smarthome.automation.module.core.factory,
  org.eclipse.smarthome.automation.module.core.handler,
+ org.eclipse.smarthome.automation.type,
  org.eclipse.smarthome.config.core,
+ org.eclipse.smarthome.core.common.registry,
  org.eclipse.smarthome.core.events,
  org.eclipse.smarthome.core.items,
  org.eclipse.smarthome.core.items.events,
@@ -25,5 +31,6 @@ Import-Package:
  org.osgi.framework,
  org.osgi.service.component,
  org.osgi.util.tracker,
- org.slf4j;version="1.7.2"
+ org.slf4j
 Service-Component: OSGI-INF/*.xml
+Automatic-Module-Name: org.eclipse.smarthome.automation.module.core

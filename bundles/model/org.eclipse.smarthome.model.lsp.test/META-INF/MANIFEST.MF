@@ -3,6 +3,7 @@ Bundle-ManifestVersion: 2
 Bundle-Name: Eclipse SmartHome Language Server Tests
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Bundle-SymbolicName: org.eclipse.smarthome.model.lsp.test
+Bundle-Vendor: Eclipse.org/SmartHome
 Bundle-Version: 0.10.0.qualifier
 Fragment-Host: org.eclipse.smarthome.model.lsp
 Import-Package: 
@@ -12,9 +13,9 @@ Import-Package:
  org.eclipse.smarthome.test.storage,
  org.hamcrest;core=split,
  org.junit;version="4.0.0",
+ org.junit.rules;version="4.0.0",
+ org.junit.runner;version="4.0.0",
+ org.junit.runners;version="4.0.0",
  org.mockito,
  org.slf4j
-Require-Bundle: 
- org.hamcrest,
- org.junit,
- org.mockito
+Automatic-Module-Name: org.eclipse.smarthome.model.lsp.test

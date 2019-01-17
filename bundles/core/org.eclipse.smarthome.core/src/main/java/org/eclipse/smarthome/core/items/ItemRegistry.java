@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,10 +13,14 @@
 package org.eclipse.smarthome.core.items;
 
 import java.util.Collection;
+import java.util.Collections;
 
 import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.core.common.registry.Registry;
+import org.eclipse.smarthome.core.internal.items.ItemBuilderImpl;
+import org.eclipse.smarthome.core.library.CoreItemFactory;
+import org.slf4j.LoggerFactory;
 
 /**
  * The ItemRegistry is the central place, where items are kept in memory and their state
@@ -105,8 +109,7 @@ public interface ItemRegistry extends Registry<Item, String> {
      * @return list of items which contains all of the given tags, which is
      *         filtered by the given type filter.
      */
-    public @NonNull <T extends GenericItem> Collection<T> getItemsByTag(@NonNull Class<T> typeFilter,
-            @NonNull String... tags);
+    public @NonNull <T extends Item> Collection<T> getItemsByTag(@NonNull Class<T> typeFilter, @NonNull String... tags);
 
     /**
      * @see ManagedItemProvider#remove(String, boolean)
@@ -126,5 +129,36 @@ public interface ItemRegistry extends Registry<Item, String> {
      * @param hook
      */
     void removeRegistryHook(RegistryHook<Item> hook);
+
+    /**
+     * Create a new {@link ItemBuilder}, which is initialized by the given item.
+     *
+     * @param item the template to initialize the builder with
+     * @return an ItemBuilder instance
+     *
+     * @deprecated Use the {@link ItemBuilderFactory} service instead.
+     */
+    @Deprecated
+    default ItemBuilder newItemBuilder(Item item) {
+        LoggerFactory.getLogger(getClass())
+                .warn("Deprecation: You are using a deprecated API. Please use the ItemBuilder OSGi service instead.");
+        return new ItemBuilderImpl(Collections.singleton(new CoreItemFactory()), item);
+    }
+
+    /**
+     * Create a new {@link ItemBuilder}, which is initialized by the given item.
+     *
+     * @param itemType the item type to create
+     * @param itemName the name of the item to create
+     * @return an ItemBuilder instance
+     *
+     * @deprecated Use the {@link ItemBuilderFactory} service instead.
+     */
+    @Deprecated
+    default ItemBuilder newItemBuilder(String itemType, String itemName) {
+        LoggerFactory.getLogger(getClass())
+                .warn("Deprecation: You are using a deprecated API. Please use the ItemBuilder OSGi service instead.");
+        return new ItemBuilderImpl(Collections.singleton(new CoreItemFactory()), itemType, itemName);
+    }
 
 }

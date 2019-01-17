@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,7 +19,6 @@ import org.eclipse.smarthome.core.thing.binding.BaseThingHandlerFactory;
 import org.eclipse.smarthome.core.thing.binding.ThingHandler;
 import org.eclipse.smarthome.core.thing.binding.ThingHandlerFactory;
 import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.ConfigurationPolicy;
 
 /**
  * The {@link DmxTestHandlerFactory} is responsible for creating things and thing
@@ -27,7 +26,7 @@ import org.osgi.service.component.annotations.ConfigurationPolicy;
  *
  * @author Jan N. Klug - Initial contribution
  */
-@Component(service = ThingHandlerFactory.class, immediate = true, name = "binding.dmx.test", configurationPolicy = ConfigurationPolicy.OPTIONAL)
+@Component(service = ThingHandlerFactory.class)
 public class DmxTestHandlerFactory extends BaseThingHandlerFactory {
 
     @Override

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,6 +14,7 @@ package org.eclipse.smarthome.config.discovery.upnp.internal;
 
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -22,6 +23,9 @@ import org.eclipse.smarthome.config.discovery.AbstractDiscoveryService;
 import org.eclipse.smarthome.config.discovery.DiscoveryResult;
 import org.eclipse.smarthome.config.discovery.DiscoveryService;
 import org.eclipse.smarthome.config.discovery.upnp.UpnpDiscoveryParticipant;
+import org.eclipse.smarthome.core.net.CidrAddress;
+import org.eclipse.smarthome.core.net.NetworkAddressChangeListener;
+import org.eclipse.smarthome.core.net.NetworkAddressService;
 import org.eclipse.smarthome.core.thing.ThingTypeUID;
 import org.eclipse.smarthome.core.thing.ThingUID;
 import org.jupnp.UpnpService;
@@ -29,6 +33,7 @@ import org.jupnp.model.meta.LocalDevice;
 import org.jupnp.model.meta.RemoteDevice;
 import org.jupnp.registry.Registry;
 import org.jupnp.registry.RegistryListener;
+import org.jupnp.transport.RouterException;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.component.annotations.Reference;
@@ -43,10 +48,13 @@ import org.slf4j.LoggerFactory;
  *
  * @author Kai Kreuzer - Initial contribution
  * @author Andre Fuechsel - Added call of removeOlderResults
+ * @author Gary Tse - Add NetworkAddressChangeListener to handle interface changes
+ * @author Tim Roberts - Added primary address change
  *
  */
 @Component(immediate = true, service = DiscoveryService.class, configurationPid = "discovery.upnp")
-public class UpnpDiscoveryService extends AbstractDiscoveryService implements RegistryListener {
+public class UpnpDiscoveryService extends AbstractDiscoveryService
+        implements RegistryListener, NetworkAddressChangeListener {
 
     private final Logger logger = LoggerFactory.getLogger(UpnpDiscoveryService.class);
 
@@ -80,6 +88,15 @@ public class UpnpDiscoveryService extends AbstractDiscoveryService implements Re
 
     protected void unsetUpnpService(UpnpService upnpService) {
         this.upnpService = null;
+    }
+
+    @Reference
+    protected void setNetworkAddressService(NetworkAddressService networkAddressService) {
+        networkAddressService.addNetworkAddressChangeListener(this);
+    }
+
+    protected void unsetNetworkAddressService(NetworkAddressService networkAddressService) {
+        networkAddressService.removeNetworkAddressChangeListener(this);
     }
 
     @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
@@ -210,6 +227,25 @@ public class UpnpDiscoveryService extends AbstractDiscoveryService implements Re
                 logger.error("Participant '{}' threw an exception", participant.getClass().getName(), e);
             }
         }
+    }
+
+    @Override
+    public void onChanged(final List<CidrAddress> added, final List<CidrAddress> removed) {
+        scheduler.execute(() -> {
+            if (!removed.isEmpty()) {
+                upnpService.getRegistry().removeAllRemoteDevices();
+            }
+
+            try {
+                upnpService.getRouter().disable();
+                upnpService.getRouter().enable();
+
+                startScan();
+            } catch (RouterException e) {
+                logger.error("Could not retstart UPnP network components.", e);
+            }
+        });
+
     }
 
     @Override

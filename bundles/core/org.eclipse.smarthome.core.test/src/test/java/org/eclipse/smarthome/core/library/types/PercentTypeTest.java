@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,9 +12,9 @@
  */
 package org.eclipse.smarthome.core.library.types;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
-import org.eclipse.smarthome.core.types.UnDefType;
+import org.eclipse.smarthome.core.library.unit.SmartHomeUnits;
 import org.junit.Test;
 
 /**
@@ -71,17 +71,24 @@ public class PercentTypeTest {
     }
 
     @Test
+    public void testConversionToQuantityType() {
+        assertEquals(new QuantityType<>("100 %"), PercentType.HUNDRED.as(QuantityType.class));
+        assertEquals(new QuantityType<>("1 one"),
+                ((QuantityType<?>) PercentType.HUNDRED.as(QuantityType.class)).toUnit(SmartHomeUnits.ONE));
+    }
+
+    @Test
     public void testConversionToOpenCloseType() {
         assertEquals(OpenClosedType.OPEN, new PercentType("100.0").as(OpenClosedType.class));
         assertEquals(OpenClosedType.CLOSED, new PercentType("0.0").as(OpenClosedType.class));
-        assertEquals(UnDefType.UNDEF, new PercentType("50.0").as(OpenClosedType.class));
+        assertNull(new PercentType("50.0").as(OpenClosedType.class));
     }
 
     @Test
     public void testConversionToUpDownType() {
         assertEquals(UpDownType.UP, new PercentType("0.0").as(UpDownType.class));
         assertEquals(UpDownType.DOWN, new PercentType("100.0").as(UpDownType.class));
-        assertEquals(UnDefType.UNDEF, new PercentType("50.0").as(OpenClosedType.class));
+        assertNull(new PercentType("50.0").as(OpenClosedType.class));
     }
 
     @Test

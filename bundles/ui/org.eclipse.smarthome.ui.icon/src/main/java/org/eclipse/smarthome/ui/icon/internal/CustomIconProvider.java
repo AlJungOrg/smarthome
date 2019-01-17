@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,7 +22,9 @@ import java.util.Set;
 
 import org.eclipse.smarthome.config.core.ConfigConstants;
 import org.eclipse.smarthome.ui.icon.AbstractResourceIconProvider;
+import org.eclipse.smarthome.ui.icon.IconProvider;
 import org.eclipse.smarthome.ui.icon.IconSet;
+import org.osgi.service.component.annotations.Component;
 
 /**
  * The custom icon provider supports custom icons in the configurations/icons
@@ -31,6 +33,7 @@ import org.eclipse.smarthome.ui.icon.IconSet;
  * @author Kai Kreuzer - Initial contribution
  *
  */
+@Component(immediate = true, service = {IconProvider.class} )
 public class CustomIconProvider extends AbstractResourceIconProvider {
 
     private File getIconFile(String filename, String iconSetId) {

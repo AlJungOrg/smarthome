@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,7 +19,6 @@ import java.math.RoundingMode;
 import java.net.URL;
 import java.time.Instant;
 import java.time.ZonedDateTime;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -33,9 +32,6 @@ import java.util.stream.Stream;
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.smarthome.binding.wemo.internal.http.WemoHttpCall;
 import org.eclipse.smarthome.config.core.Configuration;
-import org.eclipse.smarthome.config.discovery.DiscoveryListener;
-import org.eclipse.smarthome.config.discovery.DiscoveryResult;
-import org.eclipse.smarthome.config.discovery.DiscoveryService;
 import org.eclipse.smarthome.core.library.types.DateTimeType;
 import org.eclipse.smarthome.core.library.types.DecimalType;
 import org.eclipse.smarthome.core.library.types.OnOffType;
@@ -44,8 +40,6 @@ import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.thing.ThingStatusDetail;
 import org.eclipse.smarthome.core.thing.ThingTypeUID;
-import org.eclipse.smarthome.core.thing.ThingUID;
-import org.eclipse.smarthome.core.thing.binding.BaseThingHandler;
 import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.core.types.RefreshType;
 import org.eclipse.smarthome.core.types.State;
@@ -64,11 +58,11 @@ import org.slf4j.LoggerFactory;
  * @author Erdoan Hadzhiyusein - Adapted the class to work with the new DateTimeType
  */
 
-public class WemoHandler extends BaseThingHandler implements UpnpIOParticipant, DiscoveryListener {
+public class WemoHandler extends AbstractWemoHandler implements UpnpIOParticipant {
 
     private final Logger logger = LoggerFactory.getLogger(WemoHandler.class);
 
-    public final static Set<ThingTypeUID> SUPPORTED_THING_TYPES = Stream
+    public static final Set<ThingTypeUID> SUPPORTED_THING_TYPES = Stream
             .of(THING_TYPE_SOCKET, THING_TYPE_INSIGHT, THING_TYPE_LIGHTSWITCH, THING_TYPE_MOTION)
             .collect(Collectors.toSet());
 
@@ -76,7 +70,7 @@ public class WemoHandler extends BaseThingHandler implements UpnpIOParticipant, 
 
     private final Map<String, String> stateMap = Collections.synchronizedMap(new HashMap<String, String>());
 
-    protected final static int SUBSCRIPTION_DURATION = 600;
+    // protected static final int SUBSCRIPTION_DURATION = WemoBindingConstants.SUBSCRIPTION_DURATION;
 
     private UpnpIOService service;
 
@@ -98,7 +92,6 @@ public class WemoHandler extends BaseThingHandler implements UpnpIOParticipant, 
 
                 updateWemoState();
                 onSubscription();
-
             } catch (Exception e) {
                 logger.debug("Exception during poll : {}", e);
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, e.getMessage());
@@ -106,9 +99,10 @@ public class WemoHandler extends BaseThingHandler implements UpnpIOParticipant, 
         }
     };
 
-    public WemoHandler(Thing thing, UpnpIOService upnpIOService) {
-
+    public WemoHandler(Thing thing, UpnpIOService upnpIOService, WemoHttpCall wemohttpCaller) {
         super(thing);
+
+        this.wemoHttpCaller = wemohttpCaller;
 
         logger.debug("Creating a WemoHandler for thing '{}'", getThing().getUID());
 
@@ -117,12 +111,10 @@ public class WemoHandler extends BaseThingHandler implements UpnpIOParticipant, 
         } else {
             logger.debug("upnpIOService not set.");
         }
-
     }
 
     @Override
     public void initialize() {
-
         Configuration configuration = getConfig();
 
         if (configuration.get("udn") != null) {
@@ -132,28 +124,6 @@ public class WemoHandler extends BaseThingHandler implements UpnpIOParticipant, 
             updateStatus(ThingStatus.ONLINE);
         } else {
             logger.debug("Cannot initalize WemoHandler. UDN not set.");
-        }
-
-    }
-
-    @Override
-    public void thingDiscovered(DiscoveryService source, DiscoveryResult result) {
-        if (result.getThingUID().equals(this.getThing().getUID())) {
-            if (getThing().getConfiguration().get(UDN).equals(result.getProperties().get(UDN))) {
-                logger.trace("Discovered UDN '{}' for thing '{}'", result.getProperties().get(UDN),
-                        getThing().getUID());
-                updateStatus(ThingStatus.ONLINE);
-                onSubscription();
-                onUpdate();
-            }
-        }
-    }
-
-    @Override
-    public void thingRemoved(DiscoveryService source, ThingUID thingUID) {
-        if (thingUID.equals(this.getThing().getUID())) {
-            logger.trace("Setting status for thing '{}' to OFFLINE", getThing().getUID());
-            updateStatus(ThingStatus.OFFLINE);
         }
     }
 
@@ -181,9 +151,7 @@ public class WemoHandler extends BaseThingHandler implements UpnpIOParticipant, 
             }
         } else if (channelUID.getId().equals(CHANNEL_STATE)) {
             if (command instanceof OnOffType) {
-
                 try {
-
                     String binaryState = null;
 
                     if (command.equals(OnOffType.ON)) {
@@ -203,7 +171,7 @@ public class WemoHandler extends BaseThingHandler implements UpnpIOParticipant, 
                     String wemoURL = getWemoURL("basicevent");
 
                     if (wemoURL != null) {
-                        WemoHttpCall.executeCall(wemoURL, soapHeader, content);
+                        wemoHttpCaller.executeCall(wemoURL, soapHeader, content);
                     }
                 } catch (Exception e) {
                     logger.error("Failed to send command '{}' for device '{}': {}", command, getThing().getUID(),
@@ -223,7 +191,6 @@ public class WemoHandler extends BaseThingHandler implements UpnpIOParticipant, 
 
     @Override
     public void onValueReceived(String variable, String value, String service) {
-
         logger.debug("Received pair '{}':'{}' (service '{}') for thing '{}'",
                 new Object[] { variable, value, service, this.getThing().getUID() });
 
@@ -235,7 +202,6 @@ public class WemoHandler extends BaseThingHandler implements UpnpIOParticipant, 
             String insightParams = stateMap.get("InsightParams");
 
             if (insightParams != null) {
-
                 String[] splitInsightParams = insightParams.split("\\|");
 
                 if (splitInsightParams[0] != null) {
@@ -338,7 +304,6 @@ public class WemoHandler extends BaseThingHandler implements UpnpIOParticipant, 
                     updateState(CHANNEL_STANDBYLIMIT, standByLimit);
                 }
             }
-
         } else {
             State state = stateMap.get("BinaryState").equals("0") ? OnOffType.OFF : OnOffType.ON;
 
@@ -439,7 +404,6 @@ public class WemoHandler extends BaseThingHandler implements UpnpIOParticipant, 
      *
      */
     protected void updateWemoState() {
-
         String action = "GetBinaryState";
         String variable = "BinaryState";
         String actionService = "basicevent";
@@ -460,7 +424,7 @@ public class WemoHandler extends BaseThingHandler implements UpnpIOParticipant, 
         try {
             String wemoURL = getWemoURL(actionService);
             if (wemoURL != null) {
-                String wemoCallResponse = WemoHttpCall.executeCall(wemoURL, soapHeader, content);
+                String wemoCallResponse = wemoHttpCaller.executeCall(wemoURL, soapHeader, content);
                 if (wemoCallResponse != null) {
                     logger.trace("State response '{}' for device '{}' received", wemoCallResponse, getThing().getUID());
                     if (variable.equals("InsightParams")) {
@@ -492,12 +456,6 @@ public class WemoHandler extends BaseThingHandler implements UpnpIOParticipant, 
 
     @Override
     public void onStatusChanged(boolean status) {
-    }
-
-    @Override
-    public Collection<ThingUID> removeOlderResults(DiscoveryService source, long timestamp,
-            Collection<ThingTypeUID> thingTypeUIDs, ThingUID bridgeUID) {
-        return Collections.emptyList();
     }
 
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,7 +16,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.eclipse.jdt.annotation.NonNull;
+import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.smarthome.core.items.GenericItem;
 import org.eclipse.smarthome.core.library.CoreItemFactory;
 import org.eclipse.smarthome.core.library.types.PercentType;
@@ -35,6 +35,7 @@ import org.eclipse.smarthome.core.types.UnDefType;
  * @author Markus Rathgeb - Support more types for getStateAs
  *
  */
+@NonNullByDefault
 public class RollershutterItem extends GenericItem {
 
     private static List<Class<? extends State>> acceptedDataTypes = new ArrayList<Class<? extends State>>();
@@ -52,7 +53,7 @@ public class RollershutterItem extends GenericItem {
         acceptedCommandTypes.add(RefreshType.class);
     }
 
-    public RollershutterItem(@NonNull String name) {
+    public RollershutterItem(String name) {
         super(CoreItemFactory.ROLLERSHUTTER, name);
     }
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,6 +14,8 @@ package org.eclipse.smarthome.ui.basic.internal.render;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.HashMap;
@@ -25,6 +27,7 @@ import org.apache.commons.lang.StringUtils;
 import org.eclipse.smarthome.core.i18n.I18nUtil;
 import org.eclipse.smarthome.core.i18n.LocaleProvider;
 import org.eclipse.smarthome.core.i18n.TranslationProvider;
+import org.eclipse.smarthome.core.library.types.QuantityType;
 import org.eclipse.smarthome.core.types.State;
 import org.eclipse.smarthome.model.sitemap.Widget;
 import org.eclipse.smarthome.ui.basic.internal.WebAppActivator;
@@ -45,7 +48,7 @@ import org.slf4j.LoggerFactory;
  * @author Vlad Ivanov - BasicUI changes
  *
  */
-abstract public class AbstractWidgetRenderer implements WidgetRenderer {
+public abstract class AbstractWidgetRenderer implements WidgetRenderer {
 
     private final Logger logger = LoggerFactory.getLogger(AbstractWidgetRenderer.class);
 
@@ -64,13 +67,13 @@ abstract public class AbstractWidgetRenderer implements WidgetRenderer {
     protected static final String SNIPPET_LOCATION = "snippets/";
 
     /* a local cache so we do not have to read the snippets over and over again from the bundle */
-    protected static final Map<String, String> snippetCache = new HashMap<String, String>();
+    protected static final Map<String, String> SNIPPET_CACHE = new HashMap<String, String>();
 
-    public void setItemUIRegistry(ItemUIRegistry itemUIRegistry) {
+    protected void setItemUIRegistry(ItemUIRegistry itemUIRegistry) {
         this.itemUIRegistry = itemUIRegistry;
     }
 
-    public void unsetItemUIRegistry(ItemUIRegistry itemUIRegistry) {
+    protected void unsetItemUIRegistry(ItemUIRegistry itemUIRegistry) {
         this.itemUIRegistry = null;
     }
 
@@ -78,19 +81,19 @@ abstract public class AbstractWidgetRenderer implements WidgetRenderer {
         return itemUIRegistry;
     }
 
-    public void setLocaleProvider(LocaleProvider localeProvider) {
+    protected void setLocaleProvider(LocaleProvider localeProvider) {
         this.localeProvider = localeProvider;
     }
 
-    public void unsetLocaleProvider(final LocaleProvider localeProvider) {
+    protected void unsetLocaleProvider(final LocaleProvider localeProvider) {
         this.localeProvider = null;
     }
 
-    public void setTranslationProvider(TranslationProvider i18nProvider) {
+    protected void setTranslationProvider(TranslationProvider i18nProvider) {
         this.i18nProvider = i18nProvider;
     }
 
-    public void unsetTranslationProvider(TranslationProvider i18nProvider) {
+    protected void unsetTranslationProvider(TranslationProvider i18nProvider) {
         this.i18nProvider = null;
     }
 
@@ -140,14 +143,14 @@ abstract public class AbstractWidgetRenderer implements WidgetRenderer {
      */
     protected synchronized String getSnippet(String elementType) throws RenderException {
         String lowerTypeElementType = elementType.toLowerCase();
-        String snippet = snippetCache.get(lowerTypeElementType);
+        String snippet = SNIPPET_CACHE.get(lowerTypeElementType);
         if (snippet == null) {
             String snippetLocation = SNIPPET_LOCATION + lowerTypeElementType + SNIPPET_EXT;
             URL entry = WebAppActivator.getContext().getBundle().getEntry(snippetLocation);
             if (entry != null) {
                 try {
                     snippet = IOUtils.toString(entry.openStream());
-                    snippetCache.put(lowerTypeElementType, snippet);
+                    SNIPPET_CACHE.put(lowerTypeElementType, snippet);
                 } catch (IOException e) {
                     logger.warn("Cannot load snippet for element type '{}'", lowerTypeElementType, e);
                 }
@@ -311,5 +314,23 @@ abstract public class AbstractWidgetRenderer implements WidgetRenderer {
                     this.localeProvider.getLocale());
         }
         return result;
+    }
+
+    protected String getUnitForWidget(Widget widget) {
+        return itemUIRegistry.getUnitForWidget(widget);
+    }
+
+    protected State convertStateToLabelUnit(QuantityType<?> state, String label) {
+        return itemUIRegistry.convertStateToLabelUnit(state, label);
+    }
+
+    protected boolean isValidURL(String url) {
+        if (url != null && !url.isEmpty()) {
+            try {
+                return new URL(url).toURI() != null ? true : false;
+            } catch (MalformedURLException | URISyntaxException ex) {
+            }
+        }
+        return false;
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,6 +22,7 @@ import javax.ws.rs.core.Response;
 import org.eclipse.smarthome.core.auth.Role;
 import org.eclipse.smarthome.core.id.InstanceUUID;
 import org.eclipse.smarthome.io.rest.RESTResource;
+import org.osgi.service.component.annotations.Component;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -33,6 +34,7 @@ import io.swagger.annotations.ApiResponses;
  *
  * @author Kai Kreuzer - Initial contribution and API
  */
+@Component
 @Path(UUIDResource.PATH_UUID)
 @Api(value = UUIDResource.PATH_UUID)
 @RolesAllowed({ Role.ADMIN })

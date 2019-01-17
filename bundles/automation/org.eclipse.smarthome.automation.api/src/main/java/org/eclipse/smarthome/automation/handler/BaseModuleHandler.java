@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,7 @@
 package org.eclipse.smarthome.automation.handler;
 
 import org.eclipse.smarthome.automation.Module;
+import org.eclipse.smarthome.automation.ModuleHandlerCallback;
 
 /**
  * This is a base class that can be used by any ModuleHandler implementation
@@ -22,14 +23,20 @@ import org.eclipse.smarthome.automation.Module;
 public class BaseModuleHandler<T extends Module> implements ModuleHandler {
 
     protected T module;
+    protected ModuleHandlerCallback callback;
 
     public BaseModuleHandler(T module) {
         this.module = module;
     }
 
     @Override
+    public void setCallback(ModuleHandlerCallback callback) {
+        this.callback = callback;
+    }
+
+    @Override
     public void dispose() {
-        // can be overridden
+        this.callback = null;
     }
 
 }

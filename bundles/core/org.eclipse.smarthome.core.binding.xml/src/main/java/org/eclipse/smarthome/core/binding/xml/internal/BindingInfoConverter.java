@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -55,7 +55,7 @@ public class BindingInfoConverter extends GenericUnmarshaller<BindingInfoXmlResu
         if (uriText != null) {
             try {
                 return new URI(uriText);
-            } catch (NullPointerException | URISyntaxException ex) {
+            } catch (URISyntaxException ex) {
                 throw new ConversionException(
                         "The URI '" + uriText + "' in node " + "'config-description-ref' is invalid!", ex);
             }

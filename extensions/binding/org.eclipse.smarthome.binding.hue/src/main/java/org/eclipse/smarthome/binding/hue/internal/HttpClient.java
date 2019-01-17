@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,16 +12,23 @@
  */
 package org.eclipse.smarthome.binding.hue.internal;
 
-import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.LinkedList;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
 
-import org.apache.commons.io.IOUtils;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -31,13 +38,44 @@ import org.eclipse.jdt.annotation.Nullable;
 @NonNullByDefault
 public class HttpClient {
     private int timeout = 1000;
+    private final Logger logger = LoggerFactory.getLogger(HttpClient.class);
+    private final LinkedList<AsyncPutParameters> commandsQueue = new LinkedList<>();
+    private @Nullable Future<?> job;
+
+    @SuppressWarnings({ "null", "unused" })
+    private void executeCommands() {
+        while (true) {
+            try {
+                long delayTime = 0;
+                synchronized (commandsQueue) {
+                    AsyncPutParameters payloadCallbackPair = commandsQueue.poll();
+                    if (payloadCallbackPair != null) {
+                        logger.debug("Async sending put to address: {} delay: {} body: {}", payloadCallbackPair.address,
+                                payloadCallbackPair.delay, payloadCallbackPair.body);
+                        try {
+                            Result result = put(payloadCallbackPair.address, payloadCallbackPair.body);
+                            payloadCallbackPair.future.complete(result);
+                        } catch (IOException e) {
+                            payloadCallbackPair.future.completeExceptionally(e);
+                        }
+                        delayTime = payloadCallbackPair.delay;
+                    } else {
+                        return;
+                    }
+                }
+                Thread.sleep(delayTime);
+            } catch (InterruptedException e) {
+                logger.debug("commandExecutorThread was interrupted", e);
+            }
+        }
+    }
 
     public void setTimeout(int timeout) {
         this.timeout = timeout;
     }
 
     public Result get(String address) throws IOException {
-        return doNetwork(address, "GET", "");
+        return doNetwork(address, "GET");
     }
 
     public Result post(String address, String body) throws IOException {
@@ -48,8 +86,30 @@ public class HttpClient {
         return doNetwork(address, "PUT", body);
     }
 
+    public CompletableFuture<Result> putAsync(String address, String body, long delay,
+            ScheduledExecutorService scheduler) {
+        AsyncPutParameters asyncPutParameters = new AsyncPutParameters(address, body, delay);
+
+        synchronized (commandsQueue) {
+            if (commandsQueue.isEmpty()) {
+                commandsQueue.offer(asyncPutParameters);
+                if (job == null || job.isDone()) {
+                    job = scheduler.submit(this::executeCommands);
+                }
+            } else {
+                commandsQueue.offer(asyncPutParameters);
+            }
+        }
+
+        return asyncPutParameters.future;
+    }
+
     public Result delete(String address) throws IOException {
-        return doNetwork(address, "DELETE", "");
+        return doNetwork(address, "DELETE");
+    }
+
+    protected Result doNetwork(String address, String requestMethod) throws IOException {
+        return doNetwork(address, requestMethod, null);
     }
 
     protected Result doNetwork(String address, String requestMethod, @Nullable String body) throws IOException {
@@ -60,16 +120,21 @@ public class HttpClient {
             conn.setConnectTimeout(timeout);
             conn.setReadTimeout(timeout);
 
-            if (body != null && !body.equals("")) {
+            if (body != null && !"".equals(body)) {
                 conn.setDoOutput(true);
-                OutputStreamWriter out = new OutputStreamWriter(conn.getOutputStream());
-                out.write(body);
-                out.close();
+                try (Writer out = new OutputStreamWriter(conn.getOutputStream())) {
+                    out.write(body);
+                }
             }
 
-            InputStream in = new BufferedInputStream(conn.getInputStream());
-            String output = IOUtils.toString(in);
-            return new Result(output, conn.getResponseCode());
+            try (InputStream in = conn.getInputStream(); ByteArrayOutputStream result = new ByteArrayOutputStream()) {
+                byte[] buffer = new byte[1024];
+                int length;
+                while ((length = in.read(buffer)) != -1) {
+                    result.write(buffer, 0, length);
+                }
+                return new Result(result.toString(StandardCharsets.UTF_8.name()), conn.getResponseCode());
+            }
         } finally {
             conn.disconnect();
         }
@@ -90,6 +155,20 @@ public class HttpClient {
 
         public int getResponseCode() {
             return responseCode;
+        }
+    }
+
+    public final class AsyncPutParameters {
+        public final String address;
+        public final String body;
+        public final CompletableFuture<Result> future;
+        public final long delay;
+
+        public AsyncPutParameters(String address, String body, long delay) {
+            this.address = address;
+            this.body = body;
+            this.future = new CompletableFuture<>();
+            this.delay = delay;
         }
     }
 }

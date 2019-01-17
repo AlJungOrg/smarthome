@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.eclipse.smarthome.core.common.SafeCaller;
 import org.eclipse.smarthome.core.items.GenericItem;
 import org.eclipse.smarthome.core.items.GroupItem;
 import org.eclipse.smarthome.core.items.Item;
@@ -70,6 +71,8 @@ public class PersistenceManagerImpl implements PersistenceManager, ItemRegistryC
     private ExpressionThreadPoolExecutor scheduler;
 
     private ItemRegistry itemRegistry;
+    private SafeCaller safeCaller;
+    private volatile boolean started = false;
 
     final Map<String, PersistenceService> persistenceServices = new HashMap<>();
     final Map<String, PersistenceServiceConfiguration> persistenceServiceConfigs = new HashMap<>();
@@ -80,31 +83,45 @@ public class PersistenceManagerImpl implements PersistenceManager, ItemRegistryC
 
     protected void activate() {
         scheduler = ExpressionThreadPoolManager.getExpressionScheduledPool("persist");
+        allItemsChanged(null);
+        started = true;
+        itemRegistry.addRegistryChangeListener(this);
     }
 
     protected void deactivate() {
-        scheduler.shutdown();
+        itemRegistry.removeRegistryChangeListener(this);
+        started = false;
+        removeTimers();
+        removeItemStateChangeListeners();
         scheduler = null;
     }
 
     @Reference
     protected void setItemRegistry(ItemRegistry itemRegistry) {
         this.itemRegistry = itemRegistry;
-        itemRegistry.addRegistryChangeListener(this);
-        allItemsChanged(null);
     }
 
     protected void unsetItemRegistry(ItemRegistry itemRegistry) {
-        itemRegistry.removeRegistryChangeListener(this);
         this.itemRegistry = null;
+    }
+
+    @Reference
+    protected void setSafeCaller(SafeCaller safeCaller) {
+        this.safeCaller = safeCaller;
+    }
+
+    protected void unsetSafeCaller(SafeCaller safeCaller) {
+        this.safeCaller = null;
     }
 
     @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
     protected void addPersistenceService(PersistenceService persistenceService) {
         logger.debug("Initializing {} persistence service.", persistenceService.getId());
         persistenceServices.put(persistenceService.getId(), persistenceService);
-        stopEventHandling(persistenceService.getId());
-        startEventHandling(persistenceService.getId());
+        if (started) {
+            stopEventHandling(persistenceService.getId());
+            startEventHandling(persistenceService.getId());
+        }
     }
 
     protected void removePersistenceService(PersistenceService persistenceService) {
@@ -246,6 +263,7 @@ public class PersistenceManagerImpl implements PersistenceManager, ItemRegistryC
      *
      * @param item the item to restore the state for
      */
+    @SuppressWarnings("null")
     private void initialize(Item item) {
         // get the last persisted state from the persistence service if no state is yet set
         if (item.getState().equals(UnDefType.NULL) && item instanceof GenericItem) {
@@ -259,20 +277,30 @@ public class PersistenceManagerImpl implements PersistenceManager, ItemRegistryC
                             if (service instanceof QueryablePersistenceService) {
                                 QueryablePersistenceService queryService = (QueryablePersistenceService) service;
                                 FilterCriteria filter = new FilterCriteria().setItemName(item.getName()).setPageSize(1);
-                                Iterable<HistoricItem> result = queryService.query(filter);
-                                Iterator<HistoricItem> it = result.iterator();
-                                if (it.hasNext()) {
-                                    HistoricItem historicItem = it.next();
-                                    GenericItem genericItem = (GenericItem) item;
-                                    genericItem.removeStateChangeListener(this);
-                                    genericItem.setState(historicItem.getState());
-                                    genericItem.addStateChangeListener(this);
-                                    logger.debug("Restored item state from '{}' for item '{}' -> '{}'",
-                                            new Object[] {
-                                                    DateFormat.getDateTimeInstance()
-                                                            .format(historicItem.getTimestamp()),
-                                                    item.getName(), historicItem.getState().toString() });
-                                    return;
+                                Iterable<HistoricItem> result = safeCaller
+                                        .create(queryService, QueryablePersistenceService.class).onTimeout(() -> {
+                                            logger.warn("Querying persistence service '{}' takes more than {}ms.",
+                                                    queryService.getId(), SafeCaller.DEFAULT_TIMEOUT);
+                                        }).onException(e -> {
+                                            logger.error(
+                                                    "Exception occurred while querying persistence service '{}': {}",
+                                                    queryService.getId(), e.getMessage(), e);
+                                        }).build().query(filter);
+                                if (result != null) {
+                                    Iterator<HistoricItem> it = result.iterator();
+                                    if (it.hasNext()) {
+                                        HistoricItem historicItem = it.next();
+                                        GenericItem genericItem = (GenericItem) item;
+                                        genericItem.removeStateChangeListener(this);
+                                        genericItem.setState(historicItem.getState());
+                                        genericItem.addStateChangeListener(this);
+                                        logger.debug("Restored item state from '{}' for item '{}' -> '{}'",
+                                                new Object[] {
+                                                        DateFormat.getDateTimeInstance()
+                                                                .format(historicItem.getTimestamp()),
+                                                        item.getName(), historicItem.getState().toString() });
+                                        return;
+                                    }
                                 }
                             } else if (service != null) {
                                 logger.warn(
@@ -282,6 +310,14 @@ public class PersistenceManagerImpl implements PersistenceManager, ItemRegistryC
                         }
                     }
                 }
+            }
+        }
+    }
+
+    private void removeItemStateChangeListeners() {
+        for (Item item : itemRegistry.getAll()) {
+            if (item instanceof GenericItem) {
+                ((GenericItem) item).removeStateChangeListener(this);
             }
         }
     }
@@ -340,15 +376,18 @@ public class PersistenceManagerImpl implements PersistenceManager, ItemRegistryC
         persistenceJobs.remove(dbId);
     }
 
-    /*
-     * PersistenceManager
-     */
+    private void removeTimers() {
+        Set<String> dbIds = new HashSet<>(persistenceJobs.keySet());
+        for (String dbId : dbIds) {
+            removeTimers(dbId);
+        }
+    }
 
     @Override
     public void addConfig(final String dbId, final PersistenceServiceConfiguration config) {
         synchronized (persistenceServiceConfigs) {
             this.persistenceServiceConfigs.put(dbId, config);
-            if (itemRegistry != null && persistenceServices.containsKey(dbId)) {
+            if (persistenceServices.containsKey(dbId)) {
                 startEventHandling(dbId);
             }
         }
@@ -362,20 +401,17 @@ public class PersistenceManagerImpl implements PersistenceManager, ItemRegistryC
         }
     }
 
-    @Override
-    public void startEventHandling(final String dbId) {
+    private void startEventHandling(final String dbId) {
         synchronized (persistenceServiceConfigs) {
             final PersistenceServiceConfiguration config = persistenceServiceConfigs.get(dbId);
             if (config == null) {
                 return;
             }
 
-            if (itemRegistry != null) {
-                for (SimpleItemConfiguration itemConfig : config.getConfigs()) {
-                    if (hasStrategy(dbId, itemConfig, SimpleStrategy.Globals.RESTORE)) {
-                        for (Item item : getAllItems(itemConfig)) {
-                            initialize(item);
-                        }
+            for (SimpleItemConfiguration itemConfig : config.getConfigs()) {
+                if (hasStrategy(dbId, itemConfig, SimpleStrategy.Globals.RESTORE)) {
+                    for (Item item : getAllItems(itemConfig)) {
+                        initialize(item);
                     }
                 }
             }
@@ -383,16 +419,11 @@ public class PersistenceManagerImpl implements PersistenceManager, ItemRegistryC
         }
     }
 
-    @Override
-    public void stopEventHandling(String dbId) {
+    private void stopEventHandling(String dbId) {
         synchronized (persistenceServiceConfigs) {
             removeTimers(dbId);
         }
     }
-
-    /*
-     * ItemRegistryChangeListener
-     */
 
     @Override
     public void allItemsChanged(Collection<String> oldItemNames) {
@@ -420,7 +451,8 @@ public class PersistenceManagerImpl implements PersistenceManager, ItemRegistryC
 
     @Override
     public void updated(Item oldItem, Item item) {
-        // not needed here
+        removed(oldItem);
+        added(item);
     }
 
     /*

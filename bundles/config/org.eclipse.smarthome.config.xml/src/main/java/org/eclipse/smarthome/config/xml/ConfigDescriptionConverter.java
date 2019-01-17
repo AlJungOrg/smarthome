@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -65,9 +65,14 @@ public class ConfigDescriptionConverter extends GenericUnmarshaller<ConfigDescri
         }
 
         URI uri = null;
+        if (uriText == null) {
+            throw new ConversionException(
+                    "No URI provided");
+        }
+
         try {
             uri = new URI(uriText);
-        } catch (NullPointerException | URISyntaxException ex) {
+        } catch (URISyntaxException ex) {
             throw new ConversionException(
                     "The URI '" + uriText + "' in node '" + reader.getNodeName() + "' is invalid!", ex);
         }
@@ -82,7 +87,7 @@ public class ConfigDescriptionConverter extends GenericUnmarshaller<ConfigDescri
 
         // iterate through the nodes, putting the different types into their
         // respective arrays
-        while (nodeIterator.hasNext() == true) {
+        while (nodeIterator.hasNext()) {
             Object node = nodeIterator.next();
             if (node instanceof ConfigDescriptionParameter) {
                 configDescriptionParams.add((ConfigDescriptionParameter) node);

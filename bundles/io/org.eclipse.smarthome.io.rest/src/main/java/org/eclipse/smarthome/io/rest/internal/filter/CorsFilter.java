@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,8 +13,10 @@
 package org.eclipse.smarthome.io.rest.internal.filter;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.container.ContainerResponseContext;
@@ -30,9 +32,6 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
 
 /**
  * A PostMatching filter used to add CORS HTTP headers on responses for requests with CORS
@@ -50,29 +49,30 @@ import com.google.common.collect.Lists;
         "service.pid=org.eclipse.smarthome.cors" }, configurationPid = "org.eclipse.smarthome.cors", configurationPolicy = ConfigurationPolicy.REQUIRE)
 public class CorsFilter implements ContainerResponseFilter {
 
-    private static final String HTTP_HEAD_METHOD = "HEAD";
-    private static final String HTTP_DELETE_METHOD = "DELETE";
-    private static final String HTTP_PUT_METHOD = "PUT";
-    private static final String HTTP_POST_METHOD = "POST";
-    private static final String HTTP_GET_METHOD = "GET";
-    private static final String HTTP_OPTIONS_METHOD = "OPTIONS";
+    static final String HTTP_HEAD_METHOD = "HEAD";
+    static final String HTTP_DELETE_METHOD = "DELETE";
+    static final String HTTP_PUT_METHOD = "PUT";
+    static final String HTTP_POST_METHOD = "POST";
+    static final String HTTP_GET_METHOD = "GET";
+    static final String HTTP_OPTIONS_METHOD = "OPTIONS";
 
-    private static final String CONTENT_TYPE_HEADER = HttpHeaders.CONTENT_TYPE;
+    static final String CONTENT_TYPE_HEADER = HttpHeaders.CONTENT_TYPE;
 
-    private static final String ACCESS_CONTROL_REQUEST_METHOD = "Access-Control-Request-Method";
-    private static final String ACCESS_CONTROL_ALLOW_METHODS_HEADER = "Access-Control-Allow-Methods";
-    private static final String ACCESS_CONTROL_ALLOW_ORIGIN_HEADER = "Access-Control-Allow-Origin";
-    private static final String ACCESS_CONTROL_ALLOW_HEADERS = "Access-Control-Allow-Headers";
-    private static final String ORIGIN_HEADER = "Origin";
-    private static final String VARY_HEADER = "Vary";
+    static final String ACCESS_CONTROL_REQUEST_METHOD = "Access-Control-Request-Method";
+    static final String ACCESS_CONTROL_ALLOW_METHODS_HEADER = "Access-Control-Allow-Methods";
+    static final String ACCESS_CONTROL_ALLOW_ORIGIN_HEADER = "Access-Control-Allow-Origin";
+    static final String ACCESS_CONTROL_ALLOW_HEADERS = "Access-Control-Allow-Headers";
+    static final String ORIGIN_HEADER = "Origin";
+    static final String VARY_HEADER = "Vary";
 
-    private static final String VARY_HEADER_WILDCARD = "*";
-    private static final String HEADERS_SEPARATOR = ",";
+    static final String VARY_HEADER_WILDCARD = "*";
+    static final String HEADERS_SEPARATOR = ",";
 
-    private static final List<String> ACCEPTED_HTTP_METHODS_LIST = Lists.newArrayList(HTTP_GET_METHOD, HTTP_POST_METHOD,
+    static final List<String> ACCEPTED_HTTP_METHODS_LIST = Arrays.asList(HTTP_GET_METHOD, HTTP_POST_METHOD,
             HTTP_PUT_METHOD, HTTP_DELETE_METHOD, HTTP_HEAD_METHOD, HTTP_OPTIONS_METHOD);
 
-    private static final String ACCEPTED_HTTP_METHODS = Joiner.on(HEADERS_SEPARATOR).join(ACCEPTED_HTTP_METHODS_LIST);
+    static final String ACCEPTED_HTTP_METHODS = ACCEPTED_HTTP_METHODS_LIST.stream()
+            .collect(Collectors.joining(HEADERS_SEPARATOR));
 
     private final transient Logger logger = LoggerFactory.getLogger(CorsFilter.class);
 
@@ -86,11 +86,9 @@ public class CorsFilter implements ContainerResponseFilter {
     @Override
     public void filter(ContainerRequestContext requestContext, ContainerResponseContext responseContext)
             throws IOException {
-
         if (isEnabled && !processPreflight(requestContext, responseContext)) {
             processRequest(requestContext, responseContext);
         }
-
     }
 
     /**
@@ -104,7 +102,6 @@ public class CorsFilter implements ContainerResponseFilter {
         // (OPTIONS requests are not processed here)
         if (ACCEPTED_HTTP_METHODS_LIST.contains(requestContext.getMethod())
                 && !HTTP_OPTIONS_METHOD.equals(requestContext.getMethod())) {
-
             String origin = getValue(requestContext.getHeaders(), ORIGIN_HEADER);
             if (StringUtils.isNotBlank(origin)) {
                 responseContext.getHeaders().add(ACCESS_CONTROL_ALLOW_ORIGIN_HEADER, origin);
@@ -123,7 +120,6 @@ public class CorsFilter implements ContainerResponseFilter {
         boolean isCorsPreflight = false;
 
         if (HTTP_OPTIONS_METHOD.equals(requestContext.getMethod())) {
-
             // Look for the mandatory CORS preflight request headers
             String origin = getValue(requestContext.getHeaders(), ORIGIN_HEADER);
             String realRequestMethod = getValue(requestContext.getHeaders(), ACCESS_CONTROL_REQUEST_METHOD);
@@ -136,7 +132,6 @@ public class CorsFilter implements ContainerResponseFilter {
 
                 // Add the accepted request headers
                 appendVaryHeader(responseContext);
-
             }
         }
 

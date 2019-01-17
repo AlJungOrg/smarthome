@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,7 +17,7 @@ import java.util.Set;
 
 /**
  * This is a data transfer object that is used to serialize items.
- * 
+ *
  * @author Kai Kreuzer - Initial contribution and API
  * @author Andre Fuechsel - added tag support
  *

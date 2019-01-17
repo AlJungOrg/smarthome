@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,6 +12,8 @@
  */
 package org.eclipse.smarthome.io.net.http;
 
+import static org.eclipse.jetty.http.HttpMethod.*;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,6 +24,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.List;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
@@ -41,32 +44,35 @@ import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.http.HttpStatus;
 import org.eclipse.jetty.util.B64Code;
 import org.eclipse.jetty.util.StringUtil;
-import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.smarthome.core.library.types.RawType;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Some common methods to be used in both HTTP-In-Binding and HTTP-Out-Binding
+ * Some common methods to be used in HTTP-In-Binding, HTTP-Out-Binding and other bindings
  *
- * @author Thomas Eichstaedt-Engelen
- * @author Kai Kreuzer - Initial contribution and API
+ * For advanced usage direct use of the Jetty client is preferred
+ *
+ * @author Kai Kreuzer - Initial contribution
+ * @author Thomas Eichstaedt-Engelen - Initial contribution
  * @author Svilen Valkanov - replaced Apache HttpClient with Jetty
  */
+@Component(immediate = true)
 public class HttpUtil {
-
-    private static Logger logger = LoggerFactory.getLogger(HttpUtil.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(HttpUtil.class);
 
     private static final int DEFAULT_TIMEOUT_MS = 5000;
 
-    private static final HttpClient CLIENT = new HttpClient(new SslContextFactory());
+    private static HttpClientFactory httpClientFactory;
 
     private static class ProxyParams {
-        public String proxyHost = null;
-        public int proxyPort = 80;
-        public String proxyUser = null;
-        public String proxyPassword = null;
-        public String nonProxyHosts = null;
+        String proxyHost;
+        int proxyPort = 80;
+        String proxyUser;
+        String proxyPassword;
+        String nonProxyHosts;
     }
 
     /**
@@ -77,7 +83,6 @@ public class HttpUtil {
      * @param httpMethod the HTTP method to use
      * @param url the url to execute
      * @param timeout the socket timeout in milliseconds to wait for data
-     *
      * @return the response body or <code>NULL</code> when the request went wrong
      * @throws IOException when the request execution failed, timed out or it was interrupted
      */
@@ -92,17 +97,15 @@ public class HttpUtil {
      *
      * @param httpMethod the HTTP method to use
      * @param url the url to execute
-     * @param content the content to be send to the given <code>url</code> or <code>null</code> if no content should be
-     *            send.
+     * @param content the content to be sent to the given <code>url</code> or <code>null</code> if no content should
+     *            be sent.
      * @param contentType the content type of the given <code>content</code>
      * @param timeout the socket timeout in milliseconds to wait for data
-     *
      * @return the response body or <code>NULL</code> when the request went wrong
      * @throws IOException when the request execution failed, timed out or it was interrupted
      */
     public static String executeUrl(String httpMethod, String url, InputStream content, String contentType, int timeout)
             throws IOException {
-
         return executeUrl(httpMethod, url, null, content, contentType, timeout);
     }
 
@@ -114,17 +117,15 @@ public class HttpUtil {
      * @param httpMethod the HTTP method to use
      * @param url the url to execute
      * @param httpHeaders optional http request headers which has to be sent within request
-     * @param content the content to be send to the given <code>url</code> or <code>null</code> if no content should be
-     *            send.
+     * @param content the content to be sent to the given <code>url</code> or <code>null</code> if no content should
+     *            be sent.
      * @param contentType the content type of the given <code>content</code>
      * @param timeout the socket timeout in milliseconds to wait for data
-     *
      * @return the response body or <code>NULL</code> when the request went wrong
      * @throws IOException when the request execution failed, timed out or it was interrupted
      */
     public static String executeUrl(String httpMethod, String url, Properties httpHeaders, InputStream content,
             String contentType, int timeout) throws IOException {
-
         final ProxyParams proxyParams = prepareProxyParams();
 
         return executeUrl(httpMethod, url, httpHeaders, content, contentType, timeout, proxyParams.proxyHost,
@@ -137,8 +138,8 @@ public class HttpUtil {
      * @param httpMethod the HTTP method to use
      * @param url the url to execute
      * @param httpHeaders optional HTTP headers which has to be set on request
-     * @param content the content to be send to the given <code>url</code> or <code>null</code> if no content should be
-     *            send.
+     * @param content the content to be sent to the given <code>url</code> or <code>null</code> if no content
+     *            should be sent.
      * @param contentType the content type of the given <code>content</code>
      * @param timeout the socket timeout in milliseconds to wait for data
      * @param proxyHost the hostname of the proxy
@@ -146,14 +147,12 @@ public class HttpUtil {
      * @param proxyUser the username to authenticate with the proxy
      * @param proxyPassword the password to authenticate with the proxy
      * @param nonProxyHosts the hosts that won't be routed through the proxy
-     *
      * @return the response body or <code>NULL</code> when the request went wrong
      * @throws IOException when the request execution failed, timed out or it was interrupted
      */
     public static String executeUrl(String httpMethod, String url, Properties httpHeaders, InputStream content,
             String contentType, int timeout, String proxyHost, Integer proxyPort, String proxyUser,
             String proxyPassword, String nonProxyHosts) throws IOException {
-
         ContentResponse response = executeUrlAndGetReponse(httpMethod, url, httpHeaders, content, contentType, timeout,
                 proxyHost, proxyPort, proxyUser, proxyPassword, nonProxyHosts);
         String encoding = response.getEncoding() != null ? response.getEncoding().replaceAll("\"", "").trim() : "UTF-8";
@@ -172,8 +171,8 @@ public class HttpUtil {
      * @param httpMethod the HTTP method to use
      * @param url the url to execute
      * @param httpHeaders optional HTTP headers which has to be set on request
-     * @param content the content to be send to the given <code>url</code> or <code>null</code> if no content should be
-     *            send.
+     * @param content the content to be sent to the given <code>url</code> or <code>null</code> if no content
+     *            should be sent.
      * @param contentType the content type of the given <code>content</code>
      * @param timeout the socket timeout in milliseconds to wait for data
      * @param proxyHost the hostname of the proxy
@@ -181,21 +180,24 @@ public class HttpUtil {
      * @param proxyUser the username to authenticate with the proxy
      * @param proxyPassword the password to authenticate with the proxy
      * @param nonProxyHosts the hosts that won't be routed through the proxy
-     *
      * @return the response as a ContentResponse object or <code>NULL</code> when the request went wrong
      * @throws IOException when the request execution failed, timed out or it was interrupted
      */
     private static ContentResponse executeUrlAndGetReponse(String httpMethod, String url, Properties httpHeaders,
             InputStream content, String contentType, int timeout, String proxyHost, Integer proxyPort, String proxyUser,
             String proxyPassword, String nonProxyHosts) throws IOException {
-
-        startHttpClient(CLIENT);
+        // Referenced http client factory not available
+        if (httpClientFactory == null) {
+            throw new IllegalStateException("Http client factory not available");
+        }
+        // Get shared http client from factory "on-demand"
+        final HttpClient httpClient = httpClientFactory.getCommonHttpClient();
 
         HttpProxy proxy = null;
-        // only configure a proxy if a host is provided
+        // Only configure a proxy if a host is provided
         if (StringUtils.isNotBlank(proxyHost) && proxyPort != null && shouldUseProxy(url, nonProxyHosts)) {
-            AuthenticationStore authStore = CLIENT.getAuthenticationStore();
-            ProxyConfiguration proxyConfig = CLIENT.getProxyConfiguration();
+            AuthenticationStore authStore = httpClient.getAuthenticationStore();
+            ProxyConfiguration proxyConfig = httpClient.getProxyConfiguration();
             List<Proxy> proxies = proxyConfig.getProxies();
 
             proxy = new HttpProxy(proxyHost, proxyPort);
@@ -205,9 +207,9 @@ public class HttpUtil {
                     new BasicAuthentication(proxy.getURI(), Authentication.ANY_REALM, proxyUser, proxyPassword));
         }
 
-        HttpMethod method = HttpUtil.createHttpMethod(httpMethod);
+        final HttpMethod method = HttpUtil.createHttpMethod(httpMethod);
 
-        Request request = CLIENT.newRequest(url).method(method).timeout(timeout, TimeUnit.MILLISECONDS);
+        final Request request = httpClient.newRequest(url).method(method).timeout(timeout, TimeUnit.MILLISECONDS);
 
         if (httpHeaders != null) {
             for (String httpHeaderKey : httpHeaders.stringPropertyNames()) {
@@ -228,24 +230,28 @@ public class HttpUtil {
                 request.header(HttpHeader.AUTHORIZATION, basicAuthentication);
             }
         } catch (URISyntaxException e) {
-            logger.debug("String {} can not be parsed as URI reference", url);
+            LOGGER.debug("String {} can not be parsed as URI reference", url);
         }
 
         // add content if a valid method is given ...
         if (content != null && (method.equals(HttpMethod.POST) || method.equals(HttpMethod.PUT))) {
-            request.content(new InputStreamContentProvider(content), contentType);
+            // Close this outmost stream again after use!
+            try (final InputStreamContentProvider inputStreamContentProvider = new InputStreamContentProvider(
+                    content)) {
+                request.content(inputStreamContentProvider, contentType);
+            }
         }
 
-        if (logger.isDebugEnabled()) {
-            logger.debug("About to execute {}", request.getURI());
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("About to execute {}", request.getURI());
         }
 
         try {
             ContentResponse response = request.send();
             int statusCode = response.getStatus();
-            if (statusCode >= HttpStatus.BAD_REQUEST_400) {
+            if (LOGGER.isDebugEnabled() && statusCode >= HttpStatus.BAD_REQUEST_400) {
                 String statusLine = statusCode + " " + response.getReason();
-                logger.debug("Method failed: {}", statusLine);
+                LOGGER.debug("Method failed: {}", statusLine);
             }
 
             return response;
@@ -254,7 +260,7 @@ public class HttpUtil {
         } finally {
             if (proxy != null) {
                 // Remove the proxy, that has been added for this request
-                CLIENT.getProxyConfiguration().getProxies().remove(proxy);
+                httpClient.getProxyConfiguration().getProxies().remove(proxy);
             }
         }
     }
@@ -272,7 +278,7 @@ public class HttpUtil {
                 try {
                     proxyParams.proxyPort = Integer.valueOf(proxyPortString);
                 } catch (NumberFormatException e) {
-                    logger.warn("'{}' is not a valid proxy port - using default port ({}) instead", proxyPortString,
+                    LOGGER.warn("'{}' is not a valid proxy port - using default port ({}) instead", proxyPortString,
                             proxyParams.proxyPort);
                 }
             }
@@ -289,12 +295,10 @@ public class HttpUtil {
      *
      * @param urlString
      * @param nonProxyHosts
-     *
      * @return <code>false</code> if the host of the given <code>urlString</code> is contained in
      *         <code>nonProxyHosts</code>-list and <code>true</code> otherwise
      */
     private static boolean shouldUseProxy(String urlString, String nonProxyHosts) {
-
         if (StringUtils.isNotBlank(nonProxyHosts)) {
             String givenHost = urlString;
 
@@ -302,7 +306,7 @@ public class HttpUtil {
                 URL url = new URL(urlString);
                 givenHost = url.getHost();
             } catch (MalformedURLException e) {
-                logger.error("the given url {} is malformed", urlString);
+                LOGGER.error("the given url {} is malformed", urlString);
             }
 
             String[] hosts = nonProxyHosts.split("\\|");
@@ -327,37 +331,18 @@ public class HttpUtil {
     }
 
     /**
-     * Factory method to create a {@link HttpMethod}-object according to the
-     * given String <code>httpMethodString</code>
+     * Factory method to create a {@link HttpMethod}-object according to the given String <code>httpMethodString</code>
      *
      * @param httpMethodString the name of the {@link HttpMethod} to create
-     *
      * @throws IllegalArgumentException if <code>httpMethod</code> is none of <code>GET</code>, <code>PUT</code>,
      *             <code>POST</POST> or <code>DELETE</code>
      */
     public static HttpMethod createHttpMethod(String httpMethodString) {
-
-        if ("GET".equals(httpMethodString)) {
-            return HttpMethod.GET;
-        } else if ("PUT".equals(httpMethodString)) {
-            return HttpMethod.PUT;
-        } else if ("POST".equals(httpMethodString)) {
-            return HttpMethod.POST;
-        } else if ("DELETE".equals(httpMethodString)) {
-            return HttpMethod.DELETE;
-        } else {
-            throw new IllegalArgumentException("given httpMethod '" + httpMethodString + "' is unknown");
-        }
-    }
-
-    private static void startHttpClient(HttpClient client) {
-        if (!client.isStarted()) {
-            try {
-                client.start();
-            } catch (Exception e) {
-                logger.warn("Cannot start HttpClient!", e);
-            }
-        }
+        // @formatter:off
+        return Optional.ofNullable(HttpMethod.fromString(httpMethodString))
+                .filter(m -> m == GET || m == POST || m == PUT || m == DELETE)
+                .orElseThrow(() -> new IllegalArgumentException("Given HTTP Method '" + httpMethodString + "' is unknown"));
+        // @formatter:on
     }
 
     /**
@@ -446,7 +431,6 @@ public class HttpUtil {
      */
     public static RawType downloadData(String url, String contentTypeRegex, boolean scanTypeInContent,
             long maxContentLength, int timeout) {
-
         final ProxyParams proxyParams = prepareProxyParams();
 
         RawType rawData = null;
@@ -455,18 +439,21 @@ public class HttpUtil {
                     proxyParams.proxyHost, proxyParams.proxyPort, proxyParams.proxyUser, proxyParams.proxyPassword,
                     proxyParams.nonProxyHosts);
             byte[] data = response.getContent();
-            long length = (data == null) ? 0 : data.length;
+            if (data == null) {
+                data = new byte[0];
+            }
+            long length = data.length;
             String mediaType = response.getMediaType();
-            logger.debug("Media download response: status {} content length {} media type {} (URL {})",
+            LOGGER.debug("Media download response: status {} content length {} media type {} (URL {})",
                     response.getStatus(), length, mediaType, url);
 
             if (response.getStatus() != HttpStatus.OK_200 || length == 0) {
-                logger.debug("Media download failed: unexpected return code {} (URL {})", response.getStatus(), url);
+                LOGGER.debug("Media download failed: unexpected return code {} (URL {})", response.getStatus(), url);
                 return null;
             }
 
             if (maxContentLength >= 0 && length > maxContentLength) {
-                logger.debug("Media download aborted: content length {} too big (URL {})", length, url);
+                LOGGER.debug("Media download aborted: content length {} too big (URL {})", length, url);
                 return null;
             }
 
@@ -475,16 +462,16 @@ public class HttpUtil {
                 if ((contentType == null || contentType.isEmpty()) && scanTypeInContent) {
                     // We try to get the type from the data
                     contentType = guessContentTypeFromData(data);
-                    logger.debug("Media download: content type from data: {} (URL {})", contentType, url);
+                    LOGGER.debug("Media download: content type from data: {} (URL {})", contentType, url);
                 }
                 if (contentType != null && contentType.isEmpty()) {
                     contentType = null;
                 }
                 if (contentType == null) {
-                    logger.debug("Media download aborted: unknown content type (URL {})", url);
+                    LOGGER.debug("Media download aborted: unknown content type (URL {})", url);
                     return null;
                 } else if (!contentType.matches(contentTypeRegex)) {
-                    logger.debug("Media download aborted: unexpected content type \"{}\" (URL {})", contentType, url);
+                    LOGGER.debug("Media download aborted: unexpected content type \"{}\" (URL {})", contentType, url);
                     return null;
                 }
             } else if (contentType == null || contentType.isEmpty()) {
@@ -493,10 +480,10 @@ public class HttpUtil {
 
             rawData = new RawType(data, contentType);
 
-            logger.debug("Media downloaded: size {} type {} (URL {})", rawData.getBytes().length, rawData.getMimeType(),
+            LOGGER.debug("Media downloaded: size {} type {} (URL {})", rawData.getBytes().length, rawData.getMimeType(),
                     url);
         } catch (IOException e) {
-            logger.debug("Media download failed (URL {}) : {}", url, e.getMessage());
+            LOGGER.debug("Media download failed (URL {}) : {}", url, e.getMessage());
         }
         return rawData;
     }
@@ -505,7 +492,6 @@ public class HttpUtil {
      * Determine the content type from the data.
      *
      * @param data the data as a buffer of bytes
-     *
      * @return the MIME type of the content, null if the content type could not be found
      */
     public static String guessContentTypeFromData(byte[] data) {
@@ -523,7 +509,7 @@ public class HttpUtil {
                     contentType = null;
                 }
             } catch (final IOException e) {
-                logger.debug("Failed to determine content type: {}", e.getMessage());
+                LOGGER.debug("Failed to determine content type: {}", e.getMessage());
             }
         } catch (final IOException ex) {
             // Error on closing input stream -- nothing we can do here.
@@ -542,6 +528,15 @@ public class HttpUtil {
     private static boolean isJpeg(byte[] data) {
         return (data.length >= 2 && data[0] == (byte) 0xFF && data[1] == (byte) 0xD8
                 && data[data.length - 2] == (byte) 0xFF && data[data.length - 1] == (byte) 0xD9);
+    }
+
+    @Reference
+    protected void setHttpClientFactory(final HttpClientFactory httpClientFactory) {
+        HttpUtil.httpClientFactory = httpClientFactory;
+    }
+
+    protected void unsetHttpClientFactory(final HttpClientFactory httpClientFactory) {
+        HttpUtil.httpClientFactory = null;
     }
 
 }

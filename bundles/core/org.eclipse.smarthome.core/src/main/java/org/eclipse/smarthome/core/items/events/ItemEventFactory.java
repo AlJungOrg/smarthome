@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,6 +16,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.smarthome.core.events.AbstractEventFactory;
@@ -30,9 +32,6 @@ import org.eclipse.smarthome.core.types.State;
 import org.eclipse.smarthome.core.types.Type;
 import org.eclipse.smarthome.core.types.UnDefType;
 import org.osgi.service.component.annotations.Component;
-
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
 
 /**
  * An {@link ItemEventFactory} is responsible for creating item event instances, e.g. {@link ItemCommandEvent}s and
@@ -51,6 +50,8 @@ public class ItemEventFactory extends AbstractEventFactory {
 
     private static final String ITEM_STATE_EVENT_TOPIC = "smarthome/items/{itemName}/state";
 
+    private static final String ITEM_STATE_PREDICTED_EVENT_TOPIC = "smarthome/items/{itemName}/statepredicted";
+
     private static final String ITEM_STATE_CHANGED_EVENT_TOPIC = "smarthome/items/{itemName}/statechanged";
 
     private static final String GROUPITEM_STATE_EVENT_TOPIC = "smarthome/items/{itemName}/{memberName}/state";
@@ -67,8 +68,9 @@ public class ItemEventFactory extends AbstractEventFactory {
      * Constructs a new ItemEventFactory.
      */
     public ItemEventFactory() {
-        super(Sets.newHashSet(ItemCommandEvent.TYPE, ItemStateEvent.TYPE, ItemStateChangedEvent.TYPE,
-                ItemAddedEvent.TYPE, ItemUpdatedEvent.TYPE, ItemRemovedEvent.TYPE, GroupItemStateChangedEvent.TYPE, GroupItemStateEvent.TYPE));
+        super(Stream.of(ItemCommandEvent.TYPE, ItemStateEvent.TYPE, ItemStatePredictedEvent.TYPE,
+                ItemStateChangedEvent.TYPE, ItemAddedEvent.TYPE, ItemUpdatedEvent.TYPE, ItemRemovedEvent.TYPE,
+                GroupItemStateChangedEvent.TYPE, GroupItemStateEvent.TYPE).collect(Collectors.toSet()));
     }
 
     @Override
@@ -78,6 +80,8 @@ public class ItemEventFactory extends AbstractEventFactory {
             event = createCommandEvent(topic, payload, source);
         } else if (eventType.equals(ItemStateEvent.TYPE)) {
             event = createStateEvent(topic, payload, source);
+        } else if (eventType.equals(ItemStatePredictedEvent.TYPE)) {
+            event = createStatePredictedEvent(topic, payload, source);
         } else if (eventType.equals(ItemStateChangedEvent.TYPE)) {
             event = createStateChangedEvent(topic, payload);
         } else if (eventType.equals(ItemAddedEvent.TYPE)) {
@@ -123,6 +127,13 @@ public class ItemEventFactory extends AbstractEventFactory {
         ItemEventPayloadBean bean = deserializePayload(payload, ItemEventPayloadBean.class);
         State state = getState(bean.getType(), bean.getValue());
         return new ItemStateEvent(topic, payload, itemName, state, source);
+    }
+
+    private Event createStatePredictedEvent(String topic, String payload, String source) {
+        String itemName = getItemName(topic);
+        ItemStatePredictedEventPayloadBean bean = deserializePayload(payload, ItemStatePredictedEventPayloadBean.class);
+        State state = getState(bean.getPredictedType(), bean.getPredictedValue());
+        return new ItemStatePredictedEvent(topic, payload, itemName, state, bean.isConfirmation());
     }
 
     private Event createStateChangedEvent(String topic, String payload) {
@@ -217,9 +228,7 @@ public class ItemEventFactory extends AbstractEventFactory {
      * @param itemName the name of the item to send the command for
      * @param command the command to send
      * @param source the name of the source identifying the sender (can be null)
-     *
      * @return the created item command event
-     *
      * @throws IllegalArgumentException if itemName or command is null
      */
     public static ItemCommandEvent createCommandEvent(String itemName, Command command, String source) {
@@ -235,9 +244,7 @@ public class ItemEventFactory extends AbstractEventFactory {
      *
      * @param itemName the name of the item to send the command for
      * @param command the command to send
-     *
      * @return the created item command event
-     *
      * @throws IllegalArgumentException if itemName or command is null
      */
     public static ItemCommandEvent createCommandEvent(String itemName, Command command) {
@@ -250,9 +257,7 @@ public class ItemEventFactory extends AbstractEventFactory {
      * @param itemName the name of the item to send the state update for
      * @param state the new state to send
      * @param source the name of the source identifying the sender (can be null)
-     *
      * @return the created item state event
-     *
      * @throws IllegalArgumentException if itemName or state is null
      */
     public static ItemStateEvent createStateEvent(String itemName, State state, String source) {
@@ -268,13 +273,30 @@ public class ItemEventFactory extends AbstractEventFactory {
      *
      * @param itemName the name of the item to send the state update for
      * @param state the new state to send
-     *
      * @return the created item state event
-     *
      * @throws IllegalArgumentException if itemName or state is null
      */
     public static ItemStateEvent createStateEvent(String itemName, State state) {
         return createStateEvent(itemName, state, null);
+    }
+
+    /**
+     * Creates an item state predicted event.
+     *
+     * @param itemName the name of the item to send the state update for
+     * @param state the predicted state to send
+     * @param isConfirmation whether this is a confirmation of a previous state
+     * @return the created item state predicted event
+     * @throws IllegalArgumentException if itemName or state is null
+     */
+    public static ItemStatePredictedEvent createStatePredictedEvent(String itemName, State state,
+            boolean isConfirmation) {
+        assertValidArguments(itemName, state, "state");
+        String topic = buildTopic(ITEM_STATE_PREDICTED_EVENT_TOPIC, itemName);
+        ItemStatePredictedEventPayloadBean bean = new ItemStatePredictedEventPayloadBean(getStateType(state),
+                state.toFullString(), isConfirmation);
+        String payload = serializePayload(bean);
+        return new ItemStatePredictedEvent(topic, payload, itemName, state, isConfirmation);
     }
 
     /**
@@ -283,9 +305,7 @@ public class ItemEventFactory extends AbstractEventFactory {
      * @param itemName the name of the item to send the state changed event for
      * @param newState the new state to send
      * @param oldState the old state of the item
-     *
      * @return the created item state changed event
-     *
      * @throws IllegalArgumentException if itemName or state is null
      */
     public static ItemStateChangedEvent createStateChangedEvent(String itemName, State newState, State oldState) {
@@ -341,9 +361,7 @@ public class ItemEventFactory extends AbstractEventFactory {
      * Creates an item added event.
      *
      * @param item the item
-     *
      * @return the created item added event
-     *
      * @throws IllegalArgumentException if item is null
      */
     public static ItemAddedEvent createAddedEvent(Item item) {
@@ -358,9 +376,7 @@ public class ItemEventFactory extends AbstractEventFactory {
      * Creates an item removed event.
      *
      * @param item the item
-     *
      * @return the created item removed event
-     *
      * @throws IllegalArgumentException if item is null
      */
     public static ItemRemovedEvent createRemovedEvent(Item item) {
@@ -376,9 +392,7 @@ public class ItemEventFactory extends AbstractEventFactory {
      *
      * @param item the item
      * @param oldItem the old item
-     *
      * @return the created item updated event
-     *
      * @throws IllegalArgumentException if item or oldItem is null
      */
     public static ItemUpdatedEvent createUpdateEvent(Item item, Item oldItem) {
@@ -415,21 +429,18 @@ public class ItemEventFactory extends AbstractEventFactory {
     }
 
     private static void assertValidArguments(String itemName, Type type, String typeArgumentName) {
-        Preconditions.checkArgument(itemName != null && !itemName.isEmpty(),
-                "The argument 'itemName' must not be null or empty.");
-        Preconditions.checkArgument(type != null, "The argument '" + typeArgumentName + "' must not be null or empty.");
+        checkNotNullOrEmpty(itemName, "itemName");
+        checkNotNull(type, typeArgumentName);
     }
 
     private static void assertValidArguments(String itemName, String memberName, Type type, String typeArgumentName) {
-        Preconditions.checkArgument(itemName != null && !itemName.isEmpty(),
-                "The argument 'itemName' must not be null or empty.");
-        Preconditions.checkArgument(memberName != null && !memberName.isEmpty(),
-                "The argument 'memberName' must not be null or empty.");
-        Preconditions.checkArgument(type != null, "The argument '" + typeArgumentName + "' must not be null or empty.");
+        checkNotNullOrEmpty(itemName, "itemName");
+        checkNotNullOrEmpty(memberName, "memberName");
+        checkNotNull(type, typeArgumentName);
     }
 
     private static void assertValidArgument(Item item, String argumentName) {
-        Preconditions.checkArgument(item != null, "The argument '" + argumentName + "' must no be null.");
+        checkNotNull(item, argumentName);
     }
 
     /**
@@ -457,6 +468,40 @@ public class ItemEventFactory extends AbstractEventFactory {
 
         public String getValue() {
             return value;
+        }
+    }
+
+    /**
+     * This is a java bean that is used to serialize/deserialize item state changed event payload.
+     */
+    private static class ItemStatePredictedEventPayloadBean {
+        private String predictedType;
+        private String predictedValue;
+        private boolean isConfirmation;
+
+        /**
+         * Default constructor for deserialization e.g. by Gson.
+         */
+        @SuppressWarnings("unused")
+        protected ItemStatePredictedEventPayloadBean() {
+        }
+
+        public ItemStatePredictedEventPayloadBean(String predictedType, String predictedValue, boolean isConfirmation) {
+            this.predictedType = predictedType;
+            this.predictedValue = predictedValue;
+            this.isConfirmation = isConfirmation;
+        }
+
+        public String getPredictedType() {
+            return predictedType;
+        }
+
+        public String getPredictedValue() {
+            return predictedValue;
+        }
+
+        public boolean isConfirmation() {
+            return isConfirmation;
         }
     }
 

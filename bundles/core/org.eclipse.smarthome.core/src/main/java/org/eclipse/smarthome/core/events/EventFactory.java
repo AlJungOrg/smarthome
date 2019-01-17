@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -31,9 +31,7 @@ public interface EventFactory {
      * @param topic the topic
      * @param payload the payload
      * @param source the source (can be null)
-     * 
      * @return the created event instance (not null)
-     * 
      * @throws IllegalArgumentException if eventType, topic or payload is null or empty
      * @throws IllegalArgumentException if the eventType is not supported
      * @throws Exception if the creation of the event has failed

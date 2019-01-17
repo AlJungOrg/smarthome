@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,10 +12,7 @@
  */
 package org.eclipse.smarthome.binding.tradfri.internal.model;
 
-import static org.eclipse.smarthome.binding.tradfri.TradfriBindingConstants.*;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static org.eclipse.smarthome.binding.tradfri.TradfriBindingConstants.SWITCH;
 
 import com.google.gson.JsonElement;
 
@@ -25,8 +22,6 @@ import com.google.gson.JsonElement;
  * @author Christoph Weitkamp - Initial contribution
  */
 public class TradfriControllerData extends TradfriWirelessDeviceData {
-
-    private final Logger logger = LoggerFactory.getLogger(TradfriControllerData.class);
 
     public TradfriControllerData(JsonElement json) {
         super(SWITCH, json);

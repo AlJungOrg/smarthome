@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,7 +15,9 @@ package org.eclipse.smarthome.binding.digitalstrom.internal.lib.structure;
 /**
  * The {@link Group} represents a digitalSTROM-Group.
  *
- * @author Alexander Betker
+ * @author Alexander Betker - initial contributer
+ * @author Michael Ochel - add java-doc
+ * @author Matthias Siegele - add java-doc
  */
 public interface Group {
 
@@ -24,12 +26,12 @@ public interface Group {
      *
      * @return group id
      */
-    public short getGroupID();
+    short getGroupID();
 
     /**
      * Returns the name of this {@link Group}.
      *
      * @return group name
      */
-    public String getGroupName();
+    String getGroupName();
 }

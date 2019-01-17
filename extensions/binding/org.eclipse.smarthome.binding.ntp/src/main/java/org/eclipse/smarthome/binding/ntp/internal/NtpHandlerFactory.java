@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -31,7 +31,7 @@ import org.osgi.service.component.annotations.Reference;
  * @author Marcel Verpaalen - Initial contribution
  * @author Markus Rathgeb - Add locale provider support
  */
-@Component(service = ThingHandlerFactory.class, immediate = true)
+@Component(service = ThingHandlerFactory.class, configurationPid = "binding.ntp")
 public class NtpHandlerFactory extends BaseThingHandlerFactory {
 
     private LocaleProvider localeProvider;
@@ -52,10 +52,9 @@ public class NtpHandlerFactory extends BaseThingHandlerFactory {
 
     @Override
     protected ThingHandler createHandler(Thing thing) {
-
         ThingTypeUID thingTypeUID = thing.getThingTypeUID();
 
-        if (thingTypeUID.equals(THING_TYPE_NTP)) {
+        if (THING_TYPE_NTP.equals(thingTypeUID)) {
             return new NtpHandler(thing, localeProvider);
         }
 

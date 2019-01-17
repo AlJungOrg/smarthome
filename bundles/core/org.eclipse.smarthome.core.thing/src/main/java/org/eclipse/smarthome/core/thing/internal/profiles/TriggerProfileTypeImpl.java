@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,7 @@
 package org.eclipse.smarthome.core.thing.internal.profiles;
 
 import java.util.Collection;
+import java.util.Collections;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.smarthome.core.thing.profiles.ProfileTypeUID;
@@ -26,19 +27,39 @@ import org.eclipse.smarthome.core.thing.type.ChannelTypeUID;
  *
  */
 @NonNullByDefault
-public class TriggerProfileTypeImpl extends StateProfileTypeImpl implements TriggerProfileType {
+public class TriggerProfileTypeImpl implements TriggerProfileType {
 
+    private final ProfileTypeUID profileTypeUID;
     private final Collection<ChannelTypeUID> supportedChannelTypeUIDs;
+    private final String label;
+    private final Collection<String> supportedItemTypes;
 
     public TriggerProfileTypeImpl(ProfileTypeUID profileTypeUID, String label, Collection<String> supportedItemTypes,
             Collection<ChannelTypeUID> supportedChannelTypeUIDs) {
-        super(profileTypeUID, label, supportedItemTypes);
-        this.supportedChannelTypeUIDs = supportedChannelTypeUIDs;
+        this.profileTypeUID = profileTypeUID;
+        this.label = label;
+        this.supportedItemTypes = Collections.unmodifiableCollection(supportedItemTypes);
+        this.supportedChannelTypeUIDs = Collections.unmodifiableCollection(supportedChannelTypeUIDs);
     }
 
     @Override
     public Collection<ChannelTypeUID> getSupportedChannelTypeUIDs() {
         return supportedChannelTypeUIDs;
+    }
+
+    @Override
+    public Collection<String> getSupportedItemTypes() {
+        return supportedItemTypes;
+    }
+
+    @Override
+    public String getLabel() {
+        return label;
+    }
+
+    @Override
+    public ProfileTypeUID getUID() {
+        return profileTypeUID;
     }
 
 }

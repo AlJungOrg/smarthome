@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,15 +13,14 @@
 package org.eclipse.smarthome.config.core.status;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Objects;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import org.eclipse.smarthome.config.core.status.ConfigStatusMessage.Type;
-
-import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.ImmutableList;
 
 /**
  * The {@link ConfigStatusInfo} contains {@link ConfigStatusMessage}s to represent the current configuration status of
@@ -62,34 +61,23 @@ public final class ConfigStatusInfo {
      * Retrieves all configuration status messages that have one of the given types.
      *
      * @param types the types to be filtered for; if empty then all messages are delivered
-     *
      * @return an unmodifiable collection of the corresponding configuration status messages
      */
     public Collection<ConfigStatusMessage> getConfigStatusMessages(Type... types) {
-        final Collection<Type> typesCollection = ImmutableList.copyOf(types);
-        return filter(typesCollection, new Predicate<ConfigStatusMessage>() {
-            @Override
-            public boolean apply(ConfigStatusMessage configStatusMessage) {
-                return typesCollection.contains(configStatusMessage.type);
-            }
-        });
+        final Collection<Type> typesCollection = Arrays.asList(types);
+        return filter(typesCollection, configStatusMessage -> typesCollection.contains(configStatusMessage.type));
     }
 
     /**
      * Retrieves all configuration status messages that have one of the given parameter names.
      *
      * @param parameterNames the parameter names to be filtered for; if empty then all messages are delivered
-     *
      * @return an unmodifiable collection of the corresponding configuration status messages
      */
     public Collection<ConfigStatusMessage> getConfigStatusMessages(String... parameterNames) {
-        final Collection<String> parameterNamesCollection = ImmutableList.copyOf(parameterNames);
-        return filter(parameterNamesCollection, new Predicate<ConfigStatusMessage>() {
-            @Override
-            public boolean apply(ConfigStatusMessage configStatusMessage) {
-                return parameterNamesCollection.contains(configStatusMessage.parameterName);
-            }
-        });
+        final Collection<String> parameterNamesCollection = Arrays.asList(parameterNames);
+        return filter(parameterNamesCollection,
+                configStatusMessage -> parameterNamesCollection.contains(configStatusMessage.parameterName));
     }
 
     /**
@@ -97,29 +85,22 @@ public final class ConfigStatusInfo {
      *
      * @param types the types to be filtered for (must not be null)
      * @param parameterNames the parameter names to be filtered for (must not be null)
-     *
      * @return an unmodifiable collection of the corresponding configuration status messages
-     *
      * @throws NullPointerException if one of types or parameter names collection is empty
      */
     public Collection<ConfigStatusMessage> getConfigStatusMessages(final Collection<Type> types,
             final Collection<String> parameterNames) {
-        Preconditions.checkNotNull(types);
-        Preconditions.checkNotNull(parameterNames);
-        return filterConfigStatusMessages(getConfigStatusMessages(), new Predicate<ConfigStatusMessage>() {
-            @Override
-            public boolean apply(ConfigStatusMessage configStatusMessage) {
-                return types.contains(configStatusMessage.type)
-                        || parameterNames.contains(configStatusMessage.parameterName);
-            }
-        });
+        Objects.requireNonNull(types);
+        Objects.requireNonNull(parameterNames);
+        return filterConfigStatusMessages(getConfigStatusMessages(),
+                configStatusMessage -> types.contains(configStatusMessage.type)
+                        || parameterNames.contains(configStatusMessage.parameterName));
     }
 
     /**
      * Adds the given {@link ConfigStatusMessage}.
      *
      * @param configStatusMessage the configuration status message to be added
-     *
      * @throws IllegalArgumentException if given configuration status message is null
      */
     public void add(ConfigStatusMessage configStatusMessage) {
@@ -133,7 +114,6 @@ public final class ConfigStatusInfo {
      * Adds the given given {@link ConfigStatusMessage}s.
      *
      * @param configStatusMessages the configuration status messages to be added
-     *
      * @throws IllegalArgumentException if given collection is null
      */
     public void add(Collection<ConfigStatusMessage> configStatusMessages) {
@@ -153,8 +133,8 @@ public final class ConfigStatusInfo {
     }
 
     private static Collection<ConfigStatusMessage> filterConfigStatusMessages(
-            Collection<ConfigStatusMessage> configStatusMessages, Predicate<ConfigStatusMessage> predicate) {
-        return Collections.unmodifiableCollection(Collections2.filter(configStatusMessages, predicate));
+            Collection<ConfigStatusMessage> configStatusMessages, Predicate<? super ConfigStatusMessage> predicate) {
+        return configStatusMessages.stream().filter(predicate).collect(Collectors.toList());
     }
 
     @Override
@@ -167,18 +147,23 @@ public final class ConfigStatusInfo {
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj)
+        if (this == obj) {
             return true;
-        if (obj == null)
+        }
+        if (obj == null) {
             return false;
-        if (getClass() != obj.getClass())
+        }
+        if (getClass() != obj.getClass()) {
             return false;
+        }
         ConfigStatusInfo other = (ConfigStatusInfo) obj;
         if (configStatusMessages == null) {
-            if (other.configStatusMessages != null)
+            if (other.configStatusMessages != null) {
                 return false;
-        } else if (!configStatusMessages.equals(other.configStatusMessages))
+            }
+        } else if (!configStatusMessages.equals(other.configStatusMessages)) {
             return false;
+        }
         return true;
     }
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,6 +16,8 @@ import org.eclipse.smarthome.config.discovery.AbstractDiscoveryService;
 import org.eclipse.smarthome.config.discovery.DiscoveryService;
 import org.jupnp.UpnpService;
 import org.jupnp.model.message.header.RootDeviceHeader;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,6 +28,7 @@ import org.slf4j.LoggerFactory;
  * @author Hans-Jörg Merk - Initial contribution
  *
  */
+@Component(service = DiscoveryService.class, immediate = true, configurationPid = "discovery.wemo")
 public class WemoDiscoveryService extends AbstractDiscoveryService {
 
     private Logger logger = LoggerFactory.getLogger(WemoDiscoveryService.class);
@@ -36,6 +39,7 @@ public class WemoDiscoveryService extends AbstractDiscoveryService {
 
     private UpnpService upnpService;
 
+    @Reference
     protected void setUpnpService(UpnpService upnpService) {
         this.upnpService = upnpService;
     }
@@ -69,8 +73,6 @@ public class WemoDiscoveryService extends AbstractDiscoveryService {
     protected synchronized void stopScan() {
         removeOlderResults(getTimestampOfLastScan());
         super.stopScan();
-        if (!isBackgroundDiscoveryEnabled()) {
-        }
     }
 
 }

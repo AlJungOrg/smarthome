@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -61,7 +61,6 @@ public abstract class AbstractExpression<E extends AbstractExpressionPart> imple
      */
     public AbstractExpression(String expression, String delimiters, Date startDate, TimeZone timeZone,
             int minimumCandidates, int maximumCandidates) throws ParseException {
-
         if (expression == null) {
             throw new IllegalArgumentException("The expression cannot be null");
         }
@@ -159,7 +158,6 @@ public abstract class AbstractExpression<E extends AbstractExpressionPart> imple
      */
     public final void parseExpression(String expression, boolean searchMode)
             throws ParseException, IllegalArgumentException {
-
         StringTokenizer expressionTokenizer = new StringTokenizer(expression, delimiters, false);
         int position = 0;
 
@@ -198,7 +196,7 @@ public abstract class AbstractExpression<E extends AbstractExpressionPart> imple
         }
     }
 
-    abstract protected void validateExpression() throws IllegalArgumentException;
+    protected abstract void validateExpression() throws IllegalArgumentException;
 
     protected void applyExpressionParts(boolean searchMode) {
         for (ExpressionPart part : getExpressionParts()) {
@@ -264,7 +262,6 @@ public abstract class AbstractExpression<E extends AbstractExpressionPart> imple
 
     @Override
     public Date getTimeAfter(Date afterTime) {
-
         Date currentStartDate = getStartDate();
 
         if (hasFloatingStartDate()) {
@@ -287,13 +284,11 @@ public abstract class AbstractExpression<E extends AbstractExpressionPart> imple
                 return getCandidates().get(0);
             } else {
                 while (getCandidates().size() > 1) {
-
                     Collections.sort(getCandidates());
 
                     Date newStartDate = null;
 
                     try {
-
                         for (Date candidate : getCandidates()) {
                             newStartDate = candidate;
                             if (candidate.after(afterTime)) {
@@ -316,7 +311,6 @@ public abstract class AbstractExpression<E extends AbstractExpressionPart> imple
 
     @Override
     public Date getFinalFireTime() {
-
         try {
             parseExpression(getExpression(), false);
         } catch (ParseException e) {
@@ -335,13 +329,13 @@ public abstract class AbstractExpression<E extends AbstractExpressionPart> imple
     /**
      * Parses a token from the expression into an {@link ExpressionPart}
      */
-    abstract protected E parseToken(String token, int position) throws ParseException;
+    protected abstract E parseToken(String token, int position) throws ParseException;
 
     /**
      * Helper function that is called to populate the list of candidates dates in case not enough candidates were
      * generated in a first instance
      */
-    abstract protected void populateWithSeeds();
+    protected abstract void populateWithSeeds();
 
     public <T extends ExpressionPart> T getExpressionPart(Class<T> part) {
         for (ExpressionPart aPart : getExpressionParts()) {

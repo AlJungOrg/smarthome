@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -52,7 +52,8 @@ public class TradfriDiscoveryService extends AbstractDiscoveryService implements
 
     private static final String[] COLOR_TEMP_MODELS = new String[] { "TRADFRI bulb E27 WS opal 980lm",
             "TRADFRI bulb E27 WS clear 950lm", "TRADFRI bulb GU10 WS 400lm", "TRADFRI bulb E14 WS opal 400lm",
-            "FLOALT panel WS 30x30", "FLOALT panel WS 60x60", "FLOALT panel WS 30x90" };
+            "FLOALT panel WS 30x30", "FLOALT panel WS 60x60", "FLOALT panel WS 30x90",
+            "TRADFRI bulb E12 WS opal 400lm" };
 
     private static final String COLOR_MODELS_IDENTIFIER = "CWS";
 
@@ -116,12 +117,17 @@ public class TradfriDiscoveryService extends AbstractDiscoveryService implements
                         thingType = THING_TYPE_DIMMABLE_LIGHT;
                     }
                     thingId = new ThingUID(thingType, bridge, Integer.toString(id));
+                } else if (TYPE_PLUG.equals(type) && data.has(PLUG)) {
+                    // Smart plug
+                    ThingTypeUID thingType = THING_TYPE_ONOFF_PLUG;
+                    thingId = new ThingUID(thingType, bridge, Integer.toString(id));
                 } else if (TYPE_SWITCH.equals(type) && data.has(SWITCH)) {
                     // Remote control and wireless dimmer
                     // As protocol does not distinguishes between remote control and wireless dimmer,
                     // we check for the whole model name
                     ThingTypeUID thingType = (model != null && REMOTE_CONTROLLER_MODEL.equals(model))
-                            ? THING_TYPE_REMOTE_CONTROL : THING_TYPE_DIMMER;
+                            ? THING_TYPE_REMOTE_CONTROL
+                            : THING_TYPE_DIMMER;
                     thingId = new ThingUID(thingType, bridge, Integer.toString(id));
                 } else if (TYPE_SENSOR.equals(type) && data.has(SENSOR)) {
                     // Motion sensor
@@ -130,6 +136,8 @@ public class TradfriDiscoveryService extends AbstractDiscoveryService implements
 
                 if (thingId == null) {
                     // we didn't identify any device, so let's quit
+                    logger.debug("Ignoring unknown device on TRADFRI gateway:\n\ttype : {}\n\tmodel: {}\n\tinfo : {}",
+                            type, model, deviceInfo.getAsString());
                     return;
                 }
 

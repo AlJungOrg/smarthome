@@ -9,31 +9,35 @@ Bundle-Version: 0.10.0.qualifier
 Export-Package: org.eclipse.smarthome.model.thing
 Fragment-Host: org.eclipse.smarthome.model.thing
 Import-Package: 
- groovy.lang,
+ javax.measure,
+ javax.measure.quantity,
  org.apache.log4j,
- org.codehaus.groovy.reflection,
- org.codehaus.groovy.runtime,
- org.codehaus.groovy.runtime.callsite,
- org.codehaus.groovy.runtime.typehandling,
  org.eclipse.jdt.annotation;resolution:=optional,
+ org.eclipse.smarthome.config.core,
  org.eclipse.smarthome.core.events,
+ org.eclipse.smarthome.core.thing,
+ org.eclipse.smarthome.core.thing.dto,
  org.eclipse.smarthome.core.thing.events,
  org.eclipse.smarthome.core.thing.util,
  org.eclipse.smarthome.core.types,
+ org.eclipse.smarthome.model.thing,
  org.eclipse.smarthome.test,
  org.eclipse.smarthome.test.java,
- org.hamcrest.core,
  org.hamcrest;core=split,
+ org.hamcrest.core,
+ org.junit;version="4.0.0",
+ org.junit.runner;version="4.0.0",
  org.junit.runner.manipulation;version="4.0.0",
  org.junit.runner.notification;version="4.0.0",
- org.junit.runner;version="4.0.0",
- org.junit.runners.model;version="4.0.0",
  org.junit.runners;version="4.0.0",
- org.junit;version="4.0.0",
+ org.junit.runners.model;version="4.0.0",
  org.mockito,
+ org.mockito.invocation,
+ org.mockito.junit,
+ org.mockito.stubbing,
  org.mockito.verification,
- org.osgi.service.component;version="1.2.2"
+ org.osgi.service.component
 Require-Bundle: 
- org.eclipse.core.runtime,
- org.hamcrest
+ org.eclipse.core.runtime
 Service-Component: OSGI-INF/*.xml
+Automatic-Module-Name: org.eclipse.smarthome.model.thing.tests

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -64,7 +64,7 @@ public class AutomationResourceBundlesEventQueue<E> implements Runnable {
      */
     private boolean shared = false;
 
-    private AbstractResourceBundleProvider<E> provider;
+    private final AbstractResourceBundleProvider<E> provider;
 
     /**
      * This constructor is responsible for initializing a queue for bundles providing automation resources.
@@ -91,7 +91,7 @@ public class AutomationResourceBundlesEventQueue<E> implements Runnable {
     public void run() {
         boolean waitForEvents = true;
         while (true) {
-            List<BundleEvent> l_queue = null;
+            List<BundleEvent> lQueue = null;
             synchronized (this) {
                 if (closed) {
                     notifyAll();
@@ -111,10 +111,10 @@ public class AutomationResourceBundlesEventQueue<E> implements Runnable {
                     notifyAll();
                     return;
                 }
-                l_queue = queue;
+                lQueue = queue;
                 shared = true;
             }
-            Iterator<BundleEvent> events = l_queue.iterator();
+            Iterator<BundleEvent> events = lQueue.iterator();
             while (events.hasNext()) {
                 BundleEvent event = events.next();
                 try {

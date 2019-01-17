@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -67,7 +67,6 @@ public interface Inbox {
      *
      * @param thingUID the Thing UID pointing to the discovery result to be removed from this inbox
      *            (could be null or invalid)
-     *
      * @return true if the specified discovery result could be removed, otherwise false
      */
     boolean remove(@Nullable ThingUID thingUID);
@@ -81,7 +80,6 @@ public interface Inbox {
      *
      * @param criteria the filter criteria to be used for filtering all discovery results
      *            (could be null)
-     *
      * @return all discovery results in this inbox which fit to the specified filter criteria
      *         (not null, could be empty)
      *

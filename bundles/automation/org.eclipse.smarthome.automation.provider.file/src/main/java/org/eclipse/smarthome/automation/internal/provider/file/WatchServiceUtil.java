@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,7 +25,7 @@ import java.util.Map;
 @SuppressWarnings("rawtypes")
 public class WatchServiceUtil {
 
-    static Map<AbstractFileProvider, Map<String, AutomationWatchService>> WATCH_SERVICES = new HashMap<AbstractFileProvider, Map<String, AutomationWatchService>>();
+    private static final Map<AbstractFileProvider, Map<String, AutomationWatchService>> WATCH_SERVICES = new HashMap<AbstractFileProvider, Map<String, AutomationWatchService>>();
 
     public static void initializeWatchService(String watchingDir, AbstractFileProvider provider) {
         AutomationWatchService aws = null;

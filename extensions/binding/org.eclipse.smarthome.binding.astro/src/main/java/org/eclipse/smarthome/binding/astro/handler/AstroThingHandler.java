@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -183,9 +183,10 @@ public abstract class AstroThingHandler extends BaseThingHandler {
                 dailyJob.run();
 
                 // Repeat positional job every configured seconds
+                // Use scheduleAtFixedRate to avoid time drift associated with scheduleWithFixedDelay
                 if (isPositionalChannelLinked()) {
                     Job positionalJob = new PositionalJob(thingUID);
-                    ScheduledFuture<?> future = scheduler.scheduleWithFixedDelay(positionalJob, 0,
+                    ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(positionalJob, 0,
                             thingConfig.getInterval(), TimeUnit.SECONDS);
                     scheduledFutures.add(future);
                     logger.info("Scheduled {} every {} seconds", positionalJob, thingConfig.getInterval());

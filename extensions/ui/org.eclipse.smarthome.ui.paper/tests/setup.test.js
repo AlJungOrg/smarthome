@@ -293,18 +293,21 @@ describe('module PaperUI.controllers.setup', function() {
             rootScope = $rootScope;
             $httpBackend = $injector.get('$httpBackend');
             mdDialog = $injector.get('$mdDialog');
-            thingTypeRepository = $injector.get('thingTypeRepository');
-            thingTypeRepository.singleElements = {
-                'A:B' : {
+            
+            var thingType = {
                     UID : 'A:B',
                     label : 'LABEL'
-                }
             }
+            
+            thingTypeService = $injector.get('thingTypeService');
+            spyOn(thingTypeService, 'getByUid').and.callFake(function(parameter, callback) {
+                callback(thingType);
+            })
+
+            thingTypeRepository = $injector.get('thingTypeRepository');
             spyOn(thingTypeRepository, 'getOne').and.callThrough();
-            rootScope.data.thingTypes = [ {
-                UID : 'A:B',
-                label : 'LABEL'
-            } ];
+            rootScope.data.thingTypes = [ thingType ];
+            
             approveInboxEntryDialogController = $controller('ApproveInboxEntryDialogController', {
                 '$scope' : scope,
                 'discoveryResult' : {
@@ -312,6 +315,7 @@ describe('module PaperUI.controllers.setup', function() {
                     thingTypeUID : 'A:B'
                 }
             });
+            
             discoveryService = $injector.get('discoveryService');
         }));
         it('should require ApproveInboxEntryDialogController', function() {
@@ -323,6 +327,7 @@ describe('module PaperUI.controllers.setup', function() {
             expect(scope.thingTypeUID).toEqual('A:B');
         });
         it('should get thingType', function() {
+            rootScope.$apply();
             expect(thingTypeRepository.getOne).toHaveBeenCalled();
             expect(scope.thingType.label).toEqual("LABEL");
         });

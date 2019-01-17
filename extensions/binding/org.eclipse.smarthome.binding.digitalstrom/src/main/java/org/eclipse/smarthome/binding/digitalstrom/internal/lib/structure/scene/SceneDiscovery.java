@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,9 +24,9 @@ import org.eclipse.smarthome.binding.digitalstrom.internal.lib.listener.SceneSta
 import org.eclipse.smarthome.binding.digitalstrom.internal.lib.manager.ConnectionManager;
 import org.eclipse.smarthome.binding.digitalstrom.internal.lib.manager.SceneManager;
 import org.eclipse.smarthome.binding.digitalstrom.internal.lib.manager.StructureManager;
-import org.eclipse.smarthome.binding.digitalstrom.internal.lib.serverConnection.constants.JSONApiResponseKeysEnum;
-import org.eclipse.smarthome.binding.digitalstrom.internal.lib.serverConnection.impl.JSONResponseHandler;
-import org.eclipse.smarthome.binding.digitalstrom.internal.lib.structure.devices.deviceParameters.FunctionalColorGroupEnum;
+import org.eclipse.smarthome.binding.digitalstrom.internal.lib.serverconnection.constants.JSONApiResponseKeysEnum;
+import org.eclipse.smarthome.binding.digitalstrom.internal.lib.serverconnection.impl.JSONResponseHandler;
+import org.eclipse.smarthome.binding.digitalstrom.internal.lib.structure.devices.deviceparameters.constants.FunctionalColorGroupEnum;
 import org.eclipse.smarthome.binding.digitalstrom.internal.lib.structure.scene.constants.ApartmentSceneEnum;
 import org.eclipse.smarthome.binding.digitalstrom.internal.lib.structure.scene.constants.SceneEnum;
 import org.eclipse.smarthome.binding.digitalstrom.internal.lib.structure.scene.constants.ZoneSceneEnum;
@@ -46,20 +46,20 @@ import com.google.gson.JsonObject;
  */
 public class SceneDiscovery {
 
-    private static final Logger logger = LoggerFactory.getLogger(SceneDiscovery.class);
+    private final Logger logger = LoggerFactory.getLogger(SceneDiscovery.class);
+    // fields: 0 = namedScenes, 1 = apartmentScenes, 2 = zoneScenes, 3 = reachableScenes
+    private final char[] scenesGenerated = "0000".toCharArray();
 
-    private char[] scenesGenerated = "0000".toCharArray();
-
-    private List<InternalScene> namedScenes = new LinkedList<InternalScene>();
+    private final List<InternalScene> namedScenes = new LinkedList<InternalScene>();
     private boolean genList = false;
-    ScheduledFuture<?> generateReachableScenesScheduledFuture = null;
+    ScheduledFuture<?> generateReachableScenesScheduledFuture;
 
     private SceneManager sceneManager;
-    private SceneStatusListener discovery = null;
+    private SceneStatusListener discovery;
 
-    private final String query = "/json/property/query?query=/apartment/zones/*(ZoneID)/groups/*(group)/scenes/*(scene,name)";
-    private final String reachableScenesQuery = "/json/zone/getReachableScenes?id=";
-    private final String reachableGroupsQuery = "/json/apartment/getReachableGroups?token=";
+    public static final String NAMEND_SCENE_QUERY = "/apartment/zones/*(ZoneID)/groups/*(group)/scenes/*(scene,name)";
+    public static final String REACHABLE_SCENE_QUERY = "/json/zone/getReachableScenes?id=";
+    public static final String REACHABLE_GROUPS_QUERY = "/json/apartment/getReachableGroups?token=";
 
     /**
      * Creates a new {@link SceneDiscovery} with managed scene by the {@link SceneManager}
@@ -73,7 +73,7 @@ public class SceneDiscovery {
     /**
      * Creates a new {@link SceneDiscovery} and generates only a list of all scenes, if genList is true.
      *
-     * @param genList
+     * @param genList yes/no (true/false)
      */
     public SceneDiscovery(boolean genList) {
         this.genList = genList;
@@ -99,24 +99,18 @@ public class SceneDiscovery {
      * @return true, if successful otherwise false
      */
     public boolean generateNamedScenes(ConnectionManager connectionManager) {
-        if (connectionManager.checkConnection()) {
-            String response = connectionManager.getHttpTransport()
-                    .execute(query + "&token=" + connectionManager.getSessionToken());
-            if (response == null) {
-                return false;
-            } else {
-                JsonObject responsJsonObj = JSONResponseHandler.toJsonObject(response);
-                if (JSONResponseHandler.checkResponse(responsJsonObj)) {
-                    addScenesToList(JSONResponseHandler.getResultJsonObject(responsJsonObj));
-                    scenesGenerated[0] = '1';
-                    sceneManager.scenesGenerated(scenesGenerated);
-                    return true;
-                }
-            }
+        JsonObject responsJsonObj = connectionManager.getDigitalSTROMAPI().query(connectionManager.getSessionToken(),
+                NAMEND_SCENE_QUERY);
+        if (responsJsonObj == null) {
+            scenesGenerated[0] = '2';
+            sceneManager.scenesGenerated(scenesGenerated);
+            return false;
+        } else {
+            addScenesToList(responsJsonObj);
+            scenesGenerated[0] = '1';
+            sceneManager.scenesGenerated(scenesGenerated);
+            return true;
         }
-        scenesGenerated[0] = '2';
-        sceneManager.scenesGenerated(scenesGenerated);
-        return false;
     }
 
     /**
@@ -138,32 +132,28 @@ public class SceneDiscovery {
     }
 
     private void addScenesToList(JsonObject resultJsonObj) {
-        if (resultJsonObj.get(JSONApiResponseKeysEnum.APARTMENT_GET_STRUCTURE_ZONES.getKey()) instanceof JsonArray) {
-            JsonArray zones = (JsonArray) resultJsonObj
-                    .get(JSONApiResponseKeysEnum.APARTMENT_GET_STRUCTURE_ZONES.getKey());
+        if (resultJsonObj.get(JSONApiResponseKeysEnum.ZONES.getKey()) != null
+                && resultJsonObj.get(JSONApiResponseKeysEnum.ZONES.getKey()).isJsonArray()) {
+            JsonArray zones = resultJsonObj.get(JSONApiResponseKeysEnum.ZONES.getKey()).getAsJsonArray();
             for (int i = 0; i < zones.size(); i++) {
 
-                if (((JsonObject) zones.get(i)).get(
-                        JSONApiResponseKeysEnum.APARTMENT_GET_STRUCTURE_ZONES_GROUPS.getKey()) instanceof JsonArray) {
-
-                    JsonArray groups = (JsonArray) ((JsonObject) zones.get(i))
-                            .get(JSONApiResponseKeysEnum.APARTMENT_GET_STRUCTURE_ZONES_GROUPS.getKey());
+                if (((JsonObject) zones.get(i)).get(JSONApiResponseKeysEnum.GROUPS.getKey()).isJsonArray()) {
+                    JsonArray groups = ((JsonObject) zones.get(i)).get(JSONApiResponseKeysEnum.GROUPS.getKey())
+                            .getAsJsonArray();
 
                     for (int j = 0; j < groups.size(); j++) {
 
-                        if (((JsonObject) groups.get(j)).get("scenes") instanceof JsonArray) {
-
-                            JsonArray scenes = (JsonArray) ((JsonObject) groups.get(j)).get("scenes");
+                        if (((JsonObject) groups.get(j)).get("scenes") != null
+                                && ((JsonObject) groups.get(j)).get("scenes").isJsonArray()) {
+                            JsonArray scenes = ((JsonObject) groups.get(j)).get("scenes").getAsJsonArray();
                             for (int k = 0; k < scenes.size(); k++) {
                                 if (scenes.get(k).isJsonObject()) {
-
                                     JsonObject sceneJsonObject = ((JsonObject) scenes.get(k));
                                     int zoneID = ((JsonObject) zones.get(i)).get("ZoneID").getAsInt();
                                     short groupID = ((JsonObject) groups.get(j)).get("group").getAsShort();
                                     InternalScene scene = new InternalScene(zoneID, groupID,
                                             sceneJsonObject.get("scene").getAsShort(),
                                             sceneJsonObject.get("name").getAsString());
-
                                     if (genList) {
                                         this.namedScenes.add(scene);
                                     } else {
@@ -233,8 +223,8 @@ public class SceneDiscovery {
     /**
      * Generates all reachable scenes.
      *
-     * @param connectionManager
-     * @param structureManager
+     * @param connectionManager must not be null
+     * @param structureManager must not be null
      */
     public void generateReachableScenes(final ConnectionManager connectionManager,
             final StructureManager structureManager) {
@@ -266,50 +256,47 @@ public class SceneDiscovery {
                                 }
                                 if (zoneID != null) {
                                     if (groupIdInter != null) {
-                                        if (connectionManager.checkConnection()) {
-                                            Short groupID = null;
-                                            if (groupIdInter.hasNext()) {
-                                                groupID = groupIdInter.next();
-                                            } else {
-                                                groupIdInter = null;
+                                        Short groupID = null;
+                                        if (groupIdInter.hasNext()) {
+                                            groupID = groupIdInter.next();
+                                        } else {
+                                            groupIdInter = null;
+                                        }
+                                        if (groupID != null) {
+                                            if (FunctionalColorGroupEnum.getColorGroup(groupID)
+                                                    .equals(FunctionalColorGroupEnum.YELLOW)) {
+                                                discoverScene(SceneEnum.AUTO_OFF.getSceneNumber(), groupID);
                                             }
-                                            if (groupID != null) {
-                                                if (FunctionalColorGroupEnum.getColorGroup((int) groupID)
-                                                        .equals(FunctionalColorGroupEnum.YELLOW)) {
-                                                    discoverScene(SceneEnum.AUTO_OFF.getSceneNumber(), groupID);
-                                                }
-                                                String response = connectionManager.getHttpTransport()
-                                                        .execute(reachableScenesQuery + zoneID + "&groupID=" + groupID
-                                                                + "&token=" + connectionManager.getSessionToken());
-                                                if (response == null) {
-                                                    scenesGenerated[3] = '2';
-                                                    sceneManager.scenesGenerated(scenesGenerated);
-                                                    return;
-                                                } else {
-                                                    JsonObject responsJsonObj = JSONResponseHandler
-                                                            .toJsonObject(response);
-                                                    if (JSONResponseHandler.checkResponse(responsJsonObj)) {
-                                                        JsonObject resultJsonObj = JSONResponseHandler
-                                                                .getResultJsonObject(responsJsonObj);
-                                                        if (resultJsonObj
-                                                                .get(JSONApiResponseKeysEnum.ZONE_GET_REACHABLE_SCENES
-                                                                        .getKey()) instanceof JsonArray) {
-                                                            JsonArray scenes = (JsonArray) resultJsonObj
-                                                                    .get(JSONApiResponseKeysEnum.ZONE_GET_REACHABLE_SCENES
-                                                                            .getKey());
-                                                            if (scenes != null) {
-                                                                for (int i = 0; i < scenes.size(); i++) {
-                                                                    discoverScene(scenes.get(i).getAsShort(), groupID);
-                                                                }
+                                            String response = connectionManager.getHttpTransport()
+                                                    .execute(REACHABLE_SCENE_QUERY + zoneID + "&groupID=" + groupID
+                                                            + "&token=" + connectionManager.getSessionToken());
+                                            if (response == null) {
+                                                scenesGenerated[3] = '2';
+                                                sceneManager.scenesGenerated(scenesGenerated);
+                                                logger.debug(
+                                                        "Reachable scenes for zone {} and group {} cant be generated, because the dSS does not answer",
+                                                        zoneID, groupID);
+                                                generateReachableScenesScheduledFuture.cancel(true);
+                                                return;
+                                            } else {
+                                                JsonObject responsJsonObj = JSONResponseHandler.toJsonObject(response);
+                                                if (JSONResponseHandler.checkResponse(responsJsonObj)) {
+                                                    JsonObject resultJsonObj = JSONResponseHandler
+                                                            .getResultJsonObject(responsJsonObj);
+                                                    if (resultJsonObj
+                                                            .get(JSONApiResponseKeysEnum.REACHABLE_SCENES.getKey())
+                                                            .isJsonArray()) {
+                                                        JsonArray scenes = resultJsonObj
+                                                                .get(JSONApiResponseKeysEnum.REACHABLE_SCENES.getKey())
+                                                                .getAsJsonArray();
+                                                        if (scenes != null) {
+                                                            for (int i = 0; i < scenes.size(); i++) {
+                                                                discoverScene(scenes.get(i).getAsShort(), groupID);
                                                             }
                                                         }
                                                     }
                                                 }
                                             }
-                                        } else {
-                                            scenesGenerated[3] = '2';
-                                            sceneManager.scenesGenerated(scenesGenerated);
-                                            generateReachableScenesScheduledFuture.cancel(true);
                                         }
                                     }
                                 }
@@ -350,33 +337,28 @@ public class SceneDiscovery {
 
     private HashMap<Integer, List<Short>> getReachableGroups(ConnectionManager connectionManager) {
         HashMap<Integer, List<Short>> reachableGroupsMap = null;
-        if (connectionManager.checkConnection()) {
-            String response = connectionManager.getHttpTransport()
-                    .execute(this.reachableGroupsQuery + connectionManager.getSessionToken());
-            if (response == null) {
-                return null;
-            } else {
-                JsonObject responsJsonObj = JSONResponseHandler.toJsonObject(response);
-                if (JSONResponseHandler.checkResponse(responsJsonObj)) {
-                    JsonObject resultJsonObj = JSONResponseHandler.getResultJsonObject(responsJsonObj);
-                    if (resultJsonObj
-                            .get(JSONApiResponseKeysEnum.APARTMENT_GET_STRUCTURE_ZONES.getKey()) instanceof JsonArray) {
-                        JsonArray zones = (JsonArray) resultJsonObj
-                                .get(JSONApiResponseKeysEnum.APARTMENT_GET_STRUCTURE_ZONES.getKey());
-                        reachableGroupsMap = new HashMap<Integer, List<Short>>(zones.size());
-                        List<Short> groupList;
-                        for (int i = 0; i < zones.size(); i++) {
-                            if (((JsonObject) zones.get(i))
-                                    .get(JSONApiResponseKeysEnum.APARTMENT_GET_STRUCTURE_ZONES_GROUPS
-                                            .getKey()) instanceof JsonArray) {
-                                JsonArray groups = (JsonArray) ((JsonObject) zones.get(i))
-                                        .get(JSONApiResponseKeysEnum.APARTMENT_GET_STRUCTURE_ZONES_GROUPS.getKey());
-                                groupList = new LinkedList<Short>();
-                                for (int k = 0; k < groups.size(); k++) {
-                                    groupList.add(groups.get(k).getAsShort());
-                                }
-                                reachableGroupsMap.put(((JsonObject) zones.get(i)).get("zoneID").getAsInt(), groupList);
+        String response = connectionManager.getHttpTransport()
+                .execute(SceneDiscovery.REACHABLE_GROUPS_QUERY + connectionManager.getSessionToken());
+        if (response == null) {
+            return null;
+        } else {
+            JsonObject responsJsonObj = JSONResponseHandler.toJsonObject(response);
+            if (JSONResponseHandler.checkResponse(responsJsonObj)) {
+                JsonObject resultJsonObj = JSONResponseHandler.getResultJsonObject(responsJsonObj);
+                if (resultJsonObj.get(JSONApiResponseKeysEnum.ZONES.getKey()) instanceof JsonArray) {
+                    JsonArray zones = (JsonArray) resultJsonObj.get(JSONApiResponseKeysEnum.ZONES.getKey());
+                    reachableGroupsMap = new HashMap<Integer, List<Short>>(zones.size());
+                    List<Short> groupList;
+                    for (int i = 0; i < zones.size(); i++) {
+                        if (((JsonObject) zones.get(i))
+                                .get(JSONApiResponseKeysEnum.GROUPS.getKey()) instanceof JsonArray) {
+                            JsonArray groups = (JsonArray) ((JsonObject) zones.get(i))
+                                    .get(JSONApiResponseKeysEnum.GROUPS.getKey());
+                            groupList = new LinkedList<Short>();
+                            for (int k = 0; k < groups.size(); k++) {
+                                groupList.add(groups.get(k).getAsShort());
                             }
+                            reachableGroupsMap.put(((JsonObject) zones.get(i)).get("zoneID").getAsInt(), groupList);
                         }
                     }
                 }
@@ -386,9 +368,9 @@ public class SceneDiscovery {
     }
 
     /**
-     * Informs the registered {@link SceneStausListener} as scene discovery about a new scene.
+     * Informs the registered {@link SceneStatusListener} as scene discovery about a new scene.
      *
-     * @param scene
+     * @param scene that was discoverd
      */
     public void sceneDiscoverd(InternalScene scene) {
         if (scene != null) {
@@ -430,7 +412,7 @@ public class SceneDiscovery {
     /**
      * Registers the given {@link SceneStatusListener} as scene discovery.
      *
-     * @param listener
+     * @param listener to register
      */
     public void registerSceneDiscovery(SceneStatusListener listener) {
         this.discovery = listener;

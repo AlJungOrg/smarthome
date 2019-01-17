@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -27,8 +27,6 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 
-import com.google.common.collect.Lists;
-
 /**
  * The {@link ThingTypeRegistry} tracks all {@link ThingType}s provided by registered {@link ThingTypeProvider}s.
  *
@@ -38,13 +36,13 @@ import com.google.common.collect.Lists;
 @Component(immediate = true, service = ThingTypeRegistry.class)
 public class ThingTypeRegistry {
 
-    private List<ThingTypeProvider> thingTypeProviders = new CopyOnWriteArrayList<>();
+    private final List<ThingTypeProvider> thingTypeProviders = new CopyOnWriteArrayList<>();
+    private ChannelTypeRegistry channelTypeRegistry;
 
     /**
      * Returns all thing types.
      *
-     * @param locale
-     *            locale (can be null)
+     * @param locale locale (can be null)
      * @return all thing types
      */
     public List<ThingType> getThingTypes(Locale locale) {
@@ -67,14 +65,12 @@ public class ThingTypeRegistry {
     /**
      * Returns thing types for a given binding id.
      *
-     * @param bindingId
-     *            binding id
-     * @param locale
-     *            locale (can be null)
+     * @param bindingId binding id
+     * @param locale locale (can be null)
      * @return thing types for given binding id
      */
     public List<ThingType> getThingTypes(String bindingId, Locale locale) {
-        List<ThingType> thingTypesForBinding = Lists.newArrayList();
+        List<ThingType> thingTypesForBinding = new ArrayList<>();
 
         for (ThingType thingType : getThingTypes()) {
             if (thingType.getBindingId().equals(bindingId)) {
@@ -88,8 +84,7 @@ public class ThingTypeRegistry {
     /**
      * Returns thing types for a given binding id.
      *
-     * @param bindingId
-     *            binding id
+     * @param bindingId binding id
      * @return thing types for given binding id
      */
     public List<ThingType> getThingTypes(String bindingId) {
@@ -99,10 +94,8 @@ public class ThingTypeRegistry {
     /**
      * Returns a thing type for a given thing type UID.
      *
-     * @param thingTypeUID
-     *            thing type UID
-     * @param locale
-     *            locale (can be null)
+     * @param thingTypeUID thing type UID
+     * @param locale locale (can be null)
      * @return thing type for given UID or null if no thing type with this UID
      *         was found
      */
@@ -120,8 +113,7 @@ public class ThingTypeRegistry {
     /**
      * Returns a thing type for a given thing type UID.
      *
-     * @param thingTypeUID
-     *            thing type UID
+     * @param thingTypeUID thing type UID
      * @return thing type for given UID or null if no thing type with this UID
      *         was found
      */
@@ -161,7 +153,7 @@ public class ThingTypeRegistry {
     public ChannelType getChannelType(Channel channel, Locale locale) {
         ChannelTypeUID channelTypeUID = channel.getChannelTypeUID();
         if (channelTypeUID != null) {
-            return TypeResolver.resolve(channelTypeUID, locale);
+            return channelTypeRegistry.getChannelType(channelTypeUID, locale);
         }
         return null;
     }
@@ -177,6 +169,15 @@ public class ThingTypeRegistry {
         if (thingTypeProvider != null) {
             this.thingTypeProviders.remove(thingTypeProvider);
         }
+    }
+
+    @Reference
+    protected void setChannelTypeRegistry(ChannelTypeRegistry channelTypeRegistry) {
+        this.channelTypeRegistry = channelTypeRegistry;
+    }
+
+    protected void unsetChannelTypeRegistry(ChannelTypeRegistry channelTypeRegistry) {
+        this.channelTypeRegistry = null;
     }
 
 }

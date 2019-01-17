@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,17 +20,18 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.Set;
 
-import org.eclipse.smarthome.automation.ManagedRuleProvider;
 import org.eclipse.smarthome.automation.Rule;
+import org.eclipse.smarthome.automation.core.ManagedRuleProvider;
 import org.eclipse.smarthome.automation.parser.Parser;
 import org.osgi.framework.Bundle;
 
 /**
- * This class is implementation of {@link RuleResourceBundleImporter}. It serves for providing {@link Rule}s by loading
+ * This class is implementation of {@link RuleResourceBundleImporter}. It serves for providing {@link Rule}s by
+ * loading
  * bundle resources. It extends functionality of {@link AbstractResourceBundleProvider} by specifying:
  * <ul>
  * <li>the path to resources, corresponding to the {@link Rule}s - root directory
- * {@link AbstractResourceBundleProvider#PATH} with sub-directory "rules".
+ * {@link AbstractResourceBundleProvider#ROOT_DIRECTORY} with sub-directory "rules".
  * <li>type of the {@link Parser}s, corresponding to the {@link Rule}s - {@link Parser#PARSER_RULE}
  * <li>specific functionality for loading the {@link Rule}s
  * <li>tracking the managing service of the {@link Rule}s.
@@ -54,7 +55,7 @@ public class RuleResourceBundleImporter extends AbstractResourceBundleProvider<R
      * @param registry the managing service of the {@link Rule}s.
      */
     public RuleResourceBundleImporter() {
-        path = PATH + "/rules/";
+        path = ROOT_DIRECTORY + "/rules/";
     }
 
     protected void setManagedRuleProvider(ManagedRuleProvider mProvider) {

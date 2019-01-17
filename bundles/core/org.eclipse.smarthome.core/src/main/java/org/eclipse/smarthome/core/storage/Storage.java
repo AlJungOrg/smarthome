@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,7 +12,10 @@
  */
 package org.eclipse.smarthome.core.storage;
 
+import java.util.AbstractMap;
 import java.util.Collection;
+import java.util.Map;
+import java.util.stream.Stream;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
@@ -76,5 +79,14 @@ public interface Storage<T> {
      * @return the values of this Storage
      */
     Collection<@Nullable T> getValues();
+
+    /**
+     * Get all storage entries.
+     *
+     * @return a stream of all storage entries
+     */
+    default Stream<Map.Entry<String, @Nullable T>> stream() {
+        return getKeys().stream().map(key -> new AbstractMap.SimpleImmutableEntry<>(key, get(key)));
+    }
 
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -100,8 +100,8 @@ public class URLAudioStream extends AudioStream {
                 shoutCastSocket = new Socket(streamUrl.getHost(), port);
 
                 OutputStream os = shoutCastSocket.getOutputStream();
-                String user_agent = "WinampMPEG/5.09";
-                String req = "GET / HTTP/1.0\r\nuser-agent: " + user_agent
+                String userAgent = "WinampMPEG/5.09";
+                String req = "GET / HTTP/1.0\r\nuser-agent: " + userAgent
                         + "\r\nIcy-MetaData: 1\r\nConnection: keep-alive\r\n\r\n";
                 os.write(req.getBytes());
                 return shoutCastSocket.getInputStream();

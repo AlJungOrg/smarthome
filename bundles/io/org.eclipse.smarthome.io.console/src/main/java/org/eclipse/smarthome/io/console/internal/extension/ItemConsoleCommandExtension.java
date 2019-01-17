@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,6 +24,9 @@ import org.eclipse.smarthome.core.items.ItemRegistry;
 import org.eclipse.smarthome.core.items.ManagedItemProvider;
 import org.eclipse.smarthome.io.console.Console;
 import org.eclipse.smarthome.io.console.extensions.AbstractConsoleCommandExtension;
+import org.eclipse.smarthome.io.console.extensions.ConsoleCommandExtension;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 
 /**
  * Console command extension to get item list
@@ -35,6 +38,7 @@ import org.eclipse.smarthome.io.console.extensions.AbstractConsoleCommandExtensi
  * @author Stefan Triller - Added commands for adding and removing tags
  *
  */
+@Component(service = ConsoleCommandExtension.class)
 public class ItemConsoleCommandExtension extends AbstractConsoleCommandExtension {
 
     private static final String SUBCMD_LIST = "list";
@@ -147,10 +151,15 @@ public class ItemConsoleCommandExtension extends AbstractConsoleCommandExtension
                 console.println(item.toString());
             }
         } else {
-            console.println("No item found for this pattern.");
+            if (pattern == null || pattern.isEmpty()) {
+                console.println("No item found.");
+            } else {
+                console.println("No item found for this pattern.");
+            }
         }
     }
 
+    @Reference
     protected void setItemRegistry(ItemRegistry itemRegistry) {
         this.itemRegistry = itemRegistry;
     }
@@ -159,6 +168,7 @@ public class ItemConsoleCommandExtension extends AbstractConsoleCommandExtension
         this.itemRegistry = null;
     }
 
+    @Reference
     protected void setManagedItemProvider(ManagedItemProvider managedItemProvider) {
         this.managedItemProvider = managedItemProvider;
     }

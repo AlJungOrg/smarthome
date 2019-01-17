@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,17 +12,26 @@
  */
 package org.eclipse.smarthome.core.voice.internal;
 
+import static java.util.stream.Collectors.*;
+
+import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.config.core.ConfigOptionProvider;
+import org.eclipse.smarthome.config.core.ConfigurableService;
 import org.eclipse.smarthome.config.core.ParameterOption;
 import org.eclipse.smarthome.core.audio.AudioFormat;
 import org.eclipse.smarthome.core.audio.AudioManager;
@@ -33,6 +42,7 @@ import org.eclipse.smarthome.core.audio.UnsupportedAudioFormatException;
 import org.eclipse.smarthome.core.audio.UnsupportedAudioStreamException;
 import org.eclipse.smarthome.core.events.EventPublisher;
 import org.eclipse.smarthome.core.i18n.LocaleProvider;
+import org.eclipse.smarthome.core.library.types.PercentType;
 import org.eclipse.smarthome.core.voice.KSService;
 import org.eclipse.smarthome.core.voice.STTService;
 import org.eclipse.smarthome.core.voice.TTSException;
@@ -41,6 +51,14 @@ import org.eclipse.smarthome.core.voice.Voice;
 import org.eclipse.smarthome.core.voice.VoiceManager;
 import org.eclipse.smarthome.core.voice.text.HumanLanguageInterpreter;
 import org.eclipse.smarthome.core.voice.text.InterpretationException;
+import org.osgi.framework.Constants;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.annotations.Modified;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,14 +68,22 @@ import org.slf4j.LoggerFactory;
  * @author Kai Kreuzer - Initial contribution and API
  * @author Yannick Schaus - Added ability to provide a item for feedback during listening phases
  * @author Christoph Weitkamp - Added getSupportedStreams() and UnsupportedAudioStreamException
+ * @author Christoph Weitkamp - Added parameter to adjust the volume
+ * @author Wouter Born - Sort TTS options
  */
+@Component(immediate = true, configurationPid = "org.eclipse.smarthome.voice", property = { //
+        Constants.SERVICE_PID + "=org.eclipse.smarthome.voice", //
+        ConfigurableService.SERVICE_PROPERTY_CATEGORY + "=system", //
+        ConfigurableService.SERVICE_PROPERTY_LABEL + "=Voice", //
+        ConfigurableService.SERVICE_PROPERTY_DESCRIPTION_URI + "=" + VoiceManagerImpl.CONFIG_URI //
+})
 public class VoiceManagerImpl implements VoiceManager, ConfigOptionProvider {
 
     // the default keyword to use if no other is configured
     private static final String DEFAULT_KEYWORD = "Wakeup";
 
     // constants for the configuration properties
-    private static final String CONFIG_URI = "system:voice";
+    protected static final String CONFIG_URI = "system:voice";
     private static final String CONFIG_KEYWORD = "keyword";
     private static final String CONFIG_LISTENING_ITEM = "listeningItem";
     private static final String CONFIG_DEFAULT_HLI = "defaultHLI";
@@ -70,10 +96,10 @@ public class VoiceManagerImpl implements VoiceManager, ConfigOptionProvider {
     private final Logger logger = LoggerFactory.getLogger(VoiceManagerImpl.class);
 
     // service maps
-    private Map<String, KSService> ksServices = new HashMap<>();
-    private Map<String, STTService> sttServices = new HashMap<>();
-    private Map<String, TTSService> ttsServices = new HashMap<>();
-    private Map<String, HumanLanguageInterpreter> humanLanguageInterpreters = new HashMap<>();
+    private final Map<String, KSService> ksServices = new HashMap<>();
+    private final Map<String, STTService> sttServices = new HashMap<>();
+    private final Map<String, TTSService> ttsServices = new HashMap<>();
+    private final Map<String, HumanLanguageInterpreter> humanLanguageInterpreters = new HashMap<>();
 
     private LocaleProvider localeProvider = null;
 
@@ -87,17 +113,20 @@ public class VoiceManagerImpl implements VoiceManager, ConfigOptionProvider {
     private String defaultKS = null;
     private String defaultHLI = null;
     private String defaultVoice = null;
-    private Map<String, String> defaultVoices = new HashMap<>();
+    private final Map<String, String> defaultVoices = new HashMap<>();
     private AudioManager audioManager;
     private EventPublisher eventPublisher;
 
+    @Activate
     protected void activate(Map<String, Object> config) {
         modified(config);
     }
 
+    @Deactivate
     protected void deactivate() {
     }
 
+    @Modified
     protected void modified(Map<String, Object> config) {
         if (config != null) {
             this.keyword = config.containsKey(CONFIG_KEYWORD) ? config.get(CONFIG_KEYWORD).toString() : DEFAULT_KEYWORD;
@@ -122,20 +151,37 @@ public class VoiceManagerImpl implements VoiceManager, ConfigOptionProvider {
 
     @Override
     public void say(String text) {
-        say(text, null);
+        say(text, null, null, null);
+    }
+
+    @Override
+    public void say(String text, PercentType volume) {
+        say(text, null, null, volume);
     }
 
     @Override
     public void say(String text, String voiceId) {
-        say(text, voiceId, null);
+        say(text, voiceId, null, null);
     }
 
     @Override
-    public void say(String text, String voiceIda, String sinkId) {
+    public void say(String text, String voiceId, PercentType volume) {
+        say(text, voiceId, null, volume);
+    }
+
+    @Override
+    public void say(String text, String voiceId, String sinkId) {
+        say(text, voiceId, sinkId, null);
+    }
+
+    @Override
+    public void say(String text, String voiceId, String sinkId, PercentType volume) {
+        Objects.requireNonNull(text, "Text cannot be said as it is null.");
+
         try {
             TTSService tts = null;
             Voice voice = null;
-            String selectedVoiceId = voiceIda;
+            String selectedVoiceId = voiceId;
             if (selectedVoiceId == null) {
                 // use the configured default, if set
                 selectedVoiceId = defaultVoice;
@@ -145,18 +191,10 @@ public class VoiceManagerImpl implements VoiceManager, ConfigOptionProvider {
                 if (tts != null) {
                     voice = getPreferredVoice(tts.getAvailableVoices());
                 }
-            } else if (selectedVoiceId.contains(":")) {
-                // it is a fully qualified unique id
-                String[] segments = selectedVoiceId.split(":");
-                tts = getTTS(segments[0]);
-                if (tts != null) {
-                    voice = getVoice(tts.getAvailableVoices(), segments[1]);
-                }
             } else {
-                // voiceId is not fully qualified
-                tts = getTTS();
-                if (tts != null) {
-                    voice = getVoice(tts.getAvailableVoices(), selectedVoiceId);
+                voice = getVoice(selectedVoiceId);
+                if (voice != null) {
+                    tts = getTTS(voice);
                 }
             }
             if (tts == null) {
@@ -167,21 +205,48 @@ public class VoiceManagerImpl implements VoiceManager, ConfigOptionProvider {
                         "Unable to find a voice for language " + localeProvider.getLocale().getLanguage());
             }
             Set<AudioFormat> audioFormats = tts.getSupportedFormats();
-            AudioSink sink = null;
-            if (sinkId == null) {
-                sink = audioManager.getSink();
-            } else {
-                sink = audioManager.getSink(sinkId);
-            }
+            AudioSink sink = audioManager.getSink(sinkId);
+
             if (sink != null) {
                 AudioFormat audioFormat = getBestMatch(audioFormats, sink.getSupportedFormats());
                 if (audioFormat != null) {
                     AudioStream audioStream = tts.synthesize(text, voice, audioFormat);
 
-                    try {
-                        sink.process(audioStream);
-                    } catch (UnsupportedAudioFormatException | UnsupportedAudioStreamException e) {
-                        logger.error("Error saying '{}': {}", text, e.getMessage());
+                    if (sink.getSupportedStreams().stream().anyMatch(clazz -> clazz.isInstance(audioStream))) {
+                        PercentType oldVolume = null;
+                        try {
+                            // get current volume
+                            oldVolume = audioManager.getVolume(sinkId);
+                        } catch (IOException e) {
+                            logger.debug("An exception occurred while getting the volume of sink '{}' : {}",
+                                    sink.getId(), e.getMessage(), e);
+                        }
+                        // set notification sound volume
+                        if (volume != null) {
+                            try {
+                                audioManager.setVolume(volume, sinkId);
+                            } catch (IOException e) {
+                                logger.debug("An exception occurred while setting the volume of sink '{}' : {}",
+                                        sink.getId(), e.getMessage(), e);
+                            }
+                        }
+                        try {
+                            sink.process(audioStream);
+                        } catch (UnsupportedAudioFormatException | UnsupportedAudioStreamException e) {
+                            logger.warn("Error saying '{}': {}", text, e.getMessage(), e);
+                        } finally {
+                            if (volume != null && oldVolume != null) {
+                                // restore volume only if it was set before
+                                try {
+                                    audioManager.setVolume(oldVolume, sinkId);
+                                } catch (IOException e) {
+                                    logger.debug("An exception occurred while setting the volume of sink '{}' : {}",
+                                            sink.getId(), e.getMessage(), e);
+                                }
+                            }
+                        }
+                    } else {
+                        logger.warn("Failed playing audio stream '{}' as audio sink doesn't support it.", audioStream);
                     }
                 } else {
                     logger.warn("No compatible audio format found for TTS '{}' and sink '{}'", tts.getId(),
@@ -189,7 +254,7 @@ public class VoiceManagerImpl implements VoiceManager, ConfigOptionProvider {
                 }
             }
         } catch (TTSException e) {
-            logger.error("Error saying '{}': {}", text, e.getMessage());
+            logger.warn("Error saying '{}': {}", text, e.getMessage(), e);
         }
     }
 
@@ -213,6 +278,24 @@ public class VoiceManagerImpl implements VoiceManager, ConfigOptionProvider {
             }
         }
         return interpreter.interpret(localeProvider.getLocale(), text);
+    }
+
+    private Voice getVoice(String id) {
+        if (id.contains(":")) {
+            // it is a fully qualified unique id
+            String[] segments = id.split(":");
+            TTSService tts = getTTS(segments[0]);
+            if (tts != null) {
+                return getVoice(tts.getAvailableVoices(), segments[1]);
+            }
+        } else {
+            // voiceId is not fully qualified
+            TTSService tts = getTTS();
+            if (tts != null) {
+                return getVoice(tts.getAvailableVoices(), id);
+            }
+        }
+        return null;
     }
 
     private Voice getVoice(Set<Voice> voices, String id) {
@@ -378,7 +461,6 @@ public class VoiceManagerImpl implements VoiceManager, ConfigOptionProvider {
     public void startDialog(KSService ksService, STTService sttService, TTSService ttsService,
             HumanLanguageInterpreter interpreter, AudioSource audioSource, AudioSink audioSink, Locale locale,
             String keyword, String listeningItem) {
-
         // use defaults, if null
         KSService ks = (ksService == null) ? getKS() : ksService;
         STTService stt = (sttService == null) ? getSTT() : sttService;
@@ -402,6 +484,7 @@ public class VoiceManagerImpl implements VoiceManager, ConfigOptionProvider {
         }
     }
 
+    @Reference
     protected void setLocaleProvider(LocaleProvider localeProvider) {
         this.localeProvider = localeProvider;
     }
@@ -410,6 +493,7 @@ public class VoiceManagerImpl implements VoiceManager, ConfigOptionProvider {
         this.localeProvider = null;
     }
 
+    @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
     protected void addKSService(KSService ksService) {
         this.ksServices.put(ksService.getId(), ksService);
     }
@@ -418,6 +502,7 @@ public class VoiceManagerImpl implements VoiceManager, ConfigOptionProvider {
         this.ksServices.remove(ksService.getId());
     }
 
+    @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
     protected void addSTTService(STTService sttService) {
         this.sttServices.put(sttService.getId(), sttService);
     }
@@ -426,6 +511,7 @@ public class VoiceManagerImpl implements VoiceManager, ConfigOptionProvider {
         this.sttServices.remove(sttService.getId());
     }
 
+    @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
     protected void addTTSService(TTSService ttsService) {
         this.ttsServices.put(ttsService.getId(), ttsService);
     }
@@ -434,6 +520,7 @@ public class VoiceManagerImpl implements VoiceManager, ConfigOptionProvider {
         this.ttsServices.remove(ttsService.getId());
     }
 
+    @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
     protected void addHumanLanguageInterpreter(HumanLanguageInterpreter humanLanguageInterpreter) {
         this.humanLanguageInterpreters.put(humanLanguageInterpreter.getId(), humanLanguageInterpreter);
     }
@@ -442,6 +529,7 @@ public class VoiceManagerImpl implements VoiceManager, ConfigOptionProvider {
         this.humanLanguageInterpreters.remove(humanLanguageInterpreter.getId());
     }
 
+    @Reference
     protected void setAudioManager(AudioManager audioManager) {
         this.audioManager = audioManager;
     }
@@ -450,6 +538,7 @@ public class VoiceManagerImpl implements VoiceManager, ConfigOptionProvider {
         this.audioManager = null;
     }
 
+    @Reference
     protected void setEventPublisher(EventPublisher eventPublisher) {
         this.eventPublisher = eventPublisher;
     }
@@ -477,6 +566,10 @@ public class VoiceManagerImpl implements VoiceManager, ConfigOptionProvider {
     @Override
     public TTSService getTTS(String id) {
         return ttsServices.get(id);
+    }
+
+    private TTSService getTTS(Voice voice) {
+        return getTTS(voice.getUID().split(":")[0]);
     }
 
     @Override
@@ -564,52 +657,68 @@ public class VoiceManagerImpl implements VoiceManager, ConfigOptionProvider {
 
     @Override
     public Set<Voice> getAllVoices() {
-        Set<Voice> voices = new HashSet<>();
-        for (TTSService tts : ttsServices.values()) {
-            voices.addAll(tts.getAvailableVoices());
-        }
-        return voices;
+        return getAllVoicesSorted(localeProvider.getLocale());
+    }
+
+    private Set<Voice> getAllVoicesSorted(Locale locale) {
+        return ttsServices.values().stream().map(s -> s.getAvailableVoices()).flatMap(Collection::stream)
+                .sorted(createVoiceComparator(locale))
+                .collect(collectingAndThen(toCollection(LinkedHashSet::new), Collections::unmodifiableSet));
+    }
+
+    /**
+     * Creates a comparator which compares voices using the given locale in the following order:
+     * <ol>
+     * <li>Voice TTSService label (localized with the given locale)
+     * <li>Voice locale display name (localized with the given locale)
+     * <li>Voice label
+     * </ol>
+     *
+     * @param locale the locale used for comparing {@link TTSService} labels and {@link Voice} locale display names
+     * @return the localized voice comparator
+     */
+    private Comparator<Voice> createVoiceComparator(Locale locale) {
+        Comparator<Voice> byTTSLabel = (Voice v1, Voice v2) -> {
+            return getTTS(v1).getLabel(locale).compareToIgnoreCase(getTTS(v2).getLabel(locale));
+        };
+        Comparator<Voice> byVoiceLocale = (Voice v1, Voice v2) -> {
+            return v1.getLocale().getDisplayName(locale).compareToIgnoreCase(v2.getLocale().getDisplayName(locale));
+        };
+        return byTTSLabel.thenComparing(byVoiceLocale).thenComparing(Voice::getLabel);
+    }
+
+    @Override
+    public @Nullable Voice getDefaultVoice() {
+        return defaultVoice != null ? getVoice(defaultVoice) : null;
     }
 
     @Override
     public Collection<ParameterOption> getParameterOptions(URI uri, String param, Locale locale) {
         if (uri.toString().equals(CONFIG_URI)) {
             if (CONFIG_DEFAULT_HLI.equals(param)) {
-                List<ParameterOption> options = new ArrayList<>();
-                for (HumanLanguageInterpreter hli : humanLanguageInterpreters.values()) {
-                    ParameterOption option = new ParameterOption(hli.getId(), hli.getLabel(locale));
-                    options.add(option);
-                }
-                return options;
+                return humanLanguageInterpreters.values().stream()
+                        .sorted((hli1, hli2) -> hli1.getLabel(locale).compareToIgnoreCase(hli2.getLabel(locale)))
+                        .map(hli -> new ParameterOption(hli.getId(), hli.getLabel(locale))).collect(toList());
             } else if (CONFIG_DEFAULT_KS.equals(param)) {
-                List<ParameterOption> options = new ArrayList<>();
-                for (KSService ks : ksServices.values()) {
-                    ParameterOption option = new ParameterOption(ks.getId(), ks.getLabel(locale));
-                    options.add(option);
-                }
-                return options;
+                return ksServices.values().stream()
+                        .sorted((ks1, ks2) -> ks1.getLabel(locale).compareToIgnoreCase(ks2.getLabel(locale)))
+                        .map(ks -> new ParameterOption(ks.getId(), ks.getLabel(locale))).collect(toList());
             } else if (CONFIG_DEFAULT_STT.equals(param)) {
-                List<ParameterOption> options = new ArrayList<>();
-                for (STTService stt : sttServices.values()) {
-                    ParameterOption option = new ParameterOption(stt.getId(), stt.getLabel(locale));
-                    options.add(option);
-                }
-                return options;
+                return sttServices.values().stream()
+                        .sorted((stt1, stt2) -> stt1.getLabel(locale).compareToIgnoreCase(stt2.getLabel(locale)))
+                        .map(stt -> new ParameterOption(stt.getId(), stt.getLabel(locale))).collect(toList());
             } else if (CONFIG_DEFAULT_TTS.equals(param)) {
-                List<ParameterOption> options = new ArrayList<>();
-                for (TTSService tts : ttsServices.values()) {
-                    ParameterOption option = new ParameterOption(tts.getId(), tts.getLabel(locale));
-                    options.add(option);
-                }
-                return options;
+                return ttsServices.values().stream()
+                        .sorted((tts1, tts2) -> tts1.getLabel(locale).compareToIgnoreCase(tts2.getLabel(locale)))
+                        .map(tts -> new ParameterOption(tts.getId(), tts.getLabel(locale))).collect(toList());
             } else if (CONFIG_DEFAULT_VOICE.equals(param)) {
-                List<ParameterOption> options = new ArrayList<>();
-                for (Voice voice : getAllVoices()) {
-                    ParameterOption option = new ParameterOption(voice.getUID(),
-                            voice.getLabel() + " - " + voice.getLocale().getDisplayName());
-                    options.add(option);
-                }
-                return options;
+                Locale nullSafeLocale = locale != null ? locale : localeProvider.getLocale();
+                return getAllVoicesSorted(nullSafeLocale)
+                        .stream().filter(v -> getTTS(v) != null).map(
+                                v -> new ParameterOption(v.getUID(),
+                                        String.format("%s - %s - %s", getTTS(v).getLabel(nullSafeLocale),
+                                                v.getLocale().getDisplayName(nullSafeLocale), v.getLabel())))
+                        .collect(toList());
             }
         }
         return null;

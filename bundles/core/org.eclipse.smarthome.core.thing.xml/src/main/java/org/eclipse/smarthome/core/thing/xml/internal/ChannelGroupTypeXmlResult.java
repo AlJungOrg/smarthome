@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,6 +18,7 @@ import java.util.Map;
 
 import org.eclipse.smarthome.core.thing.type.ChannelDefinition;
 import org.eclipse.smarthome.core.thing.type.ChannelGroupType;
+import org.eclipse.smarthome.core.thing.type.ChannelGroupTypeBuilder;
 import org.eclipse.smarthome.core.thing.type.ChannelGroupTypeUID;
 
 import com.thoughtworks.xstream.converters.ConversionException;
@@ -33,16 +34,15 @@ import com.thoughtworks.xstream.converters.ConversionException;
  */
 public class ChannelGroupTypeXmlResult {
 
-    private ChannelGroupTypeUID channelGroupTypeUID;
-    private boolean advanced;
-    private String label;
-    private String description;
-    private String category;
-    private List<ChannelXmlResult> channelTypeReferences;
+    private final ChannelGroupTypeUID channelGroupTypeUID;
+    private final boolean advanced;
+    private final String label;
+    private final String description;
+    private final String category;
+    private final List<ChannelXmlResult> channelTypeReferences;
 
     public ChannelGroupTypeXmlResult(ChannelGroupTypeUID channelGroupTypeUID, boolean advanced, String label,
             String description, String category, List<ChannelXmlResult> channelTypeReferences) {
-
         this.channelGroupTypeUID = channelGroupTypeUID;
         this.advanced = advanced;
         this.label = label;
@@ -57,7 +57,6 @@ public class ChannelGroupTypeXmlResult {
 
     protected List<ChannelDefinition> toChannelDefinitions(List<ChannelXmlResult> channelTypeReferences)
             throws ConversionException {
-
         List<ChannelDefinition> channelTypeDefinitions = null;
 
         if ((channelTypeReferences != null) && (channelTypeReferences.size() > 0)) {
@@ -73,8 +72,9 @@ public class ChannelGroupTypeXmlResult {
     }
 
     public ChannelGroupType toChannelGroupType() throws ConversionException {
-        ChannelGroupType channelGroupType = new ChannelGroupType(this.channelGroupTypeUID, this.advanced, this.label,
-                this.description, this.category, toChannelDefinitions(this.channelTypeReferences));
+        ChannelGroupType channelGroupType = ChannelGroupTypeBuilder.instance(this.channelGroupTypeUID, this.label)
+                .isAdvanced(this.advanced).withDescription(this.description).withCategory(this.category)
+                .withChannelDefinitions(toChannelDefinitions(this.channelTypeReferences)).build();
 
         return channelGroupType;
     }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,7 +14,6 @@ package org.eclipse.smarthome.model.rule.runtime.internal.engine;
 
 import static org.eclipse.smarthome.model.rule.runtime.internal.engine.RuleTriggerManager.TriggerTypes.*;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
@@ -59,7 +58,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import com.google.inject.Injector;
 
 /**
@@ -78,8 +76,9 @@ public class RuleEngineImpl implements ItemRegistryChangeListener, StateChangeLi
 
     private final Logger logger = LoggerFactory.getLogger(RuleEngineImpl.class);
 
-    protected final ScheduledExecutorService scheduler = ThreadPoolManager
-            .getScheduledPool(RuleEngine.class.getSimpleName());
+    private static final String THREAD_POOL_NAME = "ruleEngine";
+
+    protected final ScheduledExecutorService scheduler = ThreadPoolManager.getScheduledPool(THREAD_POOL_NAME);
 
     private ItemRegistry itemRegistry;
     private ModelRepository modelRepository;
@@ -91,26 +90,20 @@ public class RuleEngineImpl implements ItemRegistryChangeListener, StateChangeLi
 
     private ScheduledFuture<?> startupJob;
 
-    // this flag is used to signal that items are still being added and that we hence do not consider the rule engine
-    // ready to be operational
-    private boolean starting = true;
+    // This flag is used to signal that items are still being added and that we hence do not consider the rule engine
+    // ready to be operational.
+    // This field is package private to allow access for unit tests.
+    boolean starting = true;
 
     @Activate
     public void activate() {
         injector = RulesStandaloneSetup.getInjector();
-        triggerManager = injector.getInstance(RuleTriggerManager.class);
-
-        if (!isEnabled()) {
-            logger.info("Rule engine is disabled.");
-            return;
-        }
+        triggerManager = new RuleTriggerManager(injector);
 
         logger.debug("Started rule engine");
 
         // read all rule files
-        Iterable<String> ruleModelNames = modelRepository.getAllModelNamesOfType("rules");
-        ArrayList<String> clonedList = Lists.newArrayList(ruleModelNames);
-        for (String ruleModelName : clonedList) {
+        for (String ruleModelName : modelRepository.getAllModelNamesOfType("rules")) {
             EObject model = modelRepository.getModel(ruleModelName);
             if (model instanceof RuleModel) {
                 RuleModel ruleModel = (RuleModel) model;
@@ -271,7 +264,7 @@ public class RuleEngineImpl implements ItemRegistryChangeListener, StateChangeLi
     @Override
     public void modelChanged(String modelName, org.eclipse.smarthome.model.core.EventType type) {
         if (triggerManager != null) {
-            if (isEnabled() && modelName.endsWith("rules")) {
+            if (modelName.endsWith("rules")) {
                 RuleModel model = (RuleModel) modelRepository.getModel(modelName);
 
                 // remove the rules from the trigger sets
@@ -315,8 +308,13 @@ public class RuleEngineImpl implements ItemRegistryChangeListener, StateChangeLi
                         triggerManager.removeRule(STARTUP, rule);
                     } catch (ScriptExecutionException e) {
                         if (!e.getMessage().contains("cannot be resolved to an item or type")) {
-                            logger.error("Error during the execution of startup rule '{}': {}", rule.getName(),
-                                    e.getCause().getMessage());
+                            if (e.getCause() != null) {
+                                logger.error("Error during the execution of startup rule '{}': {}", rule.getName(),
+                                        e.getCause().getMessage());
+                            } else {
+                                logger.error("Error during the execution of startup rule '{}': {}", rule.getName(),
+                                        e.getMessage());
+                            }
                             triggerManager.removeRule(STARTUP, rule);
                         } else {
                             logger.debug(
@@ -401,16 +399,6 @@ public class RuleEngineImpl implements ItemRegistryChangeListener, StateChangeLi
         }
     }
 
-    /**
-     * we need to be able to deactivate the rule execution, otherwise the Eclipse SmartHome designer would also execute
-     * the rules.
-     *
-     * @return true, if rules should be executed, false otherwise
-     */
-    private boolean isEnabled() {
-        return !"true".equalsIgnoreCase(System.getProperty("noRules"));
-    }
-
     @Override
     public void updated(Item oldItem, Item item) {
         removed(oldItem);
@@ -439,5 +427,9 @@ public class RuleEngineImpl implements ItemRegistryChangeListener, StateChangeLi
         } else if (event instanceof ThingStatusInfoChangedEvent) {
             receiveThingStatus((ThingStatusInfoChangedEvent) event);
         }
+    }
+
+    RuleTriggerManager getTriggerManager() {
+        return triggerManager;
     }
 }

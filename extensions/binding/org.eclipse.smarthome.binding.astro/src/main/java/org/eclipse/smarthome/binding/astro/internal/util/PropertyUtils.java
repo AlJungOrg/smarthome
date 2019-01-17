@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -35,6 +35,7 @@ import org.eclipse.smarthome.core.types.UnDefType;
  *
  * @author Gerhard Riegler - Initial contribution
  * @author Erdoan Hadzhiyusein - Adapted the class to work with the new DateTimeType
+ * @author Christoph Weitkamp - Introduced UoM
  */
 public class PropertyUtils {
 
@@ -44,7 +45,7 @@ public class PropertyUtils {
     }
 
     private static TimeZoneProvider timeZoneProvider;
-    
+
     /**
      * Returns the state of the channel.
      */
@@ -52,6 +53,8 @@ public class PropertyUtils {
         Object value = getPropertyValue(channelUID, instance);
         if (value == null) {
             return UnDefType.UNDEF;
+        } else if (value instanceof State) {
+            return (State) value;
         } else if (value instanceof Calendar) {
             Calendar cal = (Calendar) value;
             GregorianCalendar gregorianCal = (GregorianCalendar) DateTimeUtils.applyConfig(cal, config);
@@ -64,18 +67,18 @@ public class PropertyUtils {
         } else if (value instanceof String || value instanceof Enum) {
             return new StringType(value.toString());
         } else {
-            throw new RuntimeException("Unsupported value type " + value.getClass().getSimpleName());
+            throw new IllegalStateException("Unsupported value type " + value.getClass().getSimpleName());
         }
     }
-    
-    public static void setTimeZone (TimeZoneProvider zone) {
-        PropertyUtils.timeZoneProvider=zone;
+
+    public static void setTimeZone(TimeZoneProvider zone) {
+        PropertyUtils.timeZoneProvider = zone;
     }
 
     public static void unsetTimeZone() {
-        PropertyUtils.timeZoneProvider=null;
+        PropertyUtils.timeZoneProvider = null;
     }
-    
+
     /**
      * Returns the property value from the object instance, nested properties are possible. If the propertyName is for
      * example rise.start, the methods getRise().getStart() are called.

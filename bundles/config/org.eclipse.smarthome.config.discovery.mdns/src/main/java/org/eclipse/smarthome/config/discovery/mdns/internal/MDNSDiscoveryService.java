@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,7 +12,9 @@
  */
 package org.eclipse.smarthome.config.discovery.mdns.internal;
 
+import java.time.Duration;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.TimeUnit;
@@ -21,6 +23,8 @@ import javax.jmdns.ServiceEvent;
 import javax.jmdns.ServiceInfo;
 import javax.jmdns.ServiceListener;
 
+import org.eclipse.jdt.annotation.NonNull;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.config.discovery.AbstractDiscoveryService;
 import org.eclipse.smarthome.config.discovery.DiscoveryResult;
 import org.eclipse.smarthome.config.discovery.DiscoveryService;
@@ -29,6 +33,7 @@ import org.eclipse.smarthome.core.thing.ThingTypeUID;
 import org.eclipse.smarthome.core.thing.ThingUID;
 import org.eclipse.smarthome.io.transport.mdns.MDNSClient;
 import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
@@ -45,6 +50,8 @@ import org.slf4j.LoggerFactory;
  */
 @Component(immediate = true, service = DiscoveryService.class, configurationPid = "discovery.mdns")
 public class MDNSDiscoveryService extends AbstractDiscoveryService implements ServiceListener {
+
+    private static final Duration FOREGROUND_SCAN_TIMEOUT = Duration.ofMillis(200);
     private final Logger logger = LoggerFactory.getLogger(MDNSDiscoveryService.class);
 
     @Deprecated
@@ -81,6 +88,12 @@ public class MDNSDiscoveryService extends AbstractDiscoveryService implements Se
         this.mdnsClient = null;
     }
 
+    @Modified
+    @Override
+    protected void modified(@Nullable Map<@NonNull String, @Nullable Object> configProperties) {
+        super.modified(configProperties);
+    }
+
     @Override
     protected void startBackgroundDiscovery() {
         for (MDNSDiscoveryParticipant participant : participants) {
@@ -89,7 +102,7 @@ public class MDNSDiscoveryService extends AbstractDiscoveryService implements Se
         for (org.eclipse.smarthome.io.transport.mdns.discovery.MDNSDiscoveryParticipant participant : oldParticipants) {
             mdnsClient.addServiceListener(participant.getServiceType(), this);
         }
-        startScan();
+        startScan(true);
     }
 
     @Override
@@ -104,18 +117,45 @@ public class MDNSDiscoveryService extends AbstractDiscoveryService implements Se
 
     @Override
     protected void startScan() {
+        startScan(false);
+    }
+
+    @Override
+    protected synchronized void stopScan() {
+        removeOlderResults(getTimestampOfLastScan());
+        super.stopScan();
+    }
+
+    private void startScan(boolean isBackground) {
         scheduler.schedule(new Runnable() {
             @Override
             public void run() {
-                scan();
+                scan(isBackground);
             }
         }, 0, TimeUnit.SECONDS);
     }
 
-    private void scan() {
+    /**
+     * Scan has 2 different behaviours. background/ foreground. Background scans can
+     * have much higher timeout. Foreground scans have only a short timeout as human
+     * users may become impatient. The underlying reason is that the jmDNS
+     * implementation {@code MDNSClient#list(String)} has a default timeout of 6
+     * seconds when no ServiceInfo is found. When there are many participants,
+     * waiting 6 seconds for each non-existent type is too long.
+     *
+     * @param isBackground true if it is background scan, false otherwise.
+     */
+    private void scan(boolean isBackground) {
         for (MDNSDiscoveryParticipant participant : participants) {
-            ServiceInfo[] services = mdnsClient.list(participant.getServiceType());
-            logger.debug("{} services found for {}", services.length, participant.getServiceType());
+            long start = System.currentTimeMillis();
+            ServiceInfo[] services;
+            if (isBackground) {
+                services = mdnsClient.list(participant.getServiceType());
+            } else {
+                services = mdnsClient.list(participant.getServiceType(), FOREGROUND_SCAN_TIMEOUT);
+            }
+            logger.debug("{} services found for {}; duration: {}ms", services.length, participant.getServiceType(),
+                    System.currentTimeMillis() - start);
             for (ServiceInfo service : services) {
                 DiscoveryResult result = participant.createResult(service);
                 if (result != null) {
@@ -124,8 +164,15 @@ public class MDNSDiscoveryService extends AbstractDiscoveryService implements Se
             }
         }
         for (org.eclipse.smarthome.io.transport.mdns.discovery.MDNSDiscoveryParticipant participant : oldParticipants) {
-            ServiceInfo[] services = mdnsClient.list(participant.getServiceType());
-            logger.debug("{} services found for {}", services.length, participant.getServiceType());
+            long start = System.currentTimeMillis();
+            ServiceInfo[] services;
+            if (isBackground) {
+                services = mdnsClient.list(participant.getServiceType());
+            } else {
+                services = mdnsClient.list(participant.getServiceType(), FOREGROUND_SCAN_TIMEOUT);
+            }
+            logger.debug("{} services found for {}; duration: {}ms", services.length, participant.getServiceType(),
+                    System.currentTimeMillis() - start);
             for (ServiceInfo service : services) {
                 DiscoveryResult result = participant.createResult(service);
                 if (result != null) {

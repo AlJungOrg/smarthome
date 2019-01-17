@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,10 +12,10 @@
  */
 package org.eclipse.smarthome.io.transport.mqtt.sslcontext;
 
-import javax.naming.ConfigurationException;
 import javax.net.ssl.SSLContext;
 
 import org.eclipse.smarthome.io.transport.mqtt.MqttBrokerConnection;
+import org.osgi.service.cm.ConfigurationException;
 
 /**
  * Implement this and provide a {@link SSLContext} instance to be used by the {@link MqttBrokerConnection} for secure

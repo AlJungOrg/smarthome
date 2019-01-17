@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,9 +23,9 @@ import java.util.Map;
  */
 public class WebAppConfig {
 
-    private final static String DEFAULT_SITEMAP = "default";
-    private final static String DEFAULT_ICON_TYPE = "png";
-    private final static boolean DEFAULT_HTML_CACHE_DISABLED = false;
+    private static final String DEFAULT_SITEMAP = "default";
+    private static final String DEFAULT_ICON_TYPE = "png";
+    private static final boolean DEFAULT_HTML_CACHE_DISABLED = false;
 
     private String defaultSitemap = DEFAULT_SITEMAP;
     private String iconType = DEFAULT_ICON_TYPE;

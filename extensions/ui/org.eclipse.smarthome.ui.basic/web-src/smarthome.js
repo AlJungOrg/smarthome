@@ -1,5 +1,5 @@
 /**
- * Eclipse Smarthome BasicUI javascript
+ * Eclipse SmartHome BasicUI javascript
  *
  * @author Vlad Ivanov — initial version
  */
@@ -162,6 +162,25 @@
 				return "";
 			}
 		});
+	}
+
+	function EventMapper() {
+		var
+			_t = this;
+
+		function processEvents(callable, table) {
+			table.forEach(function(entry) {
+				var
+					element = entry[0],
+					event = entry[1],
+					handler = entry[2];
+
+				callable.call(element, event, handler);
+			});
+		}
+
+		_t.map = processEvents.bind(null, Node.prototype.addEventListener);
+		_t.unmap = processEvents.bind(null, Node.prototype.removeEventListener);
 	}
 
 	function HistoryStack() {
@@ -379,6 +398,18 @@
 		_t.setValueColor = function(color) {
 			_t.parentNode.style.color = color;
 		};
+
+		_t.destroy = function() {
+			if (_t.icon !== null) {
+				_t.icon.removeEventListener("error", replaceImageWithNone);
+			}
+
+			[].forEach.call(_t.parentNode.querySelectorAll("video, audio"), function(media) {
+				if (media instanceof HTMLMediaElement) {
+					media.pause();
+				}
+			});
+		};
 	}
 
 	/* class Frame */
@@ -407,7 +438,10 @@
 		};
 
 		_t.setValue = function() {};
+		_t.setLabelColor = function() {};
+		_t.setValueColor = function() {};
 		_t.suppressUpdate = function() {};
+		_t.destroy = function() {};
 	}
 
 	/* class ControlImage */
@@ -416,6 +450,9 @@
 		// other classes, so calling Control is conditional
 		if (callSuper) {
 			Control.call(this, parentNode);
+		} else {
+			this.parentNode = parentNode;
+			this.id = this.parentNode.getAttribute(o.idAttribute);
 		}
 
 		var
@@ -487,6 +524,14 @@
 				}
 				_t.image.setAttribute("src", _t.url + "&t=" + Date.now());
 			}, _t.updateInterval);
+		};
+
+		_t.destroy = function() {
+			var
+				imageParent = _t.image.parentNode;
+
+			_t.image.setAttribute("src", urlNoneIcon);
+			imageParent.removeChild(_t.image);
 		};
 
 		if (_t.visible) {
@@ -580,6 +625,13 @@
 			_t.valueMap[value] = button;
 			button.addEventListener("click", _t.onclick);
 		});
+
+		_t.destroy = function() {
+			_t.buttons.forEach(function(button) {
+				button.removeEventListener("click", _t.onclick);
+			});
+			componentHandler.downgradeElements(_t.buttons);
+		};
 	}
 
 	/* class ControlRadio extends Control */
@@ -625,6 +677,17 @@
 
 			_t.modal = new Modal(content);
 			_t.modal.show();
+			_t.modal.onHide = function() {
+				var
+					items = [].slice.call(_t.modal.container.querySelectorAll(o.formRadio));
+
+				componentHandler.downgradeElements(items);
+				items.forEach(function(control) {
+					control.removeEventListener("click", onRadioChange);
+				});
+
+				_t.modal = null;
+			};
 
 			var
 				controls = [].slice.call(_t.modal.container.querySelectorAll(o.formRadio));
@@ -659,6 +722,10 @@
 
 		_t.setValueColor = function(color) {
 			_t.valueNode.style.color = color;
+		};
+
+		_t.destroy = function() {
+			_t.parentNode.parentNode.removeEventListener("click", _t.showModal);
 		};
 
 		_t.parentNode.parentNode.addEventListener("click", _t.showModal);
@@ -745,25 +812,36 @@
 			downButtonMouseUp = onMouseUp.bind(null, "DOWN"),
 			downButtonMouseDown = onMouseDown.bind(null, "DOWN");
 
-		// Up button
-		_t.buttonUp.addEventListener("touchstart", upButtonMouseDown);
-		_t.buttonUp.addEventListener("mousedown", upButtonMouseDown);
+		var
+			eventMap = [
+				// Up button
+				[ _t.buttonUp,   "touchstart", upButtonMouseDown ],
+				[ _t.buttonUp,   "mousedown",  upButtonMouseDown ],
+				[ _t.buttonUp,   "touchend",   upButtonMouseUp   ],
+				[ _t.buttonUp,   "mouseup",    upButtonMouseUp   ],
+				[ _t.buttonUp,   "mouseleave", upButtonMouseUp   ],
+				// Down button
+				[ _t.buttonDown, "touchstart", downButtonMouseDown ],
+				[ _t.buttonDown, "mousedown",  downButtonMouseDown ],
+				[ _t.buttonDown, "touchend",   downButtonMouseUp   ],
+				[ _t.buttonDown, "mouseup",    downButtonMouseUp   ],
+				[ _t.buttonDown, "mouseleave", downButtonMouseUp   ],
+				// Stop button
+				[ _t.buttonStop, "mousedown",  onStop ],
+				[ _t.buttonStop, "touchstart", onStop ]
+			];
 
-		_t.buttonUp.addEventListener("touchend", upButtonMouseUp);
-		_t.buttonUp.addEventListener("mouseup", upButtonMouseUp);
-		_t.buttonUp.addEventListener("mouseleave", upButtonMouseUp);
+		_t.destroy = function() {
+			componentHandler.downgradeElements([
+				_t.buttonUp,
+				_t.buttonDown,
+				_t.buttonStop
+			]);
 
-		// Down button
-		_t.buttonDown.addEventListener("touchstart", downButtonMouseDown);
-		_t.buttonDown.addEventListener("mousedown", downButtonMouseDown);
+			smarthome.eventMapper.unmap(eventMap);
+		};
 
-		_t.buttonDown.addEventListener("touchend", downButtonMouseUp);
-		_t.buttonDown.addEventListener("mouseup", downButtonMouseUp);
-		_t.buttonDown.addEventListener("mouseleave", downButtonMouseUp);
-
-		// Stop button
-		_t.buttonStop.addEventListener("mousedown", onStop);
-		_t.buttonStop.addEventListener("touchstart", onStop);
+		smarthome.eventMapper.map(eventMap);
 	}
 
 	/* class ControlSetpoint extends Control */
@@ -784,8 +862,16 @@
 		_t.value = isNaN(parseFloat(_t.value)) ? 0 : parseFloat(_t.value);
 		_t.valueNode = _t.parentNode.parentNode.querySelector(o.formValue);
 
+		_t.unit = _t.parentNode.getAttribute("data-unit");
+
 		_t.setValuePrivate = function(value, itemState) {
-			_t.value = itemState * 1;
+			if (itemState.indexOf(" ") > 0) {
+				var stateAndUnit = itemState.split(" ");
+				_t.value = stateAndUnit[0] * 1;
+				_t.unit = stateAndUnit[1];
+				} else {
+					_t.value = itemState * 1;
+					}
 			_t.valueNode.innerHTML = value;
 		};
 
@@ -796,10 +882,15 @@
 			value = value > _t.max ? _t.max : value;
 			value = value < _t.min ? _t.min : value;
 
+			var command = value;
+			if (_t.unit) {
+				command = value + " " + _t.unit;
+			}
+
 			_t.parentNode.dispatchEvent(createEvent(
 				"control-change", {
 					item: _t.item,
-					value: value
+					value: command
 			}));
 
 			_t.value = value;
@@ -812,11 +903,24 @@
 			increaseHandler = onMouseDown.bind(null, true),
 			decreaseHandler = onMouseDown.bind(null, false);
 
-		_t.up.addEventListener("mousedown", increaseHandler);
-		_t.up.addEventListener("touchstart", increaseHandler);
+		var
+			eventMap = [
+				[ _t.up,   "mousedown",  increaseHandler ],
+				[ _t.up,   "touchstart", increaseHandler ],
+				[ _t.down, "mousedown",  decreaseHandler ],
+				[ _t.down, "touchstart", decreaseHandler ]
+			];
 
-		_t.down.addEventListener("mousedown", decreaseHandler);
-		_t.down.addEventListener("touchstart", decreaseHandler);
+		_t.destroy = function() {
+			componentHandler.downgradeElements([
+				_t.up,
+				_t.down
+			]);
+
+			smarthome.eventMapper.unmap(eventMap);
+		};
+
+		smarthome.eventMapper.map(eventMap);
 	}
 	/* class Colorpicker */
 	function Colorpicker(parentNode, color, callback) {
@@ -1059,23 +1163,27 @@
 			_t.debounceProxy.finish();
 		}
 
-		_t.slider.addEventListener("change", onSliderChange);
+		var
+			eventMap = [
+				[ _t.slider, "change",     onSliderChange ],
+				[ _t.slider, "touchend",   onSliderFinish ],
+				[ _t.slider, "mouseup",    onSliderFinish ],
+				[ _t.image,  "mousedown",  onMove ],
+				[ _t.image,  "mousemove",  onMove ],
+				[ _t.image,  "touchmove",  onMove ],
+				[ _t.image,  "touchstart", onMove ],
+				[ _t.image,  "touchend",   onMouseUp ],
+				[ _t.image,  "mouseup",    onMouseUp ],
+				[ _t.image,  "mousedown",  onMouseDown ],
+				[ _t.image,  "touchstart", onMouseDown ]
+			];
 
-		_t.slider.addEventListener("touchend", onSliderFinish);
-		_t.slider.addEventListener("mouseup", onSliderFinish);
+		_t.destroy = function() {
+			smarthome.eventMapper.unmap(eventMap);
+			componentHandler.downgradeElements([ _t.button ]);
+		};
 
-		_t.image.addEventListener("mousedown", onMove);
-		_t.image.addEventListener("mousemove", onMove);
-
-		_t.image.addEventListener("touchmove", onMove);
-		_t.image.addEventListener("touchstart", onMove);
-
-		_t.image.addEventListener("touchend", onMouseUp);
-		_t.image.addEventListener("mouseup", onMouseUp);
-
-		_t.image.addEventListener("mousedown", onMouseDown);
-		_t.image.addEventListener("touchstart", onMouseDown);
-
+		smarthome.eventMapper.map(eventMap);
 		setColor(color);
 	}
 
@@ -1209,10 +1317,19 @@
 		}
 
 		function onPick() {
+			var
+				button;
+
+			function onClick() {
+				_t.modal.hide();
+			}
+
 			_t.modal = new Modal(renderTemplate("template-colorpicker"));
 			_t.modal.show();
 			_t.modal.container.classList.add(o.colorpicker.modalClass);
 			_t.modal.onHide = function() {
+				button.removeEventListener("click", onClick);
+				_t.modalControl.destroy();
 				_t.modalControl = null;
 				_t.modal = null;
 			};
@@ -1226,9 +1343,8 @@
 				);
 			});
 
-			_t.modal.container.querySelector(o.colorpicker.button).addEventListener("click", function() {
-				_t.modal.hide();
-			});
+			button = _t.modal.container.querySelector(o.colorpicker.button);
+			button.addEventListener("click", onClick);
 		}
 
 		var
@@ -1237,24 +1353,31 @@
 			upButtonMouseUp = onMouseUp.bind(null, "ON"),
 			downButtonMouseUp = onMouseUp.bind(null, "OFF");
 
-		// Up button
-		_t.buttonUp.addEventListener("touchstart", upButtonMouseDown);
-		_t.buttonUp.addEventListener("mousedown", upButtonMouseDown);
+		var
+			eventMap = [
+				[ _t.buttonUp,   "touchstart", upButtonMouseDown ],
+				[ _t.buttonUp,   "mousedown",  upButtonMouseDown ],
+				[ _t.buttonUp,   "mouseleave", upButtonMouseUp ],
+				[ _t.buttonUp,   "touchend",   upButtonMouseUp ],
+				[ _t.buttonUp,   "mouseup",    upButtonMouseUp ],
+				[ _t.buttonDown, "touchstart", downButtonMouseDown ],
+				[ _t.buttonDown, "mousedown",  downButtonMouseDown ],
+				[ _t.buttonDown, "touchend",   downButtonMouseUp ],
+				[ _t.buttonDown, "mouseup",    downButtonMouseUp ],
+				[ _t.buttonDown, "mouseleave", downButtonMouseUp ],
+				[ _t.buttonPick, "click",      onPick ]
+			];
 
-		_t.buttonUp.addEventListener("mouseleave", upButtonMouseUp);
-		_t.buttonUp.addEventListener("touchend", upButtonMouseUp);
-		_t.buttonUp.addEventListener("mouseup", upButtonMouseUp);
+		_t.destroy = function() {
+			smarthome.eventMapper.unmap(eventMap);
+			componentHandler.downgradeElements([
+				_t.buttonUp,
+				_t.buttonDown,
+				_t.buttonPick
+			]);
+		};
 
-		// Down button
-		_t.buttonDown.addEventListener("touchstart", downButtonMouseDown);
-		_t.buttonDown.addEventListener("mousedown", downButtonMouseDown);
-
-		_t.buttonDown.addEventListener("touchend", downButtonMouseUp);
-		_t.buttonDown.addEventListener("mouseup", downButtonMouseUp);
-		_t.buttonDown.addEventListener("mouseleave", downButtonMouseUp);
-
-		// Stop button
-		_t.buttonPick.addEventListener("click", onPick);
+		smarthome.eventMapper.map(eventMap);
 	}
 	/* class ControlSwitch extends Control */
 	function ControlSwitch(parentNode) {
@@ -1264,15 +1387,16 @@
 			_t = this;
 
 		_t.input = _t.parentNode.querySelector("input[type=checkbox]");
-		_t.input.addEventListener("change", function() {
+
+		_t.hasValue = _t.parentNode.getAttribute("data-has-value") === "true";
+		_t.valueNode = _t.parentNode.parentNode.querySelector(o.formValue);
+
+		function onChange() {
 			_t.parentNode.dispatchEvent(createEvent("control-change", {
 				item: _t.item,
 				value: _t.input.checked ? "ON" : "OFF"
 			}));
-		});
-
-		_t.hasValue = _t.parentNode.getAttribute("data-has-value") === "true";
-		_t.valueNode = _t.parentNode.parentNode.querySelector(o.formValue);
+		}
 
 		_t.setValuePrivate = function(value, itemState) {
 			var
@@ -1295,6 +1419,13 @@
 		_t.setValueColor = function(color) {
 			_t.valueNode.style.color = color;
 		};
+
+		_t.destroy = function() {
+			_t.input.removeEventListener("change", onChange);
+			componentHandler.downgradeElements([ _t.parentNode ]);
+		};
+
+		_t.input.addEventListener("change", onChange);
 	}
 
 	/* class ControlSlider extends Control */
@@ -1308,6 +1439,8 @@
 		_t.hasValue = _t.parentNode.getAttribute("data-has-value") === "true";
 		_t.valueNode = _t.parentNode.parentNode.querySelector(o.formValue);
 		_t.locked = false;
+
+		_t.unit = _t.parentNode.getAttribute("data-unit");
 
 		(function() {
 			var
@@ -1325,19 +1458,19 @@
 		})();
 
 		function emitEvent() {
+			var command = _t.input.value;
+			if (_t.unit) {
+				command = command + " " + _t.unit;
+			}
 			_t.parentNode.dispatchEvent(createEvent("control-change", {
 				item: _t.item,
-				value: _t.input.value
+				value: command
 			}));
 		}
 
 		_t.debounceProxy = new DebounceProxy(function() {
 			emitEvent();
 		}, 200);
-
-		_t.input.addEventListener("change", function() {
-			_t.debounceProxy.call();
-		});
 
 		_t.setValuePrivate = function(value, itemState) {
 			if (_t.hasValue) {
@@ -1357,6 +1490,10 @@
 
 		var
 			unlockTimeout = null;
+
+		function onChange() {
+			_t.debounceProxy.call();
+		}
 
 		function onChangeStart() {
 			if (unlockTimeout !== null) {
@@ -1379,11 +1516,21 @@
 			_t.debounceProxy.finish();
 		}
 
-		_t.input.addEventListener("touchstart", onChangeStart);
-		_t.input.addEventListener("mousedown", onChangeStart);
+		var
+			eventMap = [
+				[ _t.input, "touchstart", onChangeStart ],
+				[ _t.input, "mousedown",  onChangeStart ],
+				[ _t.input, "touchend",   onChangeEnd ],
+				[ _t.input, "mouseup",    onChangeEnd ],
+				[ _t.input, "change",     onChange ]
+			];
 
-		_t.input.addEventListener("touchend", onChangeEnd);
-		_t.input.addEventListener("mouseup", onChangeEnd);
+		_t.destroy = function() {
+			smarthome.eventMapper.unmap(eventMap);
+			componentHandler.downgradeElements([ _t.input ]);
+		};
+
+		smarthome.eventMapper.map(eventMap);
 	}
 
 	/* class ControlLink */
@@ -1407,9 +1554,15 @@
 			_t.container.style.color = color;
 		};
 
-		parentNode.parentNode.addEventListener("click", function() {
+		function onClick() {
 			smarthome.UI.navigate(_t.target, true);
-		});
+		}
+
+		_t.destroy = function() {
+			parentNode.parentNode.removeEventListener("click", onClick);
+		};
+
+		parentNode.parentNode.addEventListener("click", onClick);
 	}
 
 	function controlChangeHandler(event) {
@@ -1534,6 +1687,14 @@
 				historyStack.push(_t.page);
 			}
 
+			[].forEach.call(document.querySelectorAll(o.formControls), function(e) {
+				e.removeEventListener("control-change", controlChangeHandler);
+			});
+
+			for (var id in smarthome.dataModel) {
+				smarthome.dataModel[id].destroy();
+			}
+
 			replaceContent(request.responseXML);
 
 			if (_t.pushState) {
@@ -1587,25 +1748,11 @@
 
 		_t.initControls = function() {
 			smarthome.dataModel = {};
-			smarthome.dataModelLegacy = {};
 
 			function appendControl(control) {
-				// dataModelLegacy keeps item → widgets binding for
-				// long-polling event listener
-				if (
-					(smarthome.dataModelLegacy[control.item] === undefined) ||
-					(smarthome.dataModelLegacy[control.item].widgets === undefined)
-				) {
-					if (control.item !== undefined) {
-						smarthome.dataModelLegacy[control.item] = { widgets: [] };
-					}
+				if (control.id.length > 0) {
+					smarthome.dataModel[control.id] = control;
 				}
-
-				if (control.item !== undefined) {
-					smarthome.dataModelLegacy[control.item].widgets.push(control);
-				}
-
-				smarthome.dataModel[control.id] = control;
 			}
 
 			[].forEach.call(document.querySelectorAll(o.formControls), function(e) {
@@ -1733,6 +1880,47 @@
 
 			return title;
 		};
+
+		this.updateWidget = function(widget, update) {
+			var
+				value = this.extractValueFromLabel(update.label),
+				makeVisible = false;
+
+			if (widget.visible !== update.visibility) {
+				makeVisible = update.visibility;
+				smarthome.UI.layoutChangeProxy.push({
+					widget: widget,
+					visibility: update.visibility
+				});
+			}
+
+			if (makeVisible || update.state !== "NULL") {
+				if (value === null) {
+					value = update.state;
+				}
+				widget.setValue(smarthome.UI.escapeHtml(value), update.state, update.visibility);
+			}
+
+			[{
+				apply: widget.setLabel,
+				data: update.label,
+				fallback: null
+			}, {
+				apply: widget.setLabelColor,
+				data: update.labelcolor,
+				fallback: ""
+			}, {
+				apply: widget.setValueColor,
+				data: update.valuecolor,
+				fallback: ""
+			}].forEach(function(e) {
+				if (e.data !== undefined) {
+					e.apply(e.data);
+				} else if (e.fallback !== null) {
+					e.apply(e.fallback);
+				}
+			});
+		};
 	}
 
 	function ChangeListenerEventsource(subscribeLocation) {
@@ -1751,8 +1939,12 @@
 
 			var
 				data = JSON.parse(payload.data),
-				value,
+				state,
 				title;
+
+			if (data.TYPE === "ALIVE") {
+				return;
+			}
 
 			if (data.TYPE === "SITEMAP_CHANGED") {
 				var oldLocation = window.location.href;
@@ -1766,50 +1958,35 @@
 				return;
 			}
 
-			if (!(data.widgetId in smarthome.dataModel) && (data.widgetId !== smarthome.UI.page)) {
+			if (
+				!(data.widgetId in smarthome.dataModel) &&
+				(data.widgetId !== smarthome.UI.page)
+			) {
 				return;
 			}
 
-			value = _t.extractValueFromLabel(data.label);
-			if (value === null) {
-				value = data.item.state;
+			if (data.state === undefined) {
+				state = data.item.state;
+			} else {
+				state = data.state;
 			}
+
 			title = _t.getTitleFromLabel(data.label);
 
-			if ((data.widgetId === smarthome.UI.page) && (title !== null)) {
+			if (
+				(data.widgetId === smarthome.UI.page) &&
+				(title !== null)
+			) {
 				smarthome.UI.setTitle(smarthome.UI.escapeHtml(title));
 			} else if (smarthome.dataModel[data.widgetId] !== undefined) {
-				var
-					widget = smarthome.dataModel[data.widgetId];
-
-				if (widget.visible !== data.visibility) {
-					smarthome.UI.layoutChangeProxy.push({
-						widget: widget,
-						visibility: data.visibility
-					});
-				}
-
-				widget.setValue(smarthome.UI.escapeHtml(value), data.item.state, data.visibility);
-
-				[{
-					apply: widget.setLabel,
-					data: data.label,
-					fallback: null
-				}, {
-					apply: widget.setLabelColor,
-					data: data.labelcolor,
-					fallback: ""
-				}, {
-					apply: widget.setValueColor,
-					data: data.valuecolor,
-					fallback: ""
-				}].forEach(function(e) {
-					if (e.data !== undefined) {
-						e.apply(e.data);
-					} else if (e.fallback !== null) {
-						e.apply(e.fallback);
-					}
-				});
+				var update = {
+					visibility: data.visibility,
+					state: state,
+					label: data.label,
+					labelcolor: data.labelcolor,
+					valuecolor: data.valuecolor
+				};
+				_t.updateWidget(smarthome.dataModel[data.widgetId], update);
 			}
 		});
 
@@ -1830,7 +2007,8 @@
 
 		function applyChanges(response) {
 			var
-				title;
+				title,
+				id;
 
 			try {
 				response = JSON.parse(response);
@@ -1845,52 +2023,59 @@
 
 			function walkWidgets(widgets) {
 				widgets.forEach(function(widget) {
-					if (widget.item === undefined) {
+					if (
+						widget.widgetId === undefined ||
+						smarthome.dataModel[widget.widgetId] === undefined
+					) {
 						return;
 					}
 
 					var
-						item = widget.item.name,
-						state = widget.item.state,
-						label = widget.label,
-						value = _t.extractValueFromLabel(widget.label),
-						visibility = widget.visibility,
-						labelcolor = widget.labelcolor,
-						valuecolor = widget.valuecolor;
+						w = smarthome.dataModel[widget.widgetId],
+						state = "NULL",
+						update;
 
-					if (value === null) {
-						value = state;
+					if (widget.item !== undefined) {
+						if (widget.state === undefined) {
+							state = widget.item.state;
+						} else {
+							state = widget.state;
+						}
 					}
-
-					if (smarthome.dataModelLegacy[item] !== undefined) {
-						smarthome.dataModelLegacy[item].widgets.forEach(function(w) {
-							if (state !== "NULL") {
-								w.setValue(smarthome.UI.escapeHtml(value), state, visibility);
-							}
-							if (label !== undefined) {
-								w.setLabel(label);
-							}
-							if (labelcolor !== undefined) {
-								w.setLabelColor(labelcolor);
-							} else {
-								w.setLabelColor("");
-							}
-							if (valuecolor !== undefined) {
-								w.setValueColor(valuecolor);
-							} else {
-								w.setValueColor("");
-							}
-						});
+					if (!w.visible || widget.item !== undefined) {
+						update = {
+							visibility: true,
+							state: state,
+							label: widget.label,
+							labelcolor: widget.labelcolor,
+							valuecolor: widget.valuecolor
+						};
+						_t.updateWidget(w, update);
 					}
+					w.handled = true;
 				});
 			}
 
-			if (response.leaf) {
-				walkWidgets(response.widgets);
-			} else {
-				response.widgets.forEach(function(frameWidget) {
-					walkWidgets(frameWidget.widgets);
-				});
+			for (id in smarthome.dataModel) {
+				smarthome.dataModel[id].handled = false;
+			}
+
+			walkWidgets(response.widgets);
+			response.widgets.forEach(function(frameWidget) {
+				// Handle widgets in frame
+				walkWidgets(frameWidget.widgets);
+			});
+
+			for (id in smarthome.dataModel) {
+				var
+					w = smarthome.dataModel[id];
+
+				if (w.visible && !w.handled) {
+					smarthome.UI.layoutChangeProxy.push({
+						widget: w,
+						visibility: false
+					});
+				}
 			}
 		}
 
@@ -1947,7 +2132,7 @@
 		_t.suppressErrorsState = false;
 
 		function initSubscription(address) {
-			if (featureSupport.eventSource) {
+			if (featureSupport.eventSource && address !== null) {
 				ChangeListenerEventsource.call(_t, address);
 			} else {
 				ChangeListenerLongpolling.call(_t);
@@ -2037,16 +2222,27 @@
 				"&pageid=" + page);
 		};
 
+		_t.subscriberError = function() {
+			var
+				notify = renderTemplate(o.notifyTemplateLongPollingMode, {});
+
+			// Failback to long polling mode
+			smarthome.UI.showNotification(notify);
+			initSubscription(null);
+		};
+
 		ajax({
 			url: _t.subscribeRequestURL,
 			type: "POST",
-			callback: _t.startSubscriber
+			callback: _t.startSubscriber,
+			error: _t.subscriberError
 		});
 	}
 
 	document.addEventListener("DOMContentLoaded", function() {
 		smarthome.UI = new UI(document);
 		smarthome.UI.layoutChangeProxy = new VisibilityChangeProxy(100, 50);
+		smarthome.eventMapper = new EventMapper();
 		smarthome.UI.initControls();
 		smarthome.changeListener = new ChangeListener();
 
@@ -2101,5 +2297,6 @@
 	},
 	notify: ".mdl-notify__container",
 	notifyHidden: "mdl-notify--hidden",
-	notifyTemplateOffline: "template-offline-notify"
+	notifyTemplateOffline: "template-offline-notify",
+	notifyTemplateLongPollingMode: "template-long-polling-mode-notify"
 });

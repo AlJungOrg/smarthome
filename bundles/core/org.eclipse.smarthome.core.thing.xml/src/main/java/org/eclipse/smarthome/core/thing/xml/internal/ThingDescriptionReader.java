@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -85,6 +85,7 @@ public class ThingDescriptionReader extends XmlDocumentReader<List<?>> {
         xstream.alias("supported-bridge-type-refs", NodeList.class);
         xstream.alias("bridge-type-ref", NodeAttributes.class);
         xstream.alias("item-type", NodeValue.class);
+        xstream.alias("dimension", NodeValue.class);
         xstream.alias("kind", NodeValue.class);
         xstream.alias("label", NodeValue.class);
         xstream.alias("description", NodeValue.class);
@@ -109,6 +110,7 @@ public class ThingDescriptionReader extends XmlDocumentReader<List<?>> {
         xstream.alias("properties", NodeList.class);
         xstream.alias("property", NodeValue.class);
         xstream.alias("representation-property", NodeValue.class);
+        xstream.alias("autoUpdatePolicy", NodeValue.class);
     }
 
 }

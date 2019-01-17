@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,7 +12,7 @@
  */
 package org.eclipse.smarthome.binding.dmx.handler;
 
-import static org.eclipse.smarthome.binding.dmx.DmxBindingConstants.*;
+import static org.eclipse.smarthome.binding.dmx.internal.DmxBindingConstants.*;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -46,7 +46,7 @@ public class Lib485BridgeHandler extends DmxBridgeHandler {
     public static final int DEFAULT_PORT = 9020;
 
     private final Logger logger = LoggerFactory.getLogger(Lib485BridgeHandler.class);
-    private Map<IpNode, Socket> receiverNodes = new HashMap<IpNode, Socket>();
+    private final Map<IpNode, Socket> receiverNodes = new HashMap<IpNode, Socket>();
 
     public Lib485BridgeHandler(Bridge lib485Bridge) {
         super(lib485Bridge);
@@ -54,14 +54,15 @@ public class Lib485BridgeHandler extends DmxBridgeHandler {
 
     @Override
     protected void openConnection() {
-        if (!this.thing.getStatus().equals(ThingStatus.ONLINE)) {
+        if (getThing().getStatus() != ThingStatus.ONLINE) {
             for (IpNode receiverNode : receiverNodes.keySet()) {
                 Socket socket = receiverNodes.get(receiverNode);
                 if (socket == null) {
                     try {
                         socket = new Socket(receiverNode.getAddressString(), receiverNode.getPort());
                     } catch (IOException e) {
-                        logger.debug("Could not connect to {} in {}: {}", receiverNode, this.thing.getUID(), e);
+                        logger.debug("Could not connect to {} in {}: {}", receiverNode, this.thing.getUID(),
+                                e.getMessage());
                         updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
                                 "could not connect to " + receiverNode.toString());
                         return;
@@ -88,7 +89,8 @@ public class Lib485BridgeHandler extends DmxBridgeHandler {
                 try {
                     socket.close();
                 } catch (IOException e) {
-                    logger.warn("Could not close socket {} in {}: {}", receiverNode, this.thing.getUID(), e);
+                    logger.warn("Could not close socket {} in {}: {}", receiverNode, this.thing.getUID(),
+                            e.getMessage());
                 }
             }
             receiverNodes.put(receiverNode, null);
@@ -97,7 +99,7 @@ public class Lib485BridgeHandler extends DmxBridgeHandler {
 
     @Override
     protected void sendDmxData() {
-        if (this.thing.getStatus().equals(ThingStatus.ONLINE)) {
+        if (getThing().getStatus() == ThingStatus.ONLINE) {
             long now = System.currentTimeMillis();
             universe.calculateBuffer(now);
             for (IpNode receiverNode : receiverNodes.keySet()) {
@@ -106,7 +108,8 @@ public class Lib485BridgeHandler extends DmxBridgeHandler {
                     try {
                         socket.getOutputStream().write(universe.getBuffer());
                     } catch (IOException e) {
-                        logger.debug("Could not send to {} in {}: {}", receiverNode, this.thing.getUID(), e);
+                        logger.debug("Could not send to {} in {}: {}", receiverNode, this.thing.getUID(),
+                                e.getMessage());
                         closeConnection(ThingStatusDetail.COMMUNICATION_ERROR, "could not send DMX data");
                         return;
                     }

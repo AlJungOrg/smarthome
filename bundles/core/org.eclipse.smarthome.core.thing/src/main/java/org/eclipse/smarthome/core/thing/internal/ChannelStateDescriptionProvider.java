@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,6 +18,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import org.eclipse.jdt.annotation.NonNull;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.core.items.Item;
 import org.eclipse.smarthome.core.library.CoreItemFactory;
 import org.eclipse.smarthome.core.thing.Channel;
@@ -28,7 +30,9 @@ import org.eclipse.smarthome.core.thing.type.ChannelType;
 import org.eclipse.smarthome.core.thing.type.DynamicStateDescriptionProvider;
 import org.eclipse.smarthome.core.thing.type.ThingTypeRegistry;
 import org.eclipse.smarthome.core.types.StateDescription;
-import org.eclipse.smarthome.core.types.StateDescriptionProvider;
+import org.eclipse.smarthome.core.types.StateDescriptionFragment;
+import org.eclipse.smarthome.core.types.StateDescriptionFragmentBuilder;
+import org.eclipse.smarthome.core.types.StateDescriptionFragmentProvider;
 import org.osgi.framework.Constants;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
@@ -45,11 +49,11 @@ import org.slf4j.LoggerFactory;
  * @author Dennis Nobel - Initial contribution
  */
 @Component(immediate = true, property = { "service.ranking:Integer=-1" })
-public class ChannelStateDescriptionProvider implements StateDescriptionProvider {
+public class ChannelStateDescriptionProvider implements StateDescriptionFragmentProvider {
 
     private final Logger logger = LoggerFactory.getLogger(ChannelStateDescriptionProvider.class);
 
-    private List<DynamicStateDescriptionProvider> dynamicStateDescriptionProviders = new CopyOnWriteArrayList<>();
+    private final List<DynamicStateDescriptionProvider> dynamicStateDescriptionProviders = new CopyOnWriteArrayList<>();
     private ItemChannelLinkRegistry itemChannelLinkRegistry;
     private ThingTypeRegistry thingTypeRegistry;
     private ThingRegistry thingRegistry;
@@ -71,7 +75,17 @@ public class ChannelStateDescriptionProvider implements StateDescriptionProvider
     }
 
     @Override
-    public StateDescription getStateDescription(String itemName, Locale locale) {
+    public @Nullable StateDescriptionFragment getStateDescriptionFragment(@NonNull String itemName,
+            @Nullable Locale locale) {
+        StateDescription channelStateDescription = getStateDescription(itemName, locale);
+        if (channelStateDescription != null) {
+            return StateDescriptionFragmentBuilder.create(channelStateDescription).build();
+        }
+
+        return null;
+    }
+
+    private StateDescription getStateDescription(String itemName, Locale locale) {
         Set<ChannelUID> boundChannels = itemChannelLinkRegistry.getBoundChannels(itemName);
         if (!boundChannels.isEmpty()) {
             ChannelUID channelUID = boundChannels.iterator().next();
@@ -86,7 +100,7 @@ public class ChannelStateDescriptionProvider implements StateDescriptionProvider
                         String pattern = null;
                         if (channelType.getItemType().equalsIgnoreCase(CoreItemFactory.STRING)) {
                             pattern = "%s";
-                        } else if (channelType.getItemType().equalsIgnoreCase(CoreItemFactory.NUMBER)) {
+                        } else if (channelType.getItemType().startsWith(CoreItemFactory.NUMBER)) {
                             pattern = "%.0f";
                         }
                         if (pattern != null) {

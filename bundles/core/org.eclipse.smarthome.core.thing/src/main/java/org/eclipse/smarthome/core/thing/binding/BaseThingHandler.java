@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,7 +21,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.config.core.Configuration;
-import org.eclipse.smarthome.config.core.validation.ConfigDescriptionValidator;
 import org.eclipse.smarthome.config.core.validation.ConfigValidationException;
 import org.eclipse.smarthome.core.common.ThreadPoolManager;
 import org.eclipse.smarthome.core.thing.Bridge;
@@ -36,9 +35,6 @@ import org.eclipse.smarthome.core.thing.ThingTypeUID;
 import org.eclipse.smarthome.core.thing.ThingUID;
 import org.eclipse.smarthome.core.thing.binding.builder.ThingBuilder;
 import org.eclipse.smarthome.core.thing.binding.builder.ThingStatusInfoBuilder;
-import org.eclipse.smarthome.core.thing.link.ItemChannelLinkRegistry;
-import org.eclipse.smarthome.core.thing.type.ThingType;
-import org.eclipse.smarthome.core.thing.type.TypeResolver;
 import org.eclipse.smarthome.core.thing.util.ThingHandlerHelper;
 import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.core.types.RefreshType;
@@ -64,6 +60,7 @@ import org.slf4j.LoggerFactory;
  * @author Thomas Höfer - Added thing properties and config description validation
  * @author Stefan Bußweiler - Added new thing status handling, refactorings thing/bridge life cycle
  * @author Kai Kreuzer - Refactored isLinked method to not use deprecated functions anymore
+ * @author Christoph Weitkamp - Moved OSGI ServiceTracker from BaseThingHandler to ThingHandlerCallback
  */
 @NonNullByDefault
 public abstract class BaseThingHandler implements ThingHandler {
@@ -74,10 +71,9 @@ public abstract class BaseThingHandler implements ThingHandler {
     protected final ScheduledExecutorService scheduler = ThreadPoolManager
             .getScheduledPool(THING_HANDLER_THREADPOOL_NAME);
 
+    @Deprecated // this must not be used by bindings!
     @NonNullByDefault({})
     protected ThingRegistry thingRegistry;
-    @NonNullByDefault({})
-    protected ItemChannelLinkRegistry linkRegistry;
 
     @Deprecated // this must not be used by bindings!
     @NonNullByDefault({})
@@ -88,9 +84,6 @@ public abstract class BaseThingHandler implements ThingHandler {
     @SuppressWarnings("rawtypes")
     @NonNullByDefault({})
     private ServiceTracker thingRegistryServiceTracker;
-    @SuppressWarnings("rawtypes")
-    @NonNullByDefault({})
-    private ServiceTracker linkRegistryServiceTracker;
 
     private @Nullable ThingHandlerCallback callback;
 
@@ -121,26 +114,9 @@ public abstract class BaseThingHandler implements ThingHandler {
             }
         };
         thingRegistryServiceTracker.open();
-        linkRegistryServiceTracker = new ServiceTracker(this.bundleContext, ItemChannelLinkRegistry.class.getName(),
-                null) {
-            @Override
-            public Object addingService(final @Nullable ServiceReference reference) {
-                linkRegistry = (ItemChannelLinkRegistry) bundleContext.getService(reference);
-                return linkRegistry;
-            }
-
-            @Override
-            public void removedService(final @Nullable ServiceReference reference, final @Nullable Object service) {
-                synchronized (BaseThingHandler.this) {
-                    linkRegistry = null;
-                }
-            }
-        };
-        linkRegistryServiceTracker.open();
     }
 
     public void unsetBundleContext(final BundleContext bundleContext) {
-        linkRegistryServiceTracker.close();
         thingRegistryServiceTracker.close();
         this.bundleContext = null;
     }
@@ -153,7 +129,6 @@ public abstract class BaseThingHandler implements ThingHandler {
 
     @Override
     public void handleConfigurationUpdate(Map<String, Object> configurationParameters) {
-
         if (!isModifyingCurrentConfig(configurationParameters)) {
             return;
         }
@@ -174,7 +149,12 @@ public abstract class BaseThingHandler implements ThingHandler {
         } else {
             // persist new configuration and notify Thing Manager
             updateConfiguration(configuration);
-            callback.configurationUpdated(getThing());
+            if (this.callback != null) {
+                this.callback.configurationUpdated(this.getThing());
+            } else {
+                logger.warn("Handler {} tried updating its configuration although the handler was already disposed.",
+                        this.getClass().getSimpleName());
+            }
         }
     }
 
@@ -235,6 +215,16 @@ public abstract class BaseThingHandler implements ThingHandler {
         }
     }
 
+    /**
+     * Get the {@link ThingHandlerCallback} instance.
+     *
+     * @return the {@link ThingHandlerCallback} instance. Only returns {@code null} while the handler is not
+     *         initialized.
+     */
+    protected @Nullable ThingHandlerCallback getCallback() {
+        return this.callback;
+    }
+
     @Override
     public void channelLinked(ChannelUID channelUID) {
         // can be overridden by subclasses
@@ -252,14 +242,15 @@ public abstract class BaseThingHandler implements ThingHandler {
      * Validates the given configuration parameters against the configuration description.
      *
      * @param configurationParameters the configuration parameters to be validated
-     *
      * @throws ConfigValidationException if one or more of the given configuration parameters do not match
      *             their declarations in the configuration description
      */
     protected void validateConfigurationParameters(Map<String, Object> configurationParameters) {
-        ThingType thingType = TypeResolver.resolve(getThing().getThingTypeUID());
-        if (thingType != null && thingType.getConfigDescriptionURI() != null) {
-            ConfigDescriptionValidator.validate(configurationParameters, thingType.getConfigDescriptionURI());
+        if (this.callback != null) {
+            this.callback.validateConfigurationParameters(this.getThing(), configurationParameters);
+        } else {
+            logger.warn("Handler {} tried validating its configuration although the handler was already disposed.",
+                    this.getClass().getSimpleName());
         }
     }
 
@@ -276,8 +267,7 @@ public abstract class BaseThingHandler implements ThingHandler {
      * Returns the configuration of the thing and transforms it to the given
      * class.
      *
-     * @param configurationClass
-     *            configuration class
+     * @param configurationClass configuration class
      * @return configuration of thing in form of the given class
      */
     protected <T> T getConfigAs(Class<T> configurationClass) {
@@ -288,19 +278,17 @@ public abstract class BaseThingHandler implements ThingHandler {
      *
      * Updates the state of the thing.
      *
-     * @param channelUID
-     *            unique id of the channel, which was updated
-     * @param state
-     *            new state
-     * @throws IllegalStateException
-     *             if handler is not initialized correctly, because no callback is present
+     * @param channelUID unique id of the channel, which was updated
+     * @param state new state
      */
     protected void updateState(ChannelUID channelUID, State state) {
         synchronized (this) {
             if (this.callback != null) {
                 this.callback.stateUpdated(channelUID, state);
             } else {
-                throw new IllegalStateException("Could not update state, because callback is missing");
+                logger.warn(
+                        "Handler {} of thing {} tried updating channel {} although the handler was already disposed.",
+                        this.getClass().getSimpleName(), channelUID.getThingUID(), channelUID.getId());
             }
         }
     }
@@ -310,12 +298,8 @@ public abstract class BaseThingHandler implements ThingHandler {
      * Updates the state of the thing. Will use the thing UID to infer the
      * unique channel UID from the given ID.
      *
-     * @param channel
-     *            ID id of the channel, which was updated
-     * @param state
-     *            new state
-     * @throws IllegalStateException
-     *             if handler is not initialized correctly, because no callback is present
+     * @param channel ID id of the channel, which was updated
+     * @param state new state
      */
     protected void updateState(String channelID, State state) {
         ChannelUID channelUID = new ChannelUID(this.getThing().getUID(), channelID);
@@ -333,7 +317,9 @@ public abstract class BaseThingHandler implements ThingHandler {
             if (this.callback != null) {
                 this.callback.channelTriggered(this.getThing(), channelUID, event);
             } else {
-                throw new IllegalStateException("Could not trigger channel, because callback is missing");
+                logger.warn(
+                        "Handler {} of thing {} tried triggering channel {} although the handler was already disposed.",
+                        this.getClass().getSimpleName(), channelUID.getThingUID(), channelUID.getId());
             }
         }
     }
@@ -372,12 +358,8 @@ public abstract class BaseThingHandler implements ThingHandler {
     /**
      * Sends a command for a channel of the thing.
      *
-     * @param channelID
-     *            id of the channel, which sends the command
-     * @param command
-     *            command
-     * @throws IllegalStateException
-     *             if handler is not initialized correctly, because no callback is present
+     * @param channelID id of the channel, which sends the command
+     * @param command command
      */
     protected void postCommand(String channelID, Command command) {
         ChannelUID channelUID = new ChannelUID(this.getThing().getUID(), channelID);
@@ -387,19 +369,17 @@ public abstract class BaseThingHandler implements ThingHandler {
     /**
      * Sends a command for a channel of the thing.
      *
-     * @param channelUID
-     *            unique id of the channel, which sends the command
-     * @param command
-     *            command
-     * @throws IllegalStateException
-     *             if handler is not initialized correctly, because no callback is present
+     * @param channelUID unique id of the channel, which sends the command
+     * @param command command
      */
     protected void postCommand(ChannelUID channelUID, Command command) {
         synchronized (this) {
             if (this.callback != null) {
                 this.callback.postCommand(channelUID, command);
             } else {
-                throw new IllegalStateException("Could not update state, because callback is missing");
+                logger.warn(
+                        "Handler {} of thing {} tried posting a command to channel {} although the handler was already disposed.",
+                        this.getClass().getSimpleName(), channelUID.getThingUID(), channelUID.getId());
             }
         }
     }
@@ -410,9 +390,6 @@ public abstract class BaseThingHandler implements ThingHandler {
      * @param status the status
      * @param statusDetail the detail of the status
      * @param description the description of the status
-     *
-     * @throws IllegalStateException
-     *             if handler is not initialized correctly, because no callback is present
      */
     protected void updateStatus(ThingStatus status, ThingStatusDetail statusDetail, @Nullable String description) {
         synchronized (this) {
@@ -421,7 +398,8 @@ public abstract class BaseThingHandler implements ThingHandler {
                 ThingStatusInfo statusInfo = statusBuilder.withDescription(description).build();
                 this.callback.statusUpdated(this.thing, statusInfo);
             } else {
-                throw new IllegalStateException("Could not update status, because callback is missing");
+                logger.warn("Handler {} tried updating the thing status although the handler was already disposed.",
+                        this.getClass().getSimpleName());
             }
         }
     }
@@ -431,9 +409,6 @@ public abstract class BaseThingHandler implements ThingHandler {
      *
      * @param status the status
      * @param statusDetail the detail of the status
-     *
-     * @throws IllegalStateException
-     *             if handler is not initialized correctly, because no callback is present
      */
     protected void updateStatus(ThingStatus status, ThingStatusDetail statusDetail) {
         updateStatus(status, statusDetail, null);
@@ -443,9 +418,6 @@ public abstract class BaseThingHandler implements ThingHandler {
      * Updates the status of the thing. The detail of the status will be 'NONE'.
      *
      * @param status the status
-     *
-     * @throws IllegalStateException
-     *             if handler is not initialized correctly, because no callback is present
      */
     protected void updateStatus(ThingStatus status) {
         updateStatus(status, ThingStatusDetail.NONE, null);
@@ -468,11 +440,7 @@ public abstract class BaseThingHandler implements ThingHandler {
      * Informs the framework, that a thing was updated. This method must be called after the configuration or channels
      * was changed.
      *
-     * @param thing
-     *            thing, that was updated and should be persisted
-     *
-     * @throws IllegalStateException
-     *             if handler is not initialized correctly, because no callback is present
+     * @param thing thing, that was updated and should be persisted
      */
     protected void updateThing(Thing thing) {
         if (thing == this.thing) {
@@ -484,7 +452,8 @@ public abstract class BaseThingHandler implements ThingHandler {
                 this.thing = thing;
                 this.callback.thingUpdated(thing);
             } else {
-                throw new IllegalStateException("Could not update thing, because callback is missing");
+                logger.warn("Handler {} tried updating thing {} although the handler was already disposed.",
+                        this.getClass().getSimpleName(), thing.getUID());
             }
         }
     }
@@ -503,11 +472,7 @@ public abstract class BaseThingHandler implements ThingHandler {
     /**
      * Updates the configuration of the thing and informs the framework about it.
      *
-     * @param configuration
-     *            configuration, that was updated and should be persisted
-     *
-     * @throws IllegalStateException
-     *             if handler is not initialized correctly, because no callback is present
+     * @param configuration configuration, that was updated and should be persisted
      */
     protected void updateConfiguration(Configuration configuration) {
         Map<String, Object> old = this.thing.getConfiguration().getProperties();
@@ -517,7 +482,9 @@ public abstract class BaseThingHandler implements ThingHandler {
                 if (this.callback != null) {
                     this.callback.thingUpdated(thing);
                 } else {
-                    throw new IllegalStateException("Could not update configuration, because callback is missing");
+                    logger.warn(
+                            "Handler {} tried updating its configuration although the handler was already disposed.",
+                            this.getClass().getSimpleName());
                 }
             }
         } catch (RuntimeException e) {
@@ -544,11 +511,7 @@ public abstract class BaseThingHandler implements ThingHandler {
      * Informs the framework, that the given properties map of the thing was updated. This method performs a check, if
      * the properties were updated. If the properties did not change, the framework is not informed about changes.
      *
-     * @param properties
-     *            properties map, that was updated and should be persisted
-     *
-     * @throws IllegalStateException
-     *             if handler is not initialized correctly, because no callback is present
+     * @param properties properties map, that was updated and should be persisted
      */
     protected void updateProperties(Map<String, String> properties) {
         boolean propertiesUpdated = false;
@@ -566,7 +529,9 @@ public abstract class BaseThingHandler implements ThingHandler {
                 if (this.callback != null) {
                     this.callback.thingUpdated(thing);
                 } else {
-                    throw new IllegalStateException("Could not update properties, because callback is missing");
+                    logger.warn(
+                            "Handler {} tried updating its thing's properties although the handler was already disposed.",
+                            this.getClass().getSimpleName());
                 }
             }
         }
@@ -593,7 +558,9 @@ public abstract class BaseThingHandler implements ThingHandler {
                 if (this.callback != null) {
                     this.callback.thingUpdated(thing);
                 } else {
-                    throw new IllegalStateException("Could not update properties, because callback is missing");
+                    logger.warn(
+                            "Handler {} tried updating its thing's properties although the handler was already disposed.",
+                            this.getClass().getSimpleName());
                 }
             }
         }
@@ -617,7 +584,7 @@ public abstract class BaseThingHandler implements ThingHandler {
     }
 
     /**
-     * Returns whether at least on item is linked for the given channel ID.
+     * Returns whether at least one item is linked for the given channel ID.
      *
      * @param channelId channel ID (must not be null)
      * @return true if at least one item is linked, false otherwise
@@ -625,10 +592,27 @@ public abstract class BaseThingHandler implements ThingHandler {
     protected boolean isLinked(String channelId) {
         Channel channel = thing.getChannel(channelId);
         if (channel != null) {
-            return linkRegistry != null ? !linkRegistry.getLinks(channel.getUID()).isEmpty() : false;
+            return isLinked(channel.getUID());
         } else {
             logger.debug("Channel with ID '{},' does not exists in thing '{}' and is therefore not linked.", channelId,
                     thing.getUID());
+            return false;
+        }
+    }
+
+    /**
+     * Returns whether at least one item is linked for the given UID of the channel.
+     *
+     * @param channelUID UID of the channel (must not be null)
+     * @return true if at least one item is linked, false otherwise
+     */
+    protected boolean isLinked(ChannelUID channelUID) {
+        if (callback != null) {
+            return callback.isChannelLinked(channelUID);
+        } else {
+            logger.warn(
+                    "Handler {} of thing {} tried checking if channel {} is linked although the handler was already disposed.",
+                    this.getClass().getSimpleName(), channelUID.getThingUID(), channelUID.getId());
             return false;
         }
     }
@@ -656,7 +640,8 @@ public abstract class BaseThingHandler implements ThingHandler {
         if (this.callback != null) {
             this.callback.migrateThingType(getThing(), thingTypeUID, configuration);
         } else {
-            throw new IllegalStateException("Could not change thing type because callback is missing");
+            logger.warn("Handler {} tried migrating the thing type although the handler was already disposed.",
+                    this.getClass().getSimpleName());
         }
     }
 

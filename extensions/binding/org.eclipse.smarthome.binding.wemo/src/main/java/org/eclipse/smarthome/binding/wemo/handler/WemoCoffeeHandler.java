@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,7 +19,6 @@ import java.math.BigDecimal;
 import java.net.URL;
 import java.time.Instant;
 import java.time.ZonedDateTime;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -35,9 +34,6 @@ import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.smarthome.binding.wemo.internal.http.WemoHttpCall;
 import org.eclipse.smarthome.config.core.Configuration;
-import org.eclipse.smarthome.config.discovery.DiscoveryListener;
-import org.eclipse.smarthome.config.discovery.DiscoveryResult;
-import org.eclipse.smarthome.config.discovery.DiscoveryService;
 import org.eclipse.smarthome.core.library.types.DateTimeType;
 import org.eclipse.smarthome.core.library.types.DecimalType;
 import org.eclipse.smarthome.core.library.types.OnOffType;
@@ -47,8 +43,6 @@ import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.thing.ThingStatusDetail;
 import org.eclipse.smarthome.core.thing.ThingTypeUID;
-import org.eclipse.smarthome.core.thing.ThingUID;
-import org.eclipse.smarthome.core.thing.binding.BaseThingHandler;
 import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.core.types.RefreshType;
 import org.eclipse.smarthome.core.types.State;
@@ -71,17 +65,15 @@ import org.xml.sax.InputSource;
  * @author Erdoan Hadzhiyusein - Adapted the class to work with the new DateTimeType
  */
 
-public class WemoCoffeeHandler extends BaseThingHandler implements UpnpIOParticipant, DiscoveryListener {
+public class WemoCoffeeHandler extends AbstractWemoHandler implements UpnpIOParticipant {
 
     private final Logger logger = LoggerFactory.getLogger(WemoCoffeeHandler.class);
 
-    public final static Set<ThingTypeUID> SUPPORTED_THING_TYPES = Collections.singleton(THING_TYPE_COFFEE);
+    public static final Set<ThingTypeUID> SUPPORTED_THING_TYPES = Collections.singleton(THING_TYPE_COFFEE);
 
     private Map<String, Boolean> subscriptionState = new HashMap<String, Boolean>();
 
-    private final Map<String, String> stateMap = Collections.synchronizedMap(new HashMap<String, String>());
-
-    protected final static int SUBSCRIPTION_DURATION = 600;
+    protected static final int SUBSCRIPTION_DURATION = 600;
 
     private UpnpIOService service;
 
@@ -103,7 +95,6 @@ public class WemoCoffeeHandler extends BaseThingHandler implements UpnpIOPartici
 
                 updateWemoState();
                 onSubscription();
-
             } catch (Exception e) {
                 logger.debug("Exception during poll : {}", e);
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, e.getMessage());
@@ -111,9 +102,10 @@ public class WemoCoffeeHandler extends BaseThingHandler implements UpnpIOPartici
         }
     };
 
-    public WemoCoffeeHandler(Thing thing, UpnpIOService upnpIOService) {
-
+    public WemoCoffeeHandler(Thing thing, UpnpIOService upnpIOService, WemoHttpCall wemoHttpcaller) {
         super(thing);
+
+        this.wemoHttpCaller = wemoHttpcaller;
 
         logger.debug("Creating a WemoCoffeeHandler V0.4 for thing '{}'", getThing().getUID());
 
@@ -122,12 +114,10 @@ public class WemoCoffeeHandler extends BaseThingHandler implements UpnpIOPartici
         } else {
             logger.debug("upnpIOService not set.");
         }
-
     }
 
     @Override
     public void initialize() {
-
         Configuration configuration = getConfig();
 
         if (configuration.get("udn") != null) {
@@ -137,28 +127,6 @@ public class WemoCoffeeHandler extends BaseThingHandler implements UpnpIOPartici
             updateStatus(ThingStatus.ONLINE);
         } else {
             logger.debug("Cannot initalize WemoCoffeeHandler. UDN not set.");
-        }
-
-    }
-
-    @Override
-    public void thingDiscovered(DiscoveryService source, DiscoveryResult result) {
-        if (result.getThingUID().equals(this.getThing().getUID())) {
-            if (getThing().getConfiguration().get(UDN).equals(result.getProperties().get(UDN))) {
-                logger.trace("Discovered UDN '{}' for thing '{}'", result.getProperties().get(UDN),
-                        getThing().getUID());
-                updateStatus(ThingStatus.ONLINE);
-                onSubscription();
-                onUpdate();
-            }
-        }
-    }
-
-    @Override
-    public void thingRemoved(DiscoveryService source, ThingUID thingUID) {
-        if (thingUID.equals(this.getThing().getUID())) {
-            logger.trace("Setting status for thing '{}' to OFFLINE", getThing().getUID());
-            updateStatus(ThingStatus.OFFLINE);
         }
     }
 
@@ -185,13 +153,9 @@ public class WemoCoffeeHandler extends BaseThingHandler implements UpnpIOPartici
                 logger.debug("Exception during poll : {}", e);
             }
         } else if (channelUID.getId().equals(CHANNEL_STATE)) {
-
             if (command instanceof OnOffType) {
-
                 if (command.equals(OnOffType.ON)) {
-
                     try {
-
                         String soapHeader = "\"urn:Belkin:service:deviceevent:1#SetAttributes\"";
 
                         String content = "<?xml version=\"1.0\"?>"
@@ -210,7 +174,7 @@ public class WemoCoffeeHandler extends BaseThingHandler implements UpnpIOPartici
                         String wemoURL = getWemoURL("deviceevent");
 
                         if (wemoURL != null) {
-                            String wemoCallResponse = WemoHttpCall.executeCall(wemoURL, soapHeader, content);
+                            String wemoCallResponse = wemoHttpCaller.executeCall(wemoURL, soapHeader, content);
                             if (wemoCallResponse != null) {
                                 updateState(CHANNEL_STATE, OnOffType.ON);
                                 State newMode = new StringType("Brewing");
@@ -222,10 +186,9 @@ public class WemoCoffeeHandler extends BaseThingHandler implements UpnpIOPartici
                                 e.getMessage());
                         updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR);
                     }
-
-                } else if (command.equals(OnOffType.OFF)) {
-                    // do nothing, as WeMo Coffee Maker cannot be switched off remotely
                 }
+                // if command.equals(OnOffType.OFF) we do nothing because WeMo Coffee Maker cannot be switched off
+                // remotely
                 updateStatus(ThingStatus.ONLINE);
             }
         }
@@ -252,7 +215,6 @@ public class WemoCoffeeHandler extends BaseThingHandler implements UpnpIOPartici
                 service.addSubscription(this, subscription, SUBSCRIPTION_DURATION);
                 subscriptionState.put(subscription, true);
             }
-
         } else {
             logger.debug("Setting up WeMo GENA subscription for '{}' FAILED - service.isRegistered(this) is FALSE",
                     this);
@@ -263,7 +225,6 @@ public class WemoCoffeeHandler extends BaseThingHandler implements UpnpIOPartici
         logger.debug("Removing WeMo GENA subscription for '{}'", this);
 
         if (service.isRegistered(this)) {
-
             String subscription = "deviceevent1";
             if ((subscriptionState.get(subscription) != null) && subscriptionState.get(subscription).booleanValue()) {
                 logger.debug("WeMo {}: Unsubscribing from service {}...", getUDN(), subscription);
@@ -301,7 +262,6 @@ public class WemoCoffeeHandler extends BaseThingHandler implements UpnpIOPartici
      * The {@link updateWemoState} polls the actual state of a WeMo CoffeeMaker.
      */
     protected void updateWemoState() {
-
         String action = "GetAttributes";
         String actionService = "deviceevent";
 
@@ -314,7 +274,7 @@ public class WemoCoffeeHandler extends BaseThingHandler implements UpnpIOPartici
         try {
             String wemoURL = getWemoURL(actionService);
             if (wemoURL != null) {
-                String wemoCallResponse = WemoHttpCall.executeCall(wemoURL, soapHeader, content);
+                String wemoCallResponse = wemoHttpCaller.executeCall(wemoURL, soapHeader, content);
                 if (wemoCallResponse != null) {
                     try {
                         String stringParser = StringUtils.substringBetween(wemoCallResponse, "<attributeList>",
@@ -506,12 +466,6 @@ public class WemoCoffeeHandler extends BaseThingHandler implements UpnpIOPartici
 
     @Override
     public void onStatusChanged(boolean status) {
-    }
-
-    @Override
-    public Collection<ThingUID> removeOlderResults(DiscoveryService source, long timestamp,
-            Collection<ThingTypeUID> thingTypeUIDs, ThingUID bridgeUID) {
-        return Collections.emptyList();
     }
 
 }

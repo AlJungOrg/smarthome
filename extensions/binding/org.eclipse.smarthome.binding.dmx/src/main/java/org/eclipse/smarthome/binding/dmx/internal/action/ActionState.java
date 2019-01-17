@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,7 +20,7 @@ package org.eclipse.smarthome.binding.dmx.internal.action;
  * completed : action has completed, proceed to next action
  * completedfinal : action has completed, hold here
  *
- * @author Jan N. Klug
+ * @author Jan N. Klug - Initial contribution
  */
 public enum ActionState {
     WAITING,

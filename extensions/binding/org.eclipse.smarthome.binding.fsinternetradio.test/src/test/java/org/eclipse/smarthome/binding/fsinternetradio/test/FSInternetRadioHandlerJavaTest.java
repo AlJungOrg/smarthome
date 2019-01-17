@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,7 +13,9 @@
 package org.eclipse.smarthome.binding.fsinternetradio.test;
 
 import static org.eclipse.smarthome.binding.fsinternetradio.FSInternetRadioBindingConstants.*;
+import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;
@@ -21,10 +23,9 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import javax.servlet.ServletException;
-
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.jdt.annotation.NonNull;
+import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.smarthome.binding.fsinternetradio.FSInternetRadioBindingConstants;
 import org.eclipse.smarthome.binding.fsinternetradio.handler.FSInternetRadioHandler;
@@ -50,16 +51,19 @@ import org.eclipse.smarthome.core.thing.ThingStatusInfo;
 import org.eclipse.smarthome.core.thing.ThingTypeUID;
 import org.eclipse.smarthome.core.thing.ThingUID;
 import org.eclipse.smarthome.core.thing.binding.ThingHandlerCallback;
+import org.eclipse.smarthome.core.thing.binding.builder.ChannelBuilder;
 import org.eclipse.smarthome.core.thing.binding.builder.ThingBuilder;
 import org.eclipse.smarthome.core.thing.binding.builder.ThingStatusInfoBuilder;
 import org.eclipse.smarthome.core.types.UnDefType;
+import org.eclipse.smarthome.test.TestPortUtil;
+import org.eclipse.smarthome.test.TestServer;
 import org.eclipse.smarthome.test.java.JavaTest;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.osgi.service.http.NamespaceException;
+import org.mockito.ArgumentCaptor;
 
 /**
  * OSGi tests for the {@link FSInternetRadioHandler}.
@@ -107,6 +111,8 @@ public class FSInternetRadioHandlerJavaTest extends JavaTest {
     private FSInternetRadioHandler radioHandler;
     private Thing radioThing;
 
+    private static HttpClient httpClient;
+
     // default configuration properties
     private static final String DEFAULT_CONFIG_PROPERTY_IP = "127.0.0.1";
     private static final String DEFAULT_CONFIG_PROPERTY_PIN = "1234";
@@ -122,16 +128,19 @@ public class FSInternetRadioHandlerJavaTest extends JavaTest {
         server = new TestServer(DEFAULT_CONFIG_PROPERTY_IP, DEFAULT_CONFIG_PROPERTY_PORT, TIMEOUT, holder);
         setTheChannelsMap();
         server.startServer();
+        httpClient = new HttpClient();
+        httpClient.start();
     }
 
     @Before
-    public void setUp() throws ServletException, NamespaceException {
+    public void setUp() {
         createThePowerChannel();
     }
 
     @AfterClass
-    public static void tearDownClass() {
+    public static void tearDownClass() throws Exception {
         server.stopServer();
+        httpClient.stop();
     }
 
     private static @NonNull Channel getChannel(final @NonNull Thing thing, final @NonNull String channelId) {
@@ -189,7 +198,7 @@ public class FSInternetRadioHandlerJavaTest extends JavaTest {
                 String.valueOf(DEFAULT_CONFIG_PROPERTY_PORT), DEFAULT_CONFIG_PROPERTY_REFRESH);
         initializeRadioThing(config);
         waitForAssert(() -> {
-            String exceptionMessage = "java.lang.RuntimeException: Radio does not allow connection, maybe wrong pin?";
+            String exceptionMessage = "Radio does not allow connection, maybe wrong pin?";
             verifyCommunicationError(exceptionMessage);
         });
     }
@@ -207,9 +216,6 @@ public class FSInternetRadioHandlerJavaTest extends JavaTest {
         Thing radioThing = initializeRadioThing(DEFAULT_COMPLETE_CONFIGURATION);
         testRadioThingConsideringConfiguration(radioThing);
 
-        // turn-on the radio
-        turnTheRadioOn(radioThing);
-
         ChannelUID modeChannelUID = getChannelUID(radioThing, modeChannelID);
 
         /*
@@ -220,12 +226,12 @@ public class FSInternetRadioHandlerJavaTest extends JavaTest {
 
         // try to handle a command
         radioHandler.handleCommand(modeChannelUID, DecimalType.valueOf("1"));
-        radioServiceDummy.setInvalidResponse(false);
 
         waitForAssert(() -> {
-            String exceptionMessage = "java.io.IOException: org.xml.sax.SAXParseException; lineNumber: 1; columnNumber: 2; The markup in the document preceding the root element must be well-formed.";
+            String exceptionMessage = "java.io.IOException: org.xml.sax.SAXParseException; lineNumber: 1; columnNumber: 2;";
             verifyCommunicationError(exceptionMessage);
         });
+        radioServiceDummy.setInvalidResponse(false);
     }
 
     /**
@@ -792,7 +798,7 @@ public class FSInternetRadioHandlerJavaTest extends JavaTest {
     private Channel createChannel(ThingUID thingUID, String channelID, String acceptedItemType) {
         ChannelUID channelUID = new ChannelUID(thingUID, channelID);
 
-        Channel radioChannel = new Channel(channelUID, acceptedItemType);
+        Channel radioChannel = ChannelBuilder.create(channelUID, acceptedItemType).build();
         channels.add(radioChannel);
         return radioChannel;
     }
@@ -828,7 +834,7 @@ public class FSInternetRadioHandlerJavaTest extends JavaTest {
 
         callback = mock(ThingHandlerCallback.class);
 
-        radioHandler = new FSInternetRadioHandler(radioThing);
+        radioHandler = new FSInternetRadioHandler(radioThing, httpClient);
         radioHandler.setCallback(callback);
         radioThing.setHandler(radioHandler);
         radioThing.getHandler().initialize();
@@ -843,7 +849,7 @@ public class FSInternetRadioHandlerJavaTest extends JavaTest {
 
         callback = mock(ThingHandlerCallback.class);
 
-        radioHandler = new MockedRadioHandler(radioThing);
+        radioHandler = new MockedRadioHandler(radioThing, httpClient);
         radioHandler.setCallback(callback);
         radioThing.setHandler(radioHandler);
         radioThing.getHandler().initialize();
@@ -881,9 +887,12 @@ public class FSInternetRadioHandlerJavaTest extends JavaTest {
     }
 
     private void verifyCommunicationError(String exceptionMessage) {
-        ThingStatusInfoBuilder statusBuilder = ThingStatusInfoBuilder.create(ThingStatus.OFFLINE,
-                ThingStatusDetail.COMMUNICATION_ERROR);
-        ThingStatusInfo statusInfo = statusBuilder.withDescription(exceptionMessage).build();
-        verify(callback, atLeast(1)).statusUpdated(radioThing, statusInfo);
+        ArgumentCaptor<ThingStatusInfo> captor = ArgumentCaptor.forClass(ThingStatusInfo.class);
+        verify(callback, atLeast(1)).statusUpdated(isA(Thing.class), captor.capture());
+        ThingStatusInfo status = captor.getValue();
+        assertThat(status.getStatus(), is(ThingStatus.OFFLINE));
+        assertThat(status.getStatusDetail(), is(ThingStatusDetail.COMMUNICATION_ERROR));
+        assertThat(status.getDescription().contains(exceptionMessage), is(true));
+
     }
 }

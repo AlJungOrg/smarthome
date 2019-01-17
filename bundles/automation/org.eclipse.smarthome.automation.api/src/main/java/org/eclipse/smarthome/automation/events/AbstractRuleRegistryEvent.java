@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,9 +29,9 @@ public abstract class AbstractRuleRegistryEvent extends AbstractEvent {
     /**
      * Must be called in subclass constructor to create a new rule registry event.
      *
-     * @param topic the topic of the event
+     * @param topic   the topic of the event
      * @param payload the payload of the event
-     * @param source the source of the event
+     * @param source  the source of the event
      * @param ruleDTO the ruleDTO for which this event is created
      */
     public AbstractRuleRegistryEvent(String topic, String payload, String source, RuleDTO rule) {

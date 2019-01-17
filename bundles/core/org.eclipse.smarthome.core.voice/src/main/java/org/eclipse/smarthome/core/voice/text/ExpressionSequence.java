@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -71,10 +71,12 @@ public final class ExpressionSequence extends Expression {
     boolean collectFirsts(ResourceBundle language, HashSet<String> firsts) {
         boolean blocking = false;
         for (Expression e : subExpressions) {
-            if ((blocking = e.collectFirsts(language, firsts)) == true) {
+            blocking = e.collectFirsts(language, firsts);
+            if (blocking) {
                 break;
             }
         }
+        
         return blocking;
     }
 

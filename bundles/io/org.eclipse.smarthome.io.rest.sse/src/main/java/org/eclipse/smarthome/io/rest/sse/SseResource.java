@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -37,6 +37,7 @@ import org.eclipse.smarthome.io.rest.sse.internal.util.SseUtil;
 import org.glassfish.jersey.media.sse.EventOutput;
 import org.glassfish.jersey.media.sse.SseBroadcaster;
 import org.glassfish.jersey.media.sse.SseFeature;
+import org.osgi.service.component.annotations.Component;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -51,13 +52,14 @@ import io.swagger.annotations.ApiResponses;
  * @author Yordan Zhelev - Added Swagger annotations
  *
  */
+@Component(immediate = true, service = SseResource.class)
 @Path(SseResource.PATH_EVENTS)
 @RolesAllowed({ Role.USER })
 @Singleton
 @Api(value = SseResource.PATH_EVENTS, hidden = true)
 public class SseResource {
 
-    public final static String PATH_EVENTS = "events";
+    public static final String PATH_EVENTS = "events";
 
     private static final String X_ACCEL_BUFFERING_HEADER = "X-Accel-Buffering";
 
@@ -96,7 +98,6 @@ public class SseResource {
             @ApiResponse(code = 400, message = "Topic is empty or contains invalid characters") })
     public Object getEvents(@QueryParam("topics") @ApiParam(value = "topics") String eventFilter)
             throws IOException, InterruptedException {
-
         if (!SseUtil.isValidTopicFilter(eventFilter)) {
             return Response.status(Status.BAD_REQUEST).build();
         }
@@ -133,10 +134,8 @@ public class SseResource {
      * Broadcasts an event described by the given parameter to all currently
      * listening clients.
      *
-     * @param sseEventType
-     *            the SSE event type
-     * @param event
-     *            the event
+     * @param sseEventType the SSE event type
+     * @param event the event
      */
     public void broadcastEvent(final Event event) {
         executorService.execute(new Runnable() {

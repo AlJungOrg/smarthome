@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,6 +18,7 @@ import java.util.UUID;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.smarthome.binding.lifx.internal.fields.HSBK;
+import org.eclipse.smarthome.binding.lifx.internal.protocol.Product.TemperatureRange;
 import org.eclipse.smarthome.core.library.types.DecimalType;
 import org.eclipse.smarthome.core.library.types.IncreaseDecreaseType;
 import org.eclipse.smarthome.core.library.types.PercentType;
@@ -90,14 +91,20 @@ public final class LifxMessageUtil {
         return percentTypeToInt(brightness);
     }
 
-    public static PercentType kelvinToPercentType(int kelvin) {
-        // range is from 2500-9000K
-        return new PercentType((kelvin - 9000) / (-65));
+    public static PercentType kelvinToPercentType(int kelvin, TemperatureRange temperatureRange) {
+        if (temperatureRange.getRange() == 0) {
+            return PercentType.HUNDRED;
+        }
+        BigDecimal value = BigDecimal
+                .valueOf((kelvin - temperatureRange.getMaximum()) / (temperatureRange.getRange() / -100));
+        value = value.min(HUNDRED);
+        value = value.max(ZERO);
+        return new PercentType(value);
     }
 
-    public static int percentTypeToKelvin(PercentType temperature) {
-        // range is from 2500-9000K
-        return 9000 - (temperature.intValue() * 65);
+    public static int percentTypeToKelvin(PercentType temperature, TemperatureRange temperatureRange) {
+        return Math.round(
+                temperatureRange.getMaximum() - (temperature.floatValue() * (temperatureRange.getRange() / 100)));
     }
 
     public static PercentType infraredToPercentType(int infrared) {

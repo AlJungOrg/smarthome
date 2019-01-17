@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -53,9 +53,13 @@ public class SitemapEventOutput extends EventOutput {
             if (sitemapName != null && sitemapName.equals(subscriptions.getSitemapName(subscriptionId))
                     && pageId != null && pageId.equals(subscriptions.getPageId(subscriptionId))) {
                 super.write(chunk);
-                if (logger.isDebugEnabled() && event instanceof SitemapWidgetEvent) {
-                    logger.debug("Sent sitemap event for widget {} to subscription {}.",
-                            ((SitemapWidgetEvent) event).widgetId, subscriptionId);
+                if (logger.isDebugEnabled()) {
+                    if (event instanceof SitemapWidgetEvent) {
+                        logger.debug("Sent sitemap event for widget {} to subscription {}.",
+                                ((SitemapWidgetEvent) event).widgetId, subscriptionId);
+                    } else if (event instanceof ServerAliveEvent) {
+                        logger.debug("Sent alive event to subscription {}.", subscriptionId);
+                    }
                 }
             }
         }

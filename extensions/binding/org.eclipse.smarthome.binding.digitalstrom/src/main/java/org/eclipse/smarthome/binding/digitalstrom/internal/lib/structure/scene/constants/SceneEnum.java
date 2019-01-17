@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,15 +17,18 @@ import java.util.HashMap;
 /**
  * The {@link SceneEnum} lists all available scenes of digitalSTROM.
  *
- * @author Alexander Betker
+ * @author Alexander Betker - initial contributer
  * @version digitalSTROM-API 1.14.5
  *
  * @author Michael Ochel - add new scenes and missing java-doc
  * @author Mathias Siegele - add new scenes and missing java-doc
  *
- * @see http://developer.digitalstrom.org/Architecture/ds-basics.pdf appendix B, page 44
  */
 public enum SceneEnum implements Scene {
+
+    /*
+     * see http://developer.digitalstrom.org/Architecture/ds-basics.pdf appendix B, page 44
+     */
 
     /* Area scene commands */
     AREA_1_OFF((short) 1), // Set output value to Preset Area 1 Off (Default: Off)
@@ -125,11 +128,11 @@ public enum SceneEnum implements Scene {
     NO_HAIL((short) 91);
 
     private final short sceneNumber;
-    static final HashMap<Short, SceneEnum> digitalstromScenes = new HashMap<Short, SceneEnum>();
+    static final HashMap<Short, SceneEnum> DIGITALSTROM_SCENES = new HashMap<Short, SceneEnum>();
 
     static {
         for (SceneEnum zs : SceneEnum.values()) {
-            digitalstromScenes.put(zs.getSceneNumber(), zs);
+            DIGITALSTROM_SCENES.put(zs.getSceneNumber(), zs);
         }
     }
 
@@ -140,25 +143,25 @@ public enum SceneEnum implements Scene {
     /**
      * Returns the {@link SceneEnum} for the given scene number.
      *
-     * @param sceneNumber
+     * @param sceneNumber of the {@link SceneEnum}
      * @return SceneEnum
      */
     public static SceneEnum getScene(short sceneNumber) {
-        return digitalstromScenes.get(sceneNumber);
+        return DIGITALSTROM_SCENES.get(sceneNumber);
     }
 
     /**
      * Returns true, if the given scene number contains in digitalSTROM scenes, otherwise false.
      *
-     * @param sceneNumber
+     * @param sceneNumber to be checked
      * @return true, if contains otherwise false
      */
     public static boolean containsScene(Short sceneNumber) {
-        return digitalstromScenes.keySet().contains(sceneNumber);
+        return DIGITALSTROM_SCENES.keySet().contains(sceneNumber);
     }
 
     @Override
-    public short getSceneNumber() {
+    public Short getSceneNumber() {
         return this.sceneNumber;
     }
 }

@@ -27,27 +27,51 @@
       <groupId>${project.groupId}</groupId>
       <artifactId>esh-tp</artifactId>
       <version>${project.version}</version>
-      <scope>provided</scope>
       <classifier>features</classifier>
       <type>xml</type>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>esh-core</artifactId>
       <version>${project.version}</version>
-      <scope>provided</scope>
       <classifier>features</classifier>
       <type>xml</type>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>esh-ext</artifactId>
       <version>${project.version}</version>
-      <scope>provided</scope>
       <classifier>features</classifier>
       <type>xml</type>
+      <scope>provided</scope>
     </dependency>
   </dependencies>
+
+  <repositories>
+    <repository>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+      <id>bintray-maggu2810-maven</id>
+      <url>https://dl.bintray.com/maggu2810/maven/</url>
+    </repository>
+
+    <repository>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+      <id>jupnp-bintray</id>
+      <url>https://dl.bintray.com/jupnp/mvn/</url>
+    </repository>
+  </repositories>
 
   <build>
     <plugins>
@@ -59,10 +83,10 @@
         <executions>
           <execution>
             <id>verify-esh</id>
-            <phase>process-resources</phase>
             <goals>
               <goal>verify</goal>
             </goals>
+            <phase>process-resources</phase>
             <configuration>
               <descriptors>
                 <descriptor>mvn:org.apache.karaf.features/framework/${karaf.version}/xml/features</descriptor>
@@ -77,6 +101,7 @@
                 <feature>framework</feature>
               </framework>
               <features>
+                <feature>esh.tp*</feature>
                 <feature>esh-*</feature>
               </features>
               <verifyTransitive>false</verifyTransitive>
@@ -87,29 +112,5 @@
       </plugin>
     </plugins>
   </build>
-
-  <repositories>
-    <repository>
-      <id>bintray-maggu2810-maven</id>
-      <url>https://dl.bintray.com/maggu2810/maven/</url>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-    </repository>
-
-    <repository>
-      <id>jupnp-bintray</id>
-      <url>https://dl.bintray.com/jupnp/mvn/</url>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-    </repository>
-  </repositories>
 
 </project>

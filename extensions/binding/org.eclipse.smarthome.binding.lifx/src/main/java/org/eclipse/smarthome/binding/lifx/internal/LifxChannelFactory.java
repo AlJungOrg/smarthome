@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,6 +12,7 @@
  */
 package org.eclipse.smarthome.binding.lifx.internal;
 
+import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.smarthome.core.thing.Channel;
 import org.eclipse.smarthome.core.thing.ThingUID;
 
@@ -20,6 +21,7 @@ import org.eclipse.smarthome.core.thing.ThingUID;
  *
  * @author Wouter Born - Add i18n support
  */
+@NonNullByDefault
 public interface LifxChannelFactory {
 
     Channel createColorZoneChannel(ThingUID thingUID, int index);

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -32,30 +32,24 @@ public class ChannelGroupType extends AbstractDescriptionType {
     private final String category;
 
     /**
-     * Deprecated: Will be removed before 1.0 release in favor for constructor with category
-     *
      * Creates a new instance of this class with the specified parameters.
      *
      * @param uid the unique identifier which identifies this channel group type within the
      *            overall system (must neither be null, nor empty)
-     *
      * @param advanced true if this channel group type contains advanced features, otherwise false
-     *
      * @param label the human readable label for the according type
      *            (must neither be null nor empty)
-     *
      * @param description the human readable description for the according type
      *            (could be null or empty)
-     *
      * @param channelDefinitions the channel definitions this channel group forms
      *            (could be null or empty)
-     *
      * @throws IllegalArgumentException if the UID is null, or the label is null or empty
+     *
+     * @deprecated Use the {@link ChannelGroupTypeBuilder} instead.
      */
     @Deprecated
     public ChannelGroupType(ChannelGroupTypeUID uid, boolean advanced, String label, String description,
             List<ChannelDefinition> channelDefinitions) throws IllegalArgumentException {
-
         super(uid, label, description);
 
         this.advanced = advanced;
@@ -73,25 +67,18 @@ public class ChannelGroupType extends AbstractDescriptionType {
      *
      * @param uid the unique identifier which identifies this channel group type within the
      *            overall system (must neither be null, nor empty)
-     *
      * @param advanced true if this channel group type contains advanced features, otherwise false
-     *
      * @param label the human readable label for the according type
      *            (must neither be null nor empty)
-     *
      * @param description the human readable description for the according type
      *            (could be null or empty)
-     *
      * @param category the category of this channel group type, e.g. Temperature (could be null or empty)
-     *
      * @param channelDefinitions the channel definitions this channel group forms
      *            (could be null or empty)
-     *
      * @throws IllegalArgumentException if the UID is null, or the label is null or empty
      */
-    public ChannelGroupType(ChannelGroupTypeUID uid, boolean advanced, String label, String description,
-            String category, List<ChannelDefinition> channelDefinitions) throws IllegalArgumentException {
-
+    ChannelGroupType(ChannelGroupTypeUID uid, boolean advanced, String label, String description, String category,
+            List<ChannelDefinition> channelDefinitions) throws IllegalArgumentException {
         super(uid, label, description);
 
         this.advanced = advanced;

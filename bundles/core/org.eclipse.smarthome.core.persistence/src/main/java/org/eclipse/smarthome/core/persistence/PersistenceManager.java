@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -34,17 +34,4 @@ public interface PersistenceManager {
      */
     void removeConfig(String dbId);
 
-    /**
-     * Start the event handling for a persistence service.
-     *
-     * @param dbId the database id used by the persistence service
-     */
-    void startEventHandling(String dbId);
-
-    /**
-     * Stop the event handling for a persistence service.
-     *
-     * @param dbId the database id used by the persistence service
-     */
-    void stopEventHandling(String dbId);
 }

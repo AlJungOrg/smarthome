@@ -5,18 +5,17 @@ Bundle-ManifestVersion: 2
 Bundle-Name: Eclipse SmartHome SSE REST API
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Bundle-SymbolicName: org.eclipse.smarthome.io.rest.sse
-Bundle-Vendor: Eclipse.org
+Bundle-Vendor: Eclipse.org/SmartHome
 Bundle-Version: 0.10.0.qualifier
 Export-Package: 
  org.eclipse.smarthome.io.rest.sse,
  org.eclipse.smarthome.io.rest.sse.beans
 Import-Package: 
- com.google.common.collect,
  io.swagger.annotations;resolution:=optional,
  javax.annotation.security;resolution:=optional,
  javax.inject,
- javax.servlet.http;version="[2.4.0,4.0.0)",
- javax.servlet;version="[2.4.0,4.0.0)",
+ javax.servlet.http,
+ javax.servlet,
  javax.ws.rs,
  javax.ws.rs.core,
  javax.ws.rs.ext,
@@ -48,3 +47,4 @@ Import-Package:
  org.osgi.service.event,
  org.slf4j
 Service-Component: OSGI-INF/*.xml
+Automatic-Module-Name: org.eclipse.smarthome.io.rest.sse

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,6 +12,7 @@
  */
 package org.eclipse.smarthome.core.net;
 
+import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 
 /**
@@ -20,6 +21,7 @@ import org.eclipse.jdt.annotation.Nullable;
  * @author Stefan Triller - initial contribution
  *
  */
+@NonNullByDefault
 public interface NetworkAddressService {
 
     /**
@@ -30,4 +32,43 @@ public interface NetworkAddressService {
      */
     @Nullable
     String getPrimaryIpv4HostAddress();
+
+    /**
+     * Returns the user configured broadcast address, or the broadcast address of the user configured primary IPv4 if
+     * not provided
+     *
+     * @return IPv4 broadcast address as a String in format xxx.xxx.xxx or
+     *         <code>null</code> if no broadcast address is found or an error occurred
+     */
+    @Nullable
+    String getConfiguredBroadcastAddress();
+
+    /**
+     * Use only one address per interface and family (IPv4 and IPv6). If set listeners should bind only to one address
+     * per interface and family.
+     *
+     * @return use only one address per interface and family
+     */
+    boolean isUseOnlyOneAddress();
+
+    /**
+     * Use IPv6. If not set, IPv6 addresses should be completely ignored by listeners.
+     *
+     * @return use IPv6
+     */
+    boolean isUseIPv6();
+
+    /**
+     * Adds a {@link NetworkAddressChangeListener} that is notified about changes.
+     *
+     * @param listener The listener
+     */
+    public void addNetworkAddressChangeListener(NetworkAddressChangeListener listener);
+
+    /**
+     * Removes a {@link NetworkAddressChangeListener} so that it is no longer notified about changes.
+     *
+     * @param listener The listener
+     */
+    public void removeNetworkAddressChangeListener(NetworkAddressChangeListener listener);
 }

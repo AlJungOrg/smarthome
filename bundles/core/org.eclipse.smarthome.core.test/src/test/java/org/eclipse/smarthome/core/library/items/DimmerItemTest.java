@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -75,14 +75,6 @@ public class DimmerItemTest {
     }
 
     @Test
-    public void getAsPercentFromDummy() {
-        DummyType origin = new DummyType();
-        final DimmerItem item = createDimmerItem(origin);
-        final BigDecimal result = getState(item, PercentType.class);
-        assertEquals(origin.getBrightness().toBigDecimal(), result);
-    }
-
-    @Test
     public void testUndefType() {
         DimmerItem item = new DimmerItem("test");
         StateUtil.testUndefStates(item);
@@ -92,10 +84,6 @@ public class DimmerItemTest {
     public void testAcceptedStates() {
         DimmerItem item = new DimmerItem("test");
         StateUtil.testAcceptedStates(item);
-    }
-
-    private class DummyType extends HSBType {
-
     }
 
 }

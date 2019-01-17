@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,19 +12,21 @@
  */
 package org.eclipse.smarthome.core.thing;
 
+import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.smarthome.core.common.registry.RegistryChangeListener;
 
 /**
  * {@link ThingRegistryChangeListener} can be implemented to listen for things
  * beeing added or removed. The listener must be added and removed via
- * {@link ThingRegistry#addThingRegistryChangeListener(ThingRegistryChangeListener)} and
- * {@link ThingRegistry#removeThingRegistryChangeListener(ThingRegistryChangeListener)}.
+ * {@link ThingRegistry#addRegistryChangeListener(ThingRegistryChangeListener)} and
+ * {@link ThingRegistry#removeRegistryChangeListener(ThingRegistryChangeListener)}.
  *
  * @author Dennis Nobel - Initial Contribution
  * @author Michael Grammling - Added dynamic configuration update
  *
  * @see ThingRegistry
  */
+@NonNullByDefault
 public interface ThingRegistryChangeListener extends RegistryChangeListener<Thing> {
 
 }

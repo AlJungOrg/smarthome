@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -52,22 +52,21 @@ public class StateDescriptionConverter extends GenericUnmarshaller<StateDescript
 
     private BigDecimal toBigDecimal(Map<String, String> attributes, String attribute, BigDecimal defaultValue)
             throws ConversionException {
-
         String attrValueText = attributes.get(attribute);
 
         if (attrValueText != null) {
             try {
                 return new BigDecimal(attrValueText);
             } catch (NumberFormatException nfe) {
-                throw new ConversionException("The attribute '" + attribute
-                        + "' has not a valid decimal number format!", nfe);
+                throw new ConversionException(
+                        "The attribute '" + attribute + "' has not a valid decimal number format!", nfe);
             }
         }
 
         return defaultValue;
     }
 
-    private boolean toBoolean(Map<String, String> attributes, String attribute, boolean defaultValue) {
+    private boolean toBoolean(Map<String, String> attributes, String attribute, Boolean defaultValue) {
         String attrValueText = attributes.get(attribute);
 
         if (attrValueText != null) {
@@ -78,7 +77,6 @@ public class StateDescriptionConverter extends GenericUnmarshaller<StateDescript
     }
 
     private List<StateOption> toListOfChannelState(NodeList nodeList) throws ConversionException {
-
         if ("options".equals(nodeList.getNodeName())) {
             List<StateOption> stateOptions = new ArrayList<>();
 

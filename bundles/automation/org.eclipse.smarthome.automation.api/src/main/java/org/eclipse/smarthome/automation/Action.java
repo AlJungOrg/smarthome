@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,66 +12,41 @@
  */
 package org.eclipse.smarthome.automation;
 
-import java.util.Collections;
 import java.util.Map;
 
+import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.smarthome.automation.type.ActionType;
 import org.eclipse.smarthome.automation.type.Input;
 import org.eclipse.smarthome.automation.type.Output;
 import org.eclipse.smarthome.config.core.ConfigDescriptionParameter;
-import org.eclipse.smarthome.config.core.Configuration;
 
 /**
- * Actions are the part of "THEN" section of the {@link Rule} definition.
- * Elements of this section are expected result of {@link Rule} execution. The
- * Action can have {@link Output} elements. These actions are used to process
- * input data as source data of other Actions. Building elements of actions ( {@link ConfigDescriptionParameter}s,
- * {@link Input}s and {@link Output}s) are defined by {@link ActionType}
+ * This interface represents automation {@code Action} modules which are the expected result of {@link Rule}s execution.
+ * They describe the actual work that should be performed by the Rule as a response to a trigger.
+ * <p>
+ * Each Action can provide information to the next Actions in the list through its {@link Output}s. The actions have
+ * {@link Input}s to process input data from other Actions or {@link Trigger}s.
+ * <p>
+ * Actions can be configured.
+ * <p>
+ * The building elements of the Actions are {@link ConfigDescriptionParameter}s, {@link Input}s and {@link Output}s.
+ * They are defined by the corresponding {@link ActionType}.
+ * <p>
+ * Action modules are placed in the <b>actions</b> section of the {@link Rule} definition.
  *
  * @author Yordan Mihaylov - Initial Contribution
  * @author Ana Dimova - Initial Contribution
  * @author Vasil Ilchev - Initial Contribution
  */
-public class Action extends Module {
-
-    private Map<String, String> inputs;
-
-    public Action() {
-    }
+@NonNullByDefault
+public interface Action extends Module {
 
     /**
-     * Constructor of Action object.
+     * Gets the input references of the Action. The references define how the {@link Input}s of this {@link Module} are
+     * connected to {@link Output}s of other {@link Module}s.
      *
-     * @param UID action unique id.
-     * @param typeUID module type unique id.
-     * @param configuration map of configuration values.
-     * @param inputs set of connections to other modules (triggers and other actions).
+     * @return a map with the input references of this action.
      */
-    public Action(String UID, String typeUID, Configuration configuration, Map<String, String> inputs) {
-        super(UID, typeUID, configuration);
-        setInputs(inputs);
-    }
-
-    /**
-     * This method is used to get input connections of the Action. The connections
-     * are links between {@link Input}s of the this {@link Module} and {@link Output}s
-     * of other {@link Module}s.
-     *
-     * @return map that contains the inputs of this action.
-     */
-    public Map<String, String> getInputs() {
-        return inputs != null ? inputs : Collections.<String, String> emptyMap();
-    }
-
-    /**
-     * This method is used to connect {@link Input}s of the action to {@link Output}s of other {@link Module}s.
-     *
-     * @param inputs map that contains the inputs for this action.
-     */
-    public void setInputs(Map<String, String> inputs) {
-        if (inputs != null) {
-            this.inputs = inputs;
-        }
-    }
+    Map<String, String> getInputs();
 
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,8 +12,8 @@
  */
 package org.eclipse.smarthome.binding.digitalstrom.internal.lib.listener;
 
-import org.eclipse.smarthome.binding.digitalstrom.internal.lib.listener.stateEnums.ManagerStates;
-import org.eclipse.smarthome.binding.digitalstrom.internal.lib.listener.stateEnums.ManagerTypes;
+import org.eclipse.smarthome.binding.digitalstrom.internal.lib.listener.stateenums.ManagerStates;
+import org.eclipse.smarthome.binding.digitalstrom.internal.lib.listener.stateenums.ManagerTypes;
 
 /**
  * The {@link ManagerStatusListener} is notified, if the state of digitalSTROM-Manager has changed.
@@ -24,11 +24,11 @@ import org.eclipse.smarthome.binding.digitalstrom.internal.lib.listener.stateEnu
 public interface ManagerStatusListener {
 
     /**
-     * This method is called whenever the state of an digitalkSTROM-Manager has changed.<br>
+     * This method is called whenever the state of an digitalSTROM-Manager has changed.<br>
      * For that it passes the {@link ManagerTypes} and the new {@link ManagerStates}.
      *
-     * @param managerType
-     * @param newState
+     * @param managerType of the digitalSTROM-Manager
+     * @param newState of the digitalSTROM-Manager
      */
-    public void onStatusChanged(ManagerTypes managerType, ManagerStates newState);
+    void onStatusChanged(ManagerTypes managerType, ManagerStates newState);
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,35 +13,53 @@
 package org.eclipse.smarthome.io.transport.mdns.internal;
 
 import java.io.IOException;
+import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.time.Duration;
 import java.util.Enumeration;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.jmdns.JmDNS;
 import javax.jmdns.ServiceInfo;
 import javax.jmdns.ServiceListener;
 
+import org.eclipse.smarthome.core.net.CidrAddress;
+import org.eclipse.smarthome.core.net.NetworkAddressChangeListener;
+import org.eclipse.smarthome.core.net.NetworkAddressService;
 import org.eclipse.smarthome.io.transport.mdns.MDNSClient;
 import org.eclipse.smarthome.io.transport.mdns.ServiceDescription;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * This class starts the JmDNS and implements interface to register and unregister services.
  *
- * @author Victor Belov
+ * @author Victor Belov - Initial contribution
+ * @author Gary Tse - Add NetworkAddressChangeListener to handle interface changes
  *
  */
-public class MDNSClientImpl implements MDNSClient {
+@Component(immediate = true, service = MDNSClient.class)
+public class MDNSClientImpl implements MDNSClient, NetworkAddressChangeListener {
     private final Logger logger = LoggerFactory.getLogger(MDNSClientImpl.class);
 
-    private Set<JmDNS> jmdnsInstances = new CopyOnWriteArraySet<>();
+    private final Map<InetAddress, JmDNS> jmdnsInstances = new ConcurrentHashMap<>();
 
-    private static Set<InetAddress> getAllInetAddresses() {
+    private final Set<ServiceDescription> activeServices = ConcurrentHashMap.newKeySet();
+
+    private NetworkAddressService networkAddressService;
+
+    private Set<InetAddress> getAllInetAddresses() {
         final Set<InetAddress> addresses = new HashSet<>();
         Enumeration<NetworkInterface> itInterfaces;
         try {
@@ -52,19 +70,57 @@ public class MDNSClientImpl implements MDNSClient {
         while (itInterfaces.hasMoreElements()) {
             final NetworkInterface iface = itInterfaces.nextElement();
             try {
-                if (!iface.isUp() || iface.isLoopback()) {
+                if (!iface.isUp() || iface.isLoopback() || iface.isPointToPoint()) {
                     continue;
                 }
             } catch (final SocketException ex) {
                 continue;
             }
+
+            InetAddress primaryIPv4HostAddress = null;
+
+            if (networkAddressService.isUseOnlyOneAddress()
+                    && networkAddressService.getPrimaryIpv4HostAddress() != null) {
+                final Enumeration<InetAddress> itAddresses = iface.getInetAddresses();
+                while (itAddresses.hasMoreElements()) {
+                    final InetAddress address = itAddresses.nextElement();
+                    if (address.getHostAddress().equals(networkAddressService.getPrimaryIpv4HostAddress())) {
+                        primaryIPv4HostAddress = address;
+                        break;
+                    }
+                }
+            }
+
             final Enumeration<InetAddress> itAddresses = iface.getInetAddresses();
+            boolean ipv4addressAdded = false;
+            boolean ipv6addressAdded = false;
             while (itAddresses.hasMoreElements()) {
                 final InetAddress address = itAddresses.nextElement();
-                if (address.isLoopbackAddress() || address.isLinkLocalAddress()) {
+                if (address.isLoopbackAddress() || address.isLinkLocalAddress()
+                        || (!networkAddressService.isUseIPv6() && address instanceof Inet6Address)) {
                     continue;
                 }
-                addresses.add(address);
+                if (networkAddressService.isUseOnlyOneAddress()) {
+                    // add only one address per interface and family
+                    if (address instanceof Inet4Address) {
+                        if (!ipv4addressAdded) {
+                            if (primaryIPv4HostAddress != null) {
+                                // use configured primary address instead of first one
+                                addresses.add(primaryIPv4HostAddress);
+                            } else {
+                                addresses.add(address);
+                            }
+                            ipv4addressAdded = true;
+                        }
+                    } else if (address instanceof Inet6Address) {
+                        if (!ipv6addressAdded) {
+                            addresses.add(address);
+                            ipv6addressAdded = true;
+                        }
+                    }
+                } else {
+                    addresses.add(address);
+                }
             }
         }
         return addresses;
@@ -72,42 +128,51 @@ public class MDNSClientImpl implements MDNSClient {
 
     @Override
     public Set<JmDNS> getClientInstances() {
-        return jmdnsInstances;
+        return new HashSet<>(jmdnsInstances.values());
     }
 
-    public void activate() {
+    @Activate
+    protected void activate() {
+        start();
+    }
+
+    private void start() {
         for (InetAddress address : getAllInetAddresses()) {
+            createJmDNSByAddress(address);
+        }
+        for (ServiceDescription description : activeServices) {
             try {
-                JmDNS jmdns = JmDNS.create(address, "JmDNS-IP-" + (jmdnsInstances.size() + 1));
-                jmdnsInstances.add(jmdns);
-                logger.debug("mDNS service has been started ({} for IP {})", jmdns.getName(), address.getHostAddress());
+                registerServiceInternal(description);
             } catch (IOException e) {
-                logger.debug("JmDNS instantiation failed ({})!", address.getHostAddress());
+                logger.warn("Exception while registering service {}", description, e);
             }
         }
     }
 
+    @Deactivate
     public void deactivate() {
         close();
+        activeServices.clear();
     }
 
     @Override
     public void addServiceListener(String type, ServiceListener listener) {
-        for (JmDNS instance : jmdnsInstances) {
-            instance.addServiceListener(type, listener);
-        }
+        jmdnsInstances.values().forEach(jmdns -> jmdns.addServiceListener(type, listener));
     }
 
     @Override
     public void removeServiceListener(String type, ServiceListener listener) {
-        for (JmDNS instance : jmdnsInstances) {
-            instance.removeServiceListener(type, listener);
-        }
+        jmdnsInstances.values().forEach(jmdns -> jmdns.removeServiceListener(type, listener));
     }
 
     @Override
     public void registerService(ServiceDescription description) throws IOException {
-        for (JmDNS instance : jmdnsInstances) {
+        activeServices.add(description);
+        registerServiceInternal(description);
+    }
+
+    private void registerServiceInternal(ServiceDescription description) throws IOException {
+        for (JmDNS instance : jmdnsInstances.values()) {
             logger.debug("Registering new service {} at {}:{} ({})", description.serviceType,
                     instance.getInetAddress().getHostAddress(), description.servicePort, instance.getName());
             // Create one ServiceInfo object for each JmDNS instance
@@ -119,7 +184,8 @@ public class MDNSClientImpl implements MDNSClient {
 
     @Override
     public void unregisterService(ServiceDescription description) {
-        for (JmDNS instance : jmdnsInstances) {
+        activeServices.remove(description);
+        for (JmDNS instance : jmdnsInstances.values()) {
             try {
                 logger.debug("Unregistering service {} at {}:{} ({})", description.serviceType,
                         instance.getInetAddress().getHostAddress(), description.servicePort, instance.getName());
@@ -134,7 +200,8 @@ public class MDNSClientImpl implements MDNSClient {
 
     @Override
     public void unregisterAllServices() {
-        for (JmDNS instance : jmdnsInstances) {
+        activeServices.clear();
+        for (JmDNS instance : jmdnsInstances.values()) {
             instance.unregisterAllServices();
         }
     }
@@ -142,19 +209,34 @@ public class MDNSClientImpl implements MDNSClient {
     @Override
     public ServiceInfo[] list(String type) {
         ServiceInfo[] services = new ServiceInfo[0];
-        for (JmDNS instance : jmdnsInstances) {
+        for (JmDNS instance : jmdnsInstances.values()) {
             services = concatenate(services, instance.list(type));
         }
         return services;
     }
 
     @Override
+    public ServiceInfo[] list(String type, Duration timeout) {
+        ServiceInfo[] services = new ServiceInfo[0];
+        for (JmDNS instance : jmdnsInstances.values()) {
+            services = concatenate(services, instance.list(type, timeout.toMillis()));
+        }
+        return services;
+    }
+
+    @Override
     public void close() {
-        for (JmDNS jmdns : jmdnsInstances) {
-            try {
-                jmdns.close();
-            } catch (IOException e) {
-            }
+        for (JmDNS jmdns : jmdnsInstances.values()) {
+            closeQuietly(jmdns);
+            logger.debug("mDNS service has been stopped ({})", jmdns.getName());
+        }
+        jmdnsInstances.clear();
+    }
+
+    private void closeQuietly(JmDNS jmdns) {
+        try {
+            jmdns.close();
+        } catch (IOException e) {
         }
     }
 
@@ -174,5 +256,33 @@ public class MDNSClientImpl implements MDNSClient {
         System.arraycopy(b, 0, c, aLen, bLen);
 
         return c;
+    }
+
+    private void createJmDNSByAddress(InetAddress address) {
+        try {
+            JmDNS jmdns = JmDNS.create(address, "JmDNS-" + address.toString());
+            jmdnsInstances.put(address, jmdns);
+            logger.debug("mDNS service has been started ({} for IP {})", jmdns.getName(), address.getHostAddress());
+        } catch (IOException e) {
+            logger.debug("JmDNS instantiation failed ({})!", address.getHostAddress());
+        }
+    }
+
+    @Override
+    public void onChanged(List<CidrAddress> added, List<CidrAddress> removed) {
+        logger.debug("ip address change: added {}, removed {}", added, removed);
+        close();
+        start();
+    }
+
+    @Reference
+    protected void setNetworkAddressService(NetworkAddressService networkAddressService) {
+        this.networkAddressService = networkAddressService;
+        networkAddressService.addNetworkAddressChangeListener(this);
+    }
+
+    protected void unsetNetworkAddressService(NetworkAddressService networkAddressService) {
+        networkAddressService.removeNetworkAddressChangeListener(this);
+        this.networkAddressService = null;
     }
 }

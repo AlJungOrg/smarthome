@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -27,7 +27,7 @@ import org.eclipse.smarthome.core.audio.utils.AudioStreamUtils;
  * @author Karel Goderis - Initial contribution and API
  * @author Kai Kreuzer - Refactored to take a file as input
  * @author Christoph Weitkamp - Refactored use of filename extension
- * 
+ *
  */
 public class FileAudioStream extends FixedLengthAudioStream {
 
@@ -36,10 +36,10 @@ public class FileAudioStream extends FixedLengthAudioStream {
     public static final String OGG_EXTENSION = "ogg";
     public static final String AAC_EXTENSION = "aac";
 
-    private File file;
-    private AudioFormat audioFormat;
+    private final File file;
+    private final AudioFormat audioFormat;
     private InputStream inputStream;
-    private long length;
+    private final long length;
 
     public FileAudioStream(File file) throws AudioException {
         this(file, getAudioFormat(file));
@@ -74,7 +74,7 @@ public class FileAudioStream extends FixedLengthAudioStream {
         try {
             return new FileInputStream(file);
         } catch (FileNotFoundException e) {
-            throw new AudioException("File '" + file.getName() + "' not found!");
+            throw new AudioException("File '" + file.getAbsolutePath() + "' not found!");
         }
     }
 

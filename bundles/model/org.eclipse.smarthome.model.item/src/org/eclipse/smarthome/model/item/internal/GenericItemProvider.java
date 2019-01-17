@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,7 @@
 package org.eclipse.smarthome.model.item.internal;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -23,10 +24,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.commons.lang.StringUtils;
 import org.eclipse.emf.common.util.EList;
+import org.eclipse.jdt.annotation.NonNull;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.config.core.Configuration;
 import org.eclipse.smarthome.core.common.registry.AbstractProvider;
+import org.eclipse.smarthome.core.items.ActiveItem;
 import org.eclipse.smarthome.core.items.GenericItem;
 import org.eclipse.smarthome.core.items.GroupFunction;
 import org.eclipse.smarthome.core.items.GroupItem;
@@ -35,8 +38,9 @@ import org.eclipse.smarthome.core.items.ItemFactory;
 import org.eclipse.smarthome.core.items.ItemProvider;
 import org.eclipse.smarthome.core.items.dto.GroupFunctionDTO;
 import org.eclipse.smarthome.core.items.dto.ItemDTOMapper;
-import org.eclipse.smarthome.core.types.StateDescription;
-import org.eclipse.smarthome.core.types.StateDescriptionProvider;
+import org.eclipse.smarthome.core.types.StateDescriptionFragment;
+import org.eclipse.smarthome.core.types.StateDescriptionFragmentBuilder;
+import org.eclipse.smarthome.core.types.StateDescriptionFragmentProvider;
 import org.eclipse.smarthome.model.core.EventType;
 import org.eclipse.smarthome.model.core.ModelRepository;
 import org.eclipse.smarthome.model.core.ModelRepositoryChangeListener;
@@ -49,6 +53,10 @@ import org.eclipse.smarthome.model.items.ModelGroupItem;
 import org.eclipse.smarthome.model.items.ModelItem;
 import org.eclipse.smarthome.model.items.ModelNormalItem;
 import org.osgi.framework.Constants;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,8 +66,9 @@ import org.slf4j.LoggerFactory;
  * @author Kai Kreuzer - Initial contribution and API
  * @author Thomas.Eichstaedt-Engelen
  */
+@Component(service = { ItemProvider.class, StateDescriptionFragmentProvider.class }, immediate = true)
 public class GenericItemProvider extends AbstractProvider<Item>
-        implements ModelRepositoryChangeListener, ItemProvider, StateDescriptionProvider {
+        implements ModelRepositoryChangeListener, ItemProvider, StateDescriptionFragmentProvider {
 
     private final Logger logger = LoggerFactory.getLogger(GenericItemProvider.class);
 
@@ -68,13 +77,16 @@ public class GenericItemProvider extends AbstractProvider<Item>
 
     private ModelRepository modelRepository = null;
 
+    private GenericMetadataProvider genericMetaDataProvider = null;
+
     private final Map<String, Collection<Item>> itemsMap = new ConcurrentHashMap<>();
 
     private final Collection<ItemFactory> itemFactorys = new ArrayList<ItemFactory>();
 
-    private final Map<String, StateDescription> stateDescriptions = new ConcurrentHashMap<>();
+    private final Map<String, StateDescriptionFragment> stateDescriptionFragments = new ConcurrentHashMap<>();
 
     private Integer rank;
+    private boolean active = false;
 
     protected void activate(Map<String, Object> properties) {
         Object serviceRanking = properties.get(Constants.SERVICE_RANKING);
@@ -83,6 +95,21 @@ public class GenericItemProvider extends AbstractProvider<Item>
         } else {
             rank = 0;
         }
+
+        itemFactorys.forEach(itemFactory -> dispatchBindingsPerItemType(null, itemFactory.getSupportedItemTypes()));
+
+        // process models which are already parsed by modelRepository:
+        for (String modelName : modelRepository.getAllModelNamesOfType("items")) {
+            modelChanged(modelName, EventType.ADDED);
+        }
+        modelRepository.addModelRepositoryChangeListener(this);
+
+        active = true;
+    }
+
+    protected void deactivate() {
+        active = false;
+        modelRepository.removeModelRepositoryChangeListener(this);
     }
 
     @Override
@@ -90,20 +117,22 @@ public class GenericItemProvider extends AbstractProvider<Item>
         return rank;
     }
 
+    @Reference
     public void setModelRepository(ModelRepository modelRepository) {
         this.modelRepository = modelRepository;
-
-        // process models which are already parsed by modelRepository:
-        for (String modelName : modelRepository.getAllModelNamesOfType("items")) {
-            modelChanged(modelName, EventType.ADDED);
-        }
-
-        modelRepository.addModelRepositoryChangeListener(this);
     }
 
     public void unsetModelRepository(ModelRepository modelRepository) {
-        modelRepository.removeModelRepositoryChangeListener(this);
         this.modelRepository = null;
+    }
+
+    @Reference
+    protected void setGenericMetadataProvider(GenericMetadataProvider genericMetadataProvider) {
+        this.genericMetaDataProvider = genericMetadataProvider;
+    }
+
+    protected void unsetGenericMetadataProvider(GenericMetadataProvider genericMetadataProvider) {
+        this.genericMetaDataProvider = null;
     }
 
     /**
@@ -111,9 +140,12 @@ public class GenericItemProvider extends AbstractProvider<Item>
      *
      * @param factory The {@link ItemFactory} to add.
      */
+    @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
     public void addItemFactory(ItemFactory factory) {
         itemFactorys.add(factory);
-        dispatchBindingsPerItemType(null, factory.getSupportedItemTypes());
+        if (active) {
+            dispatchBindingsPerItemType(null, factory.getSupportedItemTypes());
+        }
     }
 
     /**
@@ -125,6 +157,7 @@ public class GenericItemProvider extends AbstractProvider<Item>
         itemFactorys.remove(factory);
     }
 
+    @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
     public void addBindingConfigReader(BindingConfigReader reader) {
         if (!bindingConfigReaders.containsKey(reader.getBindingType())) {
             bindingConfigReaders.put(reader.getBindingType(), reader);
@@ -144,7 +177,7 @@ public class GenericItemProvider extends AbstractProvider<Item>
     @Override
     public Collection<Item> getAll() {
         List<Item> items = new ArrayList<Item>();
-        stateDescriptions.clear();
+        stateDescriptionFragments.clear();
         for (String name : modelRepository.getAllModelNamesOfType("items")) {
             items.addAll(getItemsFromModel(name));
         }
@@ -190,6 +223,7 @@ public class GenericItemProvider extends AbstractProvider<Item>
             // create items and read new binding configuration
             if (!EventType.REMOVED.equals(type)) {
                 for (ModelItem modelItem : model.getItems()) {
+                    genericMetaDataProvider.removeMetadata(modelItem.getName());
                     Item item = createItemFromModelItem(modelItem);
                     if (item != null) {
                         internalDispatchBindings(modelName, item, modelItem.getBindings());
@@ -205,11 +239,17 @@ public class GenericItemProvider extends AbstractProvider<Item>
     }
 
     private Item createItemFromModelItem(ModelItem modelItem) {
-        GenericItem item = null;
+        Item item = null;
         if (modelItem instanceof ModelGroupItem) {
             ModelGroupItem modelGroupItem = (ModelGroupItem) modelItem;
-            String baseItemType = modelGroupItem.getType();
-            GenericItem baseItem = createItemOfType(baseItemType, modelGroupItem.getName());
+            Item baseItem;
+            try {
+                baseItem = createItemOfType(modelGroupItem.getType(), modelGroupItem.getName());
+            } catch (IllegalArgumentException e) {
+                logger.debug("Error creating base item for group item '{}', item will be ignored: {}",
+                        modelGroupItem.getName(), e.getMessage());
+                return null;
+            }
             if (baseItem != null) {
                 // if the user did not specify a function the first value of the enum in xtext (EQUAL) will be used
                 ModelGroupFunction function = modelGroupItem.getFunction();
@@ -219,34 +259,50 @@ public class GenericItemProvider extends AbstractProvider<Item>
             }
         } else {
             ModelNormalItem normalItem = (ModelNormalItem) modelItem;
-            String itemName = normalItem.getName();
-            item = createItemOfType(normalItem.getType(), itemName);
-        }
-        if (item != null) {
-            String label = modelItem.getLabel();
-            String format = StringUtils.substringBetween(label, "[", "]");
-            if (format != null) {
-                label = StringUtils.substringBefore(label, "[").trim();
-                stateDescriptions.put(modelItem.getName(), new StateDescription(null, null, null, format, false, null));
+            try {
+                item = createItemOfType(normalItem.getType(), normalItem.getName());
+            } catch (IllegalArgumentException e) {
+                logger.debug("Error creating item '{}', item will be ignored: {}", normalItem.getName(),
+                        e.getMessage());
+                return null;
             }
-            item.setLabel(label);
-            item.setCategory(modelItem.getIcon());
-            assignTags(modelItem, item);
+        }
+        if (item != null && item instanceof ActiveItem) {
+            String label = modelItem.getLabel();
+            String format = extractFormat(label);
+            if (format != null) {
+                label = label.substring(0, label.indexOf("[")).trim();
+                stateDescriptionFragments.put(modelItem.getName(),
+                        StateDescriptionFragmentBuilder.create().withPattern(format).build());
+            }
+            ((ActiveItem) item).setLabel(label);
+            ((ActiveItem) item).setCategory(modelItem.getIcon());
+            assignTags(modelItem, (ActiveItem) item);
             return item;
         } else {
             return null;
         }
     }
 
-    private void assignTags(ModelItem modelItem, GenericItem item) {
+    private String extractFormat(String label) {
+        if (label == null) {
+            return null;
+        }
+        String format = null;
+        if (label.contains("[") && label.contains("]")) {
+            format = label.substring(label.indexOf("[") + 1, label.lastIndexOf("]"));
+        }
+        return format;
+    }
+
+    private void assignTags(ModelItem modelItem, ActiveItem item) {
         List<String> tags = modelItem.getTags();
         for (String tag : tags) {
             item.addTag(tag);
         }
     }
 
-    private GroupItem applyGroupFunction(GenericItem baseItem, ModelGroupItem modelGroupItem,
-            ModelGroupFunction function) {
+    private GroupItem applyGroupFunction(Item baseItem, ModelGroupItem modelGroupItem, ModelGroupFunction function) {
         GroupFunctionDTO dto = new GroupFunctionDTO();
         dto.name = function.getName();
         dto.params = modelGroupItem.getArgs().toArray(new String[modelGroupItem.getArgs().size()]);
@@ -349,8 +405,7 @@ public class GenericItemProvider extends AbstractProvider<Item>
                             bindingType, item.getName(), e);
                 }
             } else {
-                logger.trace("Couldn't find config reader for binding type '{}' > "
-                        + "parsing binding configuration of Item '{}' aborted!", bindingType, item);
+                genericMetaDataProvider.addMetadata(bindingType, item.getName(), config, configuration.getProperties());
             }
         }
     }
@@ -377,7 +432,7 @@ public class GenericItemProvider extends AbstractProvider<Item>
                     processBindingConfigsFromModel(modelName, type);
                     for (Item oldItem : oldItems.values()) {
                         if (!newItems.containsKey(oldItem.getName())) {
-                            notifyListenersAboutRemovedElement(oldItem);
+                            notifyAndCleanup(oldItem);
                         }
                     }
                     break;
@@ -386,22 +441,63 @@ public class GenericItemProvider extends AbstractProvider<Item>
                     Collection<Item> itemsFromModel = getItemsFromModel(modelName);
                     itemsMap.remove(modelName);
                     for (Item item : itemsFromModel) {
-                        notifyListenersAboutRemovedElement(item);
+                        notifyAndCleanup(item);
                     }
                     break;
             }
         }
     }
 
-    private boolean hasItemChanged(Item item1, Item item2) {
+    private void notifyAndCleanup(Item oldItem) {
+        notifyListenersAboutRemovedElement(oldItem);
+        this.stateDescriptionFragments.remove(oldItem.getName());
+        genericMetaDataProvider.removeMetadata(oldItem.getName());
+    }
+
+    protected boolean hasItemChanged(Item item1, Item item2) {
         return !Objects.equals(item1.getClass(), item2.getClass()) || //
                 !Objects.equals(item1.getName(), item2.getName()) || //
                 !Objects.equals(item1.getCategory(), item2.getCategory()) || //
                 !Objects.equals(item1.getGroupNames(), item2.getGroupNames()) || //
                 !Objects.equals(item1.getLabel(), item2.getLabel()) || //
                 !Objects.equals(item1.getTags(), item2.getTags()) || //
-                !Objects.equals(item1.getType(), item2.getType());
+                !Objects.equals(item1.getType(), item2.getType()) || //
+                hasGroupItemChanged(item1, item2);
+    }
 
+    private boolean hasGroupItemChanged(Item item1, Item item2) {
+        GroupItem gItem1 = null;
+        GroupItem gItem2 = null;
+
+        if (item1 instanceof GroupItem) {
+            gItem1 = (GroupItem) item1;
+        }
+        if (item2 instanceof GroupItem) {
+            gItem2 = (GroupItem) item2;
+        }
+
+        if (gItem1 == null && gItem2 == null) {
+            return false;
+        }
+
+        if ((gItem1 != null && gItem2 == null) || (gItem1 == null && gItem2 != null)) {
+            return true;
+        }
+
+        boolean sameBaseItemClass = Objects.equals(gItem1.getBaseItem(), gItem2.getBaseItem());
+
+        boolean sameFunction = false;
+        GroupFunction gf1 = gItem1.getFunction();
+        GroupFunction gf2 = gItem2.getFunction();
+        if (gf1 != null && gf2 != null) {
+            if (Objects.equals(gf1.getClass(), gf2.getClass())) {
+                sameFunction = Arrays.equals(gf1.getParameters(), gf2.getParameters());
+            }
+        } else if (gf1 == null && gf2 == null) {
+            sameFunction = true;
+        }
+
+        return !(sameBaseItemClass && sameFunction);
     }
 
     private Map<String, Item> toItemMap(Collection<Item> items) {
@@ -422,15 +518,15 @@ public class GenericItemProvider extends AbstractProvider<Item>
      * @param itemType The type to find the appropriate {@link ItemFactory} for.
      * @param itemName The name of the {@link Item} to create.
      *
-     * @return An Item instance of type {@code itemType} null if no item factory for it was found.
+     * @return An Item instance of type {@code itemType} or null if no item factory for it was found.
      */
-    private GenericItem createItemOfType(String itemType, String itemName) {
+    private Item createItemOfType(String itemType, String itemName) {
         if (itemType == null) {
             return null;
         }
 
         for (ItemFactory factory : itemFactorys) {
-            GenericItem item = factory.createItem(itemType, itemName);
+            Item item = factory.createItem(itemType, itemName);
             if (item != null) {
                 logger.trace("Created item '{}' of type '{}'", itemName, itemType);
                 return item;
@@ -442,8 +538,9 @@ public class GenericItemProvider extends AbstractProvider<Item>
     }
 
     @Override
-    public StateDescription getStateDescription(String itemName, Locale locale) {
-        return stateDescriptions.get(itemName);
+    public @Nullable StateDescriptionFragment getStateDescriptionFragment(@NonNull String itemName,
+            @Nullable Locale locale) {
+        return stateDescriptionFragments.get(itemName);
     }
 
 }

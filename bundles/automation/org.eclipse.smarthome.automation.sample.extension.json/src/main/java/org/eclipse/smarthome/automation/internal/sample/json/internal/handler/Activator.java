@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -34,7 +34,6 @@ public class Activator implements BundleActivator {
     public void start(BundleContext context) throws Exception {
         bc = context;
         sampleHandlerFactory = new SampleHandlerFactory();
-        sampleHandlerFactory.activate(context);
         this.factoryRegistration = bc.registerService(ModuleHandlerFactory.class.getName(), sampleHandlerFactory, null);
         commands = new SampleHandlerFactoryCommands(sampleHandlerFactory, bc);
     }
@@ -42,7 +41,7 @@ public class Activator implements BundleActivator {
     @Override
     public void stop(BundleContext context) throws Exception {
         commands.stop();
-        sampleHandlerFactory.dispose();
+        sampleHandlerFactory.deactivate();
         if (this.factoryRegistration != null) {
             this.factoryRegistration.unregister();
         }

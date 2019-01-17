@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,9 +22,12 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.config.core.ConfigConstants;
 import org.eclipse.smarthome.core.transform.TransformationException;
 import org.eclipse.smarthome.core.transform.TransformationService;
+import org.osgi.service.component.annotations.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,6 +37,8 @@ import org.slf4j.LoggerFactory;
  *
  * @author Thomas.Eichstaedt-Engelen
  */
+@NonNullByDefault
+@Component(immediate = true, property = { "smarthome.transform=XSLT" })
 public class XsltTransformationService implements TransformationService {
 
     private final Logger logger = LoggerFactory.getLogger(XsltTransformationService.class);
@@ -45,15 +50,12 @@ public class XsltTransformationService implements TransformationService {
      * is stored under the 'configurations/transform' folder. To organize the
      * various transformations one should use subfolders.
      *
-     * @param filename
-     *            the name of the file which contains the XSLT transformation rule.
+     * @param filename the name of the file which contains the XSLT transformation rule.
      *            The name may contain subfoldernames as well
-     * @param source
-     *            the input to transform
+     * @param source the input to transform
      */
     @Override
-    public String transform(String filename, String source) throws TransformationException {
-
+    public @Nullable String transform(String filename, String source) throws TransformationException {
         if (filename == null || source == null) {
             throw new TransformationException("the given parameters 'filename' and 'source' must not be null");
         }

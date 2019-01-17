@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014,2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,12 +12,15 @@
  */
 package org.eclipse.smarthome.core.transform;
 
+import org.eclipse.jdt.annotation.NonNullByDefault;
+
 /**
  * A TransformationException is thrown when any step of a transformation went
  * wrong. The originating exception should be attached to increase traceability.
  *
  * @author Thomas.Eichstaedt-Engelen
  */
+@NonNullByDefault
 public class TransformationException extends Exception {
 
     /** generated serial Version UID */

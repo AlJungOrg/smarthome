@@ -19,29 +19,31 @@
  */
 package ${package};
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.verify;
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
 import static org.mockito.MockitoAnnotations.initMocks;
 
-import ${package}.handler.${bindingIdCamelCase}Handler;
+import ${package}.internal.${bindingIdCamelCase}Handler;
+import org.eclipse.smarthome.config.core.Configuration;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.thing.ThingStatusInfo;
 import org.eclipse.smarthome.core.thing.binding.ThingHandler;
 import org.eclipse.smarthome.core.thing.binding.ThingHandlerCallback;
+import org.eclipse.smarthome.test.java.JavaTest;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 
 /**
-* Tests cases for {@link ${bindingIdCamelCase}Handler}. The tests provide mocks for supporting entities using Mockito.
-*
-* @author ${author} - Initial contribution
-*/
-public class ${bindingIdCamelCase}HandlerTest {
+ * Test cases for {@link ${bindingIdCamelCase}Handler}. The tests provide mocks for supporting entities using Mockito.
+ *
+ * @author ${author} - Initial contribution
+ */
+public class ${bindingIdCamelCase}HandlerTest extends JavaTest {
 
     private ThingHandler handler;
 
@@ -60,6 +62,9 @@ public class ${bindingIdCamelCase}HandlerTest {
 
     @Test
     public void initializeShouldCallTheCallback() {
+        // mock getConfiguration to prevent NPEs
+        when(thing.getConfiguration()).thenReturn(new Configuration());
+        
         // we expect the handler#initialize method to call the callback during execution and
         // pass it the thing and a ThingStatusInfo object containing the ThingStatus of the thing.
         handler.initialize();
@@ -69,10 +74,21 @@ public class ${bindingIdCamelCase}HandlerTest {
         ArgumentCaptor<ThingStatusInfo> statusInfoCaptor = ArgumentCaptor.forClass(ThingStatusInfo.class);
 
         // verify the interaction with the callback and capture the ThingStatusInfo argument:
-        verify(callback).statusUpdated(eq(thing), statusInfoCaptor.capture());
-        // assert that the ThingStatusInfo given to the callback was build with the ONLINE status:
-        ThingStatusInfo thingStatusInfo = statusInfoCaptor.getValue();
-        assertThat(thingStatusInfo.getStatus(), is(equalTo(ThingStatus.ONLINE)));
-    }
+        waitForAssert(() -> {
+            verify(callback, times(2)).statusUpdated(eq(thing), statusInfoCaptor.capture());
+        });
+        
+        // assert that the (temporary) UNKNOWN status was given first:
+        assertThat(statusInfoCaptor.getAllValues().get(0).getStatus(), is(ThingStatus.UNKNOWN));
+        
+        
+        // assert that ONLINE status was given later:
+        assertThat(statusInfoCaptor.getAllValues().get(1).getStatus(), is(ThingStatus.ONLINE));
 
+        
+        // See the documentation at 
+        // https://www.eclipse.org/smarthome/documentation/development/testing.html#assertions 
+        // to see when to use Hamcrest assertions (assertThat) or JUnit assertions. 
+    }
+    
 }
