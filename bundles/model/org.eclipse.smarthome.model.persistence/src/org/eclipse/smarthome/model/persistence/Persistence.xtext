@@ -39,7 +39,7 @@ TimeFilter:
 ;
 
 PersistenceConfiguration:
-	items+=(AllConfig | ItemConfig | GroupConfig) (',' items+=(AllConfig | ItemConfig | GroupConfig))* ('->' alias=STRING)? 
+	items+=(AllConfig | ItemConfig | GroupConfig | TagConfig) (',' items+=(AllConfig | ItemConfig | GroupConfig | TagConfig))* ('->' alias=STRING)?
 	((':' ('strategy' '=' strategies+=[Strategy|ID] (',' strategies+=[Strategy|ID])*)? 
 		 ('filter' '=' filters+=[Filter|ID] (',' filters+=[Filter|ID])*)?) 
 		| ';')
@@ -56,6 +56,10 @@ ItemConfig:
 
 GroupConfig:
 	group=ID '*'
+;
+
+TagConfig:
+	tag=(ID|STRING) '#'
 ;
 
 DECIMAL returns ecore::EBigDecimal :

@@ -25,6 +25,7 @@ import org.eclipse.smarthome.core.persistence.config.SimpleAllConfig;
 import org.eclipse.smarthome.core.persistence.config.SimpleConfig;
 import org.eclipse.smarthome.core.persistence.config.SimpleGroupConfig;
 import org.eclipse.smarthome.core.persistence.config.SimpleItemConfig;
+import org.eclipse.smarthome.core.persistence.config.SimpleTagConfig;
 import org.eclipse.smarthome.core.persistence.strategy.SimpleCronStrategy;
 import org.eclipse.smarthome.core.persistence.strategy.SimpleStrategy;
 import org.eclipse.smarthome.model.core.EventType;
@@ -38,6 +39,7 @@ import org.eclipse.smarthome.model.persistence.persistence.ItemConfig;
 import org.eclipse.smarthome.model.persistence.persistence.PersistenceConfiguration;
 import org.eclipse.smarthome.model.persistence.persistence.PersistenceModel;
 import org.eclipse.smarthome.model.persistence.persistence.Strategy;
+import org.eclipse.smarthome.model.persistence.persistence.TagConfig;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
@@ -138,6 +140,8 @@ public class PersistenceModelManager implements ModelRepositoryChangeListener {
                 items.add(new SimpleGroupConfig(((GroupConfig) item).getGroup()));
             } else if (item instanceof ItemConfig) {
                 items.add(new SimpleItemConfig(((ItemConfig) item).getItem()));
+            } else if (item instanceof TagConfig) {
+                items.add(new SimpleTagConfig(((TagConfig) item).getTag()));
             }
         }
         return new SimpleItemConfiguration(items, config.getAlias(), mapStrategies(config.getStrategies()),
