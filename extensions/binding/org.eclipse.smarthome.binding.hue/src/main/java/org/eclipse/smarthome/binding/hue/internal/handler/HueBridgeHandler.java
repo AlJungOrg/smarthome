@@ -90,6 +90,7 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
             try {
                 pollingLock.lock();
                 try {
+                    // polls to see if the hue bridge is still connected and if not tries to reconnect
                     if (!lastBridgeConnectionState) {
                         lastBridgeConnectionState = tryResumeBridgeConnection();
                     }
@@ -423,24 +424,24 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
     }
 
     /**
-     * Check USER_NAME config for null. Call onConnectionResumed() otherwise.
+     * Check USER_NAME config for null. Call for onNotAuthenticated to authenticate.
+     * Call for onConnectionResumed() if USER_NAME exists.
      *
-     * @return True if USER_NAME was not null.
+     * @return True if USER_NAME is not null.
      * @throws ApiException if the physical device does not support this API call
      * @throws IOException if the physical device could not be reached
      */
     private boolean tryResumeBridgeConnection() throws IOException, ApiException {
         logger.debug("Connection to Hue Bridge {} established.", hueBridge.getIPAddress());
+        // try to authenticate only when not linked already
         if (hueBridgeConfig.getUserName() == null) {
-            logger.warn("User name for Hue bridge authentication not available in configuration. "
-                    + "Setting ThingStatus to offline.");
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
-                    "@text/offline.conf-error-no-username");
-            return false;
-        } else {
-            onConnectionResumed();
-            return true;
+            if (!onNotAuthenticated()) {
+                // no success only when re-authentication didn't succeed
+                return false;
+            }
         }
+        onConnectionResumed();
+        return true;
     }
 
     /**
@@ -450,7 +451,6 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
      * If there is a user name available, it attempts to re-authenticate. Otherwise new authentication credentials will
      * be requested from the bridge.
      *
-     * @param bridge the hue bridge the connection is not authorized
      * @return returns {@code true} if re-authentication was successful, {@code false} otherwise
      */
     public boolean onNotAuthenticated() {
@@ -460,6 +460,7 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
         String userName = hueBridgeConfig.getUserName();
         if (userName == null) {
             createUser();
+            hueBridgeConfig = getConfigAs(HueBridgeConfig.class);
         } else {
             try {
                 hueBridge.authenticate(userName);
