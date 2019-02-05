@@ -170,4 +170,11 @@
 		<description>The effect channel allows putting the bulb in a color looping mode.</description>
 		<category>ColorLight</category>
 	</channel-type>
+
+	<!-- Scene Command Channel -->
+	<channel-type id="scene_command">
+		<item-type>Switch</item-type>
+		<label>Scene</label>
+		<description>The Scene Command channel allows to trigger a hue scene.</description>
+	</channel-type>
 </thing:thing-descriptions>

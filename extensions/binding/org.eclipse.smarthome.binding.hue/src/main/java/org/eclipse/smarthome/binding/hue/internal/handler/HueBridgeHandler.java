@@ -41,6 +41,7 @@ import org.eclipse.smarthome.binding.hue.internal.FullLight;
 import org.eclipse.smarthome.binding.hue.internal.FullSensor;
 import org.eclipse.smarthome.binding.hue.internal.HueBridge;
 import org.eclipse.smarthome.binding.hue.internal.HueConfigStatusMessage;
+import org.eclipse.smarthome.binding.hue.internal.Scene;
 import org.eclipse.smarthome.binding.hue.internal.State;
 import org.eclipse.smarthome.binding.hue.internal.StateUpdate;
 import org.eclipse.smarthome.binding.hue.internal.config.HueBridgeConfig;
@@ -81,6 +82,7 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
 
     private static final int DEFAULT_POLLING_INTERVAL = 10; // in seconds
     private static final int DEFAULT_SENSOR_POLLING_INTERVAL = 500; // in milliseconds
+    private static final int DEFAULT_SCENE_POLLING_INTERVAL = 10; // in seconds
 
     final ReentrantLock pollingLock = new ReentrantLock();
 
@@ -160,6 +162,7 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
 
     private final Map<String, FullLight> lastLightStates = new ConcurrentHashMap<>();
     private final Map<String, FullSensor> lastSensorStates = new ConcurrentHashMap<>();
+    private final Map<String, Scene> lastSceneStates = new ConcurrentHashMap<>();
 
     private boolean lastBridgeConnectionState = false;
 
@@ -167,12 +170,49 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
 
     private final List<LightStatusListener> lightStatusListeners = new CopyOnWriteArrayList<>();
     private final List<SensorStatusListener> sensorStatusListeners = new CopyOnWriteArrayList<>();
+    private final List<SceneStatusListener> sceneStatusListeners = new CopyOnWriteArrayList<>();
 
     private @Nullable ScheduledFuture<?> pollingJob;
     private @Nullable ScheduledFuture<?> sensorPollingJob;
+    private @Nullable ScheduledFuture<?> scenePollingJob;
 
     private @NonNullByDefault({}) HueBridge hueBridge = null;
     private @NonNullByDefault({}) HueBridgeConfig hueBridgeConfig = null;
+
+    private final Runnable scenePollingRunnable = new PollingRunnable() {
+        @Override
+        protected void doConnectedRun() throws IOException, ApiException {
+            Map<String, Scene> lastSceneStateCopy = new HashMap<>(lastSceneStates);
+
+            List<Scene> scenes;
+            scenes = hueBridge.getScenes();
+
+            for (final Scene scene : scenes) {
+                final String sceneId = scene.getId();
+                if (lastSceneStateCopy.containsKey(sceneId)) {
+                    lastSceneStateCopy.remove(sceneId);
+                } else {
+                    lastSceneStates.put(sceneId, scene);
+                    logger.debug("Hue scene '{}' added.", sceneId);
+                    notifySceneStatusListeners(scene, STATE_ADDED);
+                }
+            }
+
+            // check for removed scenes
+            for (Entry<String, Scene> sceneEntry : lastSceneStateCopy.entrySet()) {
+                lastSceneStates.remove(sceneEntry.getKey());
+                logger.debug("Hue scene '{}' removed.", sceneEntry.getKey());
+                for (SceneStatusListener sceneStatusListener : sceneStatusListeners) {
+                    try {
+                        sceneStatusListener.onSceneRemoved(hueBridge, sceneEntry.getValue());
+                    } catch(Exception e) {
+                        logger.error("An exception occurred while calling the Scene Listeners", e);
+                    }
+                }
+            }
+            
+        }
+    };
 
     private final Runnable sensorPollingRunnable = new PollingRunnable() {
         @Override
@@ -301,6 +341,24 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
         }
     }
 
+    @Override
+    public void updateSceneConfig(Scene scene, ConfigUpdate configUpdate) {
+        if (hueBridge != null) {
+            hueBridge.updateSceneConfig(scene, configUpdate).thenAccept(result -> {
+	            try {
+	                hueBridge.handleErrors(result);
+	            } catch (Exception e) {
+	                handleConfigUpdateException(scene, configUpdate, e);
+	            }
+            }).exceptionally(e -> {
+                handleConfigUpdateException(scene, configUpdate, e);
+                return null;
+            });
+        } else {
+            logger.warn("No bridge connected or selected. Cannot set scene config.");
+        }
+    }
+
     private void handleStateUpdateException(FullLight light, StateUpdate stateUpdate, Throwable e) {
         if (e instanceof DeviceOffException) {
             if (stateUpdate.getColorTemperature() != null && stateUpdate.getBrightness() == null) {
@@ -329,6 +387,17 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
             logger.warn("Error while accessing sensor: {}", e.getMessage(), e);
         } else if (e instanceof IllegalStateException) {
             logger.trace("Error while accessing sensor: {}", e.getMessage());
+        }
+    }
+
+    private void handleConfigUpdateException(Scene scene, ConfigUpdate configUpdate, Throwable e) {
+        if (e instanceof IOException) {
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, e.getMessage());
+        } else if (e instanceof ApiException) {
+            // This should not happen - if it does, it is most likely some bug that should be reported.
+            logger.warn("Error while accessing scene: {}", e.getMessage(), e);
+        } else if (e instanceof IllegalStateException) {
+            logger.trace("Error while accessing scene: {}", e.getMessage());
         }
     }
 
@@ -387,6 +456,17 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
                 }
                 sensorPollingJob = scheduler.scheduleWithFixedDelay(sensorPollingRunnable, 1, sensorPollingInterval,
                         TimeUnit.MILLISECONDS);
+            }
+            if (scenePollingJob == null || scenePollingJob.isCancelled()) {
+                int scenePollingInterval = DEFAULT_SCENE_POLLING_INTERVAL;
+                if (hueBridgeConfig.getScenePollingInterval() < 50) {
+                    logger.info("Wrong configuration value for scene polling interval. Using default value: {}s",
+                            scenePollingInterval);
+                } else {
+                    scenePollingInterval = hueBridgeConfig.getScenePollingInterval();
+                }
+                scenePollingJob = scheduler.scheduleWithFixedDelay(scenePollingRunnable, 1, scenePollingInterval,
+                        TimeUnit.SECONDS);
             }
         }
     }
@@ -568,6 +648,28 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
     }
 
     @Override
+    public boolean registerSceneStatusListener(SceneStatusListener sceneStatusListener) {
+        boolean result = sceneStatusListeners.add(sceneStatusListener);
+        if (result) {
+            onUpdate();
+            // inform the listener initially about all scenes
+            for (Scene scene : lastSceneStates.values()) {
+                sceneStatusListener.onSceneAdded(hueBridge, scene);
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public boolean unregisterSceneStatusListener(SceneStatusListener sceneStatusListener) {
+        boolean result = sceneStatusListeners.remove(sceneStatusListener);
+        if (result) {
+            onUpdate();
+        }
+        return result;
+    }
+
+    @Override
     public @Nullable FullLight getLightById(String lightId) {
         return lastLightStates.get(lightId);
     }
@@ -575,6 +677,11 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
     @Override
     public @Nullable FullSensor getSensorById(String sensorId) {
         return lastSensorStates.get(sensorId);
+    }
+
+    @Override
+    public @Nullable Scene getSceneById(String sceneId) {
+        return lastSceneStates.get(sceneId);
     }
 
     public List<FullLight> getFullLights() {
@@ -587,6 +694,13 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
     public List<FullSensor> getFullSensors() {
         List<FullSensor> ret = withReAuthentication("search for new sensors", () -> {
             return hueBridge.getSensors();
+        });
+        return ret != null ? ret : Collections.emptyList();
+    }
+    
+    public List<Scene> getScenes() {
+        List<Scene> ret = withReAuthentication("search for new scenes", () -> {
+            return hueBridge.getScenes();
         });
         return ret != null ? ret : Collections.emptyList();
     }
@@ -679,6 +793,33 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
                 }
             } catch (Exception e) {
                 logger.error("An exception occurred while calling the Sensor Listeners", e);
+            }
+        }
+    }
+
+    private void notifySceneStatusListeners(final Scene scene, final String type) {
+        if (sceneStatusListeners.isEmpty()) {
+            logger.debug("No scene status listeners to notify of scene change for scene '{}'", scene.getId());
+            return;
+        }
+
+        for (SceneStatusListener sceneStatusListener : sceneStatusListeners) {
+            try {
+                switch (type) {
+                    case STATE_ADDED:
+                        logger.debug("Sending sceneAdded for scene '{}'", scene.getId());
+                        sceneStatusListener.onSceneAdded(hueBridge, scene);
+                        break;
+                    case STATE_CHANGED:
+                        logger.debug("Sending sceneStateChanged for scene '{}'", scene.getId());
+                        sceneStatusListener.onSceneStateChanged(hueBridge, scene);
+                        break;
+                    default:
+                        throw new IllegalArgumentException(
+                                "Could not notify sceneStatusListeners for unknown event type " + type);
+                }
+            } catch (Exception e) {
+                logger.error("An exception occurred while calling the Scene Listeners", e);
             }
         }
     }

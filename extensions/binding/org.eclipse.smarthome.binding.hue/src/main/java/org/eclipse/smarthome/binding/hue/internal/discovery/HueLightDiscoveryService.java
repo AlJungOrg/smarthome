@@ -30,10 +30,13 @@ import org.eclipse.smarthome.binding.hue.internal.FullHueObject;
 import org.eclipse.smarthome.binding.hue.internal.FullLight;
 import org.eclipse.smarthome.binding.hue.internal.FullSensor;
 import org.eclipse.smarthome.binding.hue.internal.HueBridge;
+import org.eclipse.smarthome.binding.hue.internal.Scene;
 import org.eclipse.smarthome.binding.hue.internal.handler.HueBridgeHandler;
 import org.eclipse.smarthome.binding.hue.internal.handler.HueLightHandler;
+import org.eclipse.smarthome.binding.hue.internal.handler.HueSceneHandler;
 import org.eclipse.smarthome.binding.hue.internal.handler.LightStatusListener;
 import org.eclipse.smarthome.binding.hue.internal.handler.SensorStatusListener;
+import org.eclipse.smarthome.binding.hue.internal.handler.SceneStatusListener;
 import org.eclipse.smarthome.binding.hue.internal.handler.sensors.DimmerSwitchHandler;
 import org.eclipse.smarthome.binding.hue.internal.handler.sensors.LightLevelHandler;
 import org.eclipse.smarthome.binding.hue.internal.handler.sensors.PresenceHandler;
@@ -61,11 +64,11 @@ import org.slf4j.LoggerFactory;
  */
 @NonNullByDefault
 public class HueLightDiscoveryService extends AbstractDiscoveryService
-        implements LightStatusListener, SensorStatusListener {
+        implements LightStatusListener, SensorStatusListener, SceneStatusListener {
     public static final Set<ThingTypeUID> SUPPORTED_THING_TYPES = Collections.unmodifiableSet(Stream
             .of(HueLightHandler.SUPPORTED_THING_TYPES.stream(), DimmerSwitchHandler.SUPPORTED_THING_TYPES.stream(),
                     PresenceHandler.SUPPORTED_THING_TYPES.stream(), TemperatureHandler.SUPPORTED_THING_TYPES.stream(),
-                    LightLevelHandler.SUPPORTED_THING_TYPES.stream())
+                    LightLevelHandler.SUPPORTED_THING_TYPES.stream(), HueSceneHandler.SUPPORTED_THING_TYPES.stream())
             .flatMap(i -> i).collect(Collectors.toSet()));
 
     private final Logger logger = LoggerFactory.getLogger(HueLightDiscoveryService.class);
@@ -84,7 +87,8 @@ public class HueLightDiscoveryService extends AbstractDiscoveryService
             new SimpleEntry<>("zllswitch", "0820"),
             new SimpleEntry<>("zllpresence", "0107"),
             new SimpleEntry<>("zlltemperature", "0302"),
-            new SimpleEntry<>("zlllightlevel", "0106")
+            new SimpleEntry<>("zlllightlevel", "0106"),
+            new SimpleEntry<>("groupscene", "scene")
         ).collect(Collectors.toMap((e) -> e.getKey(), (e) -> e.getValue()));
     // @formatter:on
 
@@ -98,6 +102,7 @@ public class HueLightDiscoveryService extends AbstractDiscoveryService
     public void activate() {
         hueBridgeHandler.registerLightStatusListener(this);
         hueBridgeHandler.registerSensorStatusListener(this);
+        hueBridgeHandler.registerSceneStatusListener(this);
     }
 
     @Override
@@ -105,6 +110,7 @@ public class HueLightDiscoveryService extends AbstractDiscoveryService
         removeOlderResults(new Date().getTime(), hueBridgeHandler.getThing().getUID());
         hueBridgeHandler.unregisterLightStatusListener(this);
         hueBridgeHandler.unregisterSensorStatusListener(this);
+        hueBridgeHandler.unregisterSceneStatusListener(this);
 
     }
 
@@ -122,6 +128,10 @@ public class HueLightDiscoveryService extends AbstractDiscoveryService
         List<FullSensor> sensors = hueBridgeHandler.getFullSensors();
         for (FullSensor s : sensors) {
             onSensorAddedInternal(s);
+        }
+        List<Scene> scenes = hueBridgeHandler.getScenes();
+        for (Scene s : scenes) {
+            onSceneAddedInternal(s);
         }
         // search for unpaired lights
         hueBridgeHandler.startSearch();
@@ -241,6 +251,48 @@ public class HueLightDiscoveryService extends AbstractDiscoveryService
 
     @Override
     public void onSensorStateChanged(@Nullable HueBridge bridge, FullSensor sensor) {
+        // nothing to do
+    }
+
+    @Override
+    public void onSceneAdded(@Nullable HueBridge bridge, Scene scene) {
+        onSceneAddedInternal(scene);
+    }
+
+    public void onSceneAddedInternal(Scene scene) {
+        ThingUID thingUID = getThingUID(scene);
+        ThingTypeUID thingTypeUID = getThingTypeUID(scene);
+
+        if (thingUID != null && thingTypeUID != null) {
+            ThingUID bridgeUID = hueBridgeHandler.getThing().getUID();
+            Map<String, Object> properties = new HashMap<>();
+            properties.put(SCENE_ID, scene.getId());
+            String uniqueID = scene.getUniqueID();
+            if (uniqueID != null) {
+                properties.put(UNIQUE_ID, uniqueID);
+            }
+
+            DiscoveryResult discoveryResult = DiscoveryResultBuilder.create(thingUID).withThingType(thingTypeUID)
+                    .withProperties(properties).withBridge(bridgeUID).withRepresentationProperty(UNIQUE_ID)
+                    .withLabel(scene.getRoom() + ": " + scene.getName()).build();
+
+            thingDiscovered(discoveryResult);
+        } else {
+            logger.debug("discovered unsupported scene of type '{}' with id {}", scene.getType(), scene.getId());
+        }
+    }
+
+    @Override
+    public void onSceneRemoved(@Nullable HueBridge bridge, Scene scene) {
+        ThingUID thingUID = getThingUID(scene);
+
+        if (thingUID != null) {
+            thingRemoved(thingUID);
+        }
+    }
+
+    @Override
+    public void onSceneStateChanged(@Nullable HueBridge bridge, Scene scene) {
         // nothing to do
     }
 }

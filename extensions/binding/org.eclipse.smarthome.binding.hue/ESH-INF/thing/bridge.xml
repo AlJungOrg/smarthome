@@ -40,6 +40,12 @@
 				<required>true</required>
 				<default>500</default>
 			</parameter>
+			<parameter name="scenePollingInterval" type="integer" min="1" step="1" unit="s">
+				<label>Scene Polling Interval</label>
+				<description>Seconds between fetching values from the Bridge.</description>
+				<required>true</required>
+				<default>10</default>
+			</parameter>
 		</config-description>
 	</bridge-type>
 
