@@ -544,11 +544,13 @@ public interface ArithmeticGroupFunction extends GroupFunction {
                 boolean isLower = true;
                 for (Item item : items) {
                     DecimalType itemState = (DecimalType) item.getStateAs(DecimalType.class);
-                    itemState = new DecimalType(itemState.toBigDecimal().multiply(factor.toBigDecimal()));
-                    if (upperLimit.compareTo(itemState) < 0) {
-                        return upperState;
-                    } else if (lowerLimit.compareTo(itemState) <= 0) {
-                        isLower = false;
+                    if (itemState != null) {
+                        itemState = new DecimalType(itemState.toBigDecimal().multiply(factor.toBigDecimal()));
+                        if (upperLimit.compareTo(itemState) < 0) {
+                            return upperState;
+                        } else if (lowerLimit.compareTo(itemState) <= 0) {
+                            isLower = false;
+                        }
                     }
                 }
                 if (isLower) {

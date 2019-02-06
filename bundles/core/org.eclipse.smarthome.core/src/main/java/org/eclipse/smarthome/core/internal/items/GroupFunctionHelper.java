@@ -24,6 +24,7 @@ import org.eclipse.smarthome.core.items.dto.GroupFunctionDTO;
 import org.eclipse.smarthome.core.library.types.ArithmeticGroupFunction;
 import org.eclipse.smarthome.core.library.types.DateTimeGroupFunction;
 import org.eclipse.smarthome.core.library.types.DecimalType;
+import org.eclipse.smarthome.core.library.types.OnOffType;
 import org.eclipse.smarthome.core.library.types.QuantityTypeArithmeticGroupFunction;
 import org.eclipse.smarthome.core.library.types.StringType;
 import org.eclipse.smarthome.core.types.State;
@@ -141,9 +142,11 @@ public class GroupFunctionHelper {
             case "EQUALITY":
                 return new GroupFunction.Equality();
             case "THRESHOLD":
-                if (function.params != null && function.params.length == 1) {
-                    State active = args.get(0);
-                    State passive = args.get(1);
+                if (function.params != null && (function.params.length == 4 || function.params.length == 5)) {
+                	// NOTE: ESH refuses to let us know which state types the group item accepts, or parse them beforehand.
+                	// So we hard-code OnOffType and hope it works out. YOLO! 
+                    State active = OnOffType.from(function.params[0]);
+                    State passive = OnOffType.from(function.params[1]);
                     DecimalType upper = null;
                     DecimalType lower = null;
                     try {
