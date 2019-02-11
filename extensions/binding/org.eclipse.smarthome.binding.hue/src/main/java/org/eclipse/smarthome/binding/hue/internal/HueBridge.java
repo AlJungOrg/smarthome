@@ -504,15 +504,7 @@ public class HueBridge {
      * @throws EntityNotAvailableException thrown if a group with the given id doesn't exist
      */
     public FullGroup getGroup(Group group) throws IOException, ApiException {
-        requireAuthentication();
-
-        Result result = http.get(getRelativeURL("groups/" + enc(group.getId())));
-
-        handleErrors(result);
-
-        FullGroup fullGroup = safeFromJson(result.getBody(), FullGroup.class);
-        fullGroup.setId(group.getId());
-        return fullGroup;
+        return getGroupAttributes(group.getId());
     }
 
     /**
@@ -575,7 +567,7 @@ public class HueBridge {
     public FullGroup getGroupAttributes(String id) throws IOException, ApiException {
         requireAuthentication();
 
-        Result result = http.get(getRelativeURL("groups/" + id));
+        Result result = http.get(getRelativeURL("groups/" + enc(id)));
 
         handleErrors(result);
 
