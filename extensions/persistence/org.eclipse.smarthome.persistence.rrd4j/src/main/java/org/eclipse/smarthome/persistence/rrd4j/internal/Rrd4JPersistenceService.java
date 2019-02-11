@@ -17,6 +17,11 @@ import static java.lang.Double.NaN;
 import static java.util.stream.Collectors.toList;
 import static org.eclipse.smarthome.core.persistence.FilterCriteria.Ordering.ASCENDING;
 import static org.eclipse.smarthome.core.persistence.FilterCriteria.Ordering.DESCENDING;
+import static org.eclipse.smarthome.persistence.rrd4j.internal.Rrd4JConstants.SERVICE_NAME;
+import static org.eclipse.smarthome.persistence.rrd4j.internal.Rrd4JDatabaseUtil.createRoot;
+import static org.eclipse.smarthome.persistence.rrd4j.internal.Rrd4JDatabaseUtil.databasePath;
+import static org.eclipse.smarthome.persistence.rrd4j.internal.Rrd4JDatabaseUtil.databasePaths;
+import static org.eclipse.smarthome.persistence.rrd4j.internal.Rrd4JDatabaseUtil.itemName;
 import static org.rrd4j.ConsolFun.AVERAGE;
 import static org.rrd4j.DsType.GAUGE;
 
@@ -24,7 +29,6 @@ import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.ZonedDateTime;
 import java.util.Collections;
 import java.util.Date;
@@ -38,7 +42,6 @@ import java.util.stream.Stream;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
-import org.eclipse.smarthome.config.core.ConfigConstants;
 import org.eclipse.smarthome.core.items.Item;
 import org.eclipse.smarthome.core.items.ItemRegistry;
 import org.eclipse.smarthome.core.items.ItemStateConverter;
@@ -74,8 +77,6 @@ import org.slf4j.LoggerFactory;
 @NonNullByDefault
 @Component(service = { PersistenceService.class, QueryablePersistenceService.class })
 public class Rrd4JPersistenceService implements QueryablePersistenceService {
-    private static final String SERVICE_NAME = "rrd4j";
-    private static final Path SERVICE_ROOT = Paths.get(ConfigConstants.getUserDataFolder(), "persistence", SERVICE_NAME);
     private static final String DATASOURCE_NAME = "state";
     private static final DsDef DATASOURCE = new DsDef(DATASOURCE_NAME, GAUGE, 60, NaN, NaN);
     private static final ArcDef[] ARCHIVES = {
@@ -87,7 +88,7 @@ public class Rrd4JPersistenceService implements QueryablePersistenceService {
         new ArcDef(AVERAGE, .5, 7200, 720) //  2h over 60d  
     };
 
-    private final Logger logger = LoggerFactory.getLogger(Rrd4JPersistenceService.class);
+	private final Logger logger = LoggerFactory.getLogger(Rrd4JPersistenceService.class);
 
     @NonNullByDefault({})
     private ItemRegistry itemRegistry;
@@ -95,13 +96,11 @@ public class Rrd4JPersistenceService implements QueryablePersistenceService {
     private ItemStateConverter itemStateConverter;
 
     public void activate() {
-        if (Files.notExists(SERVICE_ROOT)) {
-            try {
-                Files.createDirectories(SERVICE_ROOT);
-            } catch (IOException e) {
-                logger.error("Failed to create the service root directory: ", e);
-                throw new IllegalStateException(e);
-            }
+        try {
+        	createRoot();
+        } catch (IOException e) {
+            logger.error("Failed to create the service root directory: ", e);
+            throw new IllegalStateException(e);
         }
     }
 
@@ -148,7 +147,7 @@ public class Rrd4JPersistenceService implements QueryablePersistenceService {
             alias = item.getName();
         }
         long time = Util.getTime();
-        Path path = dbPath(alias);
+        Path path = databasePath(alias);
         try (RrdDb db = write(path)) {
             double value = value(item, alias);
             // if the db timestamp is too recent, pretend that we're from the future
@@ -188,7 +187,7 @@ public class Rrd4JPersistenceService implements QueryablePersistenceService {
 
     @Override
     public Set<PersistenceItemInfo> getItemInfo() {
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(SERVICE_ROOT, "*.rrd")) {
+        try (DirectoryStream<Path> stream = databasePaths()) {
             Set<PersistenceItemInfo> results = new HashSet<>();
             for (Path path : stream) {
                 results.add(itemInfo(path));
@@ -201,7 +200,7 @@ public class Rrd4JPersistenceService implements QueryablePersistenceService {
     }
 
     private PersistenceItemInfo itemInfo(Path path) throws IOException {
-        String name = fileNameWithoutExtension(path);
+        String name = itemName(path);
         try (RrdDb db = read(path)) {
             Archive archive = archive(db);
             long startTime = archive.getStartTime();
@@ -215,12 +214,6 @@ public class Rrd4JPersistenceService implements QueryablePersistenceService {
 
     private PersistenceItemInfo itemInfo(String name, int count, Date earliest, Date latest) {
         return new Rrd4JPersistenceItemInfo(name, count, earliest, latest);
-    }
-
-    private String fileNameWithoutExtension(Path path) {
-        String fileName = path.getFileName().toString();
-        int dotIndex = fileName.lastIndexOf('.');
-        return (dotIndex == -1) ? fileName : fileName.substring(0, dotIndex);
     }
 
     @Override
@@ -253,7 +246,7 @@ public class Rrd4JPersistenceService implements QueryablePersistenceService {
     }
 
     private Iterable<HistoricItem> queryLatest(String itemName) throws IOException {
-        Path path = dbPath(itemName);
+        Path path = databasePath(itemName);
         try (RrdDb db = read(path)) {
             double value = db.getLastDatasourceValue(DATASOURCE_NAME);
             long time = db.getLastArchiveUpdateTime();
@@ -265,7 +258,7 @@ public class Rrd4JPersistenceService implements QueryablePersistenceService {
 
     private Iterable<HistoricItem> queryFilter(FilterCriteria filter) throws IOException {
         String itemName = filter.getItemName();
-        Path path = dbPath(itemName);
+        Path path = databasePath(itemName);
         try (RrdDb db = read(path)) {
             ConsolFun function = consolidationFunction(db);
             long beginTime = timestamp(filter.getBeginDateZoned());
@@ -331,11 +324,6 @@ public class Rrd4JPersistenceService implements QueryablePersistenceService {
         Sample sample = db.createSample(time);
         sample.setValue(DATASOURCE_NAME, value);
         sample.update();
-    }
-
-    private Path dbPath(String itemName) {
-        String fileName = itemName + ".rrd";
-        return SERVICE_ROOT.resolve(fileName);
     }
 
     private RrdDb read(Path path) throws IOException {
