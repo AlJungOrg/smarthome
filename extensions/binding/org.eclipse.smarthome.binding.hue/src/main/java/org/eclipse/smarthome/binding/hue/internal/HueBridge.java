@@ -218,6 +218,28 @@ public class HueBridge {
         return sensorList;
 
     }
+    
+    public List<Scene> getScenes() throws IOException, ApiException {
+        requireAuthentication();
+
+        Result result = http.get(getRelativeURL("scenes"));
+
+        Map<String, Scene> sceneMap = safeFromJson(result.getBody(), Scene.GSON_TYPE);
+        ArrayList<Scene> sceneList = new ArrayList<>();
+
+        for (String id : sceneMap.keySet()) {
+            Scene scene = sceneMap.get(id);
+            scene.setId(id);
+            // we need the group config as well, because we want to display the room name for the scenes
+            FullGroup group = getGroupAttributes(scene.getGroup());
+            if (group != null) {
+                scene.setRoom(group.getName());
+                sceneList.add(scene);
+            }
+        }
+
+        return sceneList;
+    }
 
     /**
      * Returns the last time a search for new lights was started.
@@ -360,6 +382,23 @@ public class HueBridge {
     }
 
     /**
+     * Changes the config of a scene.
+     *
+     * @param scene scene
+     * @param update changes to the config
+     * @throws UnauthorizedException thrown if the user no longer exists
+     * @throws EntityNotAvailableException thrown if the specified sensor no longer exists
+     * @throws IOException if the bridge cannot be reached
+     */
+    public CompletableFuture<Result> updateSceneConfig(Scene scene, ConfigUpdate update) {
+        requireAuthentication();
+
+        String body = update.toJson();
+        return http.putAsync(getRelativeURL("groups/" + enc(scene.getGroup()) + "/action"), body,
+                update.getMessageDelay(), scheduler);
+    }
+
+    /**
      * Returns a group object representing all lights.
      *
      * @return all lights pseudo group
@@ -465,15 +504,7 @@ public class HueBridge {
      * @throws EntityNotAvailableException thrown if a group with the given id doesn't exist
      */
     public FullGroup getGroup(Group group) throws IOException, ApiException {
-        requireAuthentication();
-
-        Result result = http.get(getRelativeURL("groups/" + enc(group.getId())));
-
-        handleErrors(result);
-
-        FullGroup fullGroup = safeFromJson(result.getBody(), FullGroup.class);
-        fullGroup.setId(group.getId());
-        return fullGroup;
+        return getGroupAttributes(group.getId());
     }
 
     /**
@@ -523,6 +554,26 @@ public class HueBridge {
         Result result = http.put(getRelativeURL("groups/" + enc(group.getId())), body);
 
         handleErrors(result);
+    }
+
+    /**
+     * Get details for specified group.
+     *
+     * @param id id of the group
+     * @return FullGroup the group
+     * @throws IOException
+     * @throws ApiException
+     */
+    public FullGroup getGroupAttributes(String id) throws IOException, ApiException {
+        requireAuthentication();
+
+        Result result = http.get(getRelativeURL("groups/" + enc(id)));
+
+        handleErrors(result);
+
+        FullGroup fullGroup = safeFromJson(result.getBody(), FullGroup.class);
+        fullGroup.setId(id);
+        return fullGroup;
     }
 
     /**

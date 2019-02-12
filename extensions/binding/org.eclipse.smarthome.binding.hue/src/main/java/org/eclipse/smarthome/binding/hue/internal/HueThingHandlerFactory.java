@@ -27,6 +27,7 @@ import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.binding.hue.internal.discovery.HueLightDiscoveryService;
 import org.eclipse.smarthome.binding.hue.internal.handler.HueBridgeHandler;
 import org.eclipse.smarthome.binding.hue.internal.handler.HueLightHandler;
+import org.eclipse.smarthome.binding.hue.internal.handler.HueSceneHandler;
 import org.eclipse.smarthome.binding.hue.internal.handler.sensors.DimmerSwitchHandler;
 import org.eclipse.smarthome.binding.hue.internal.handler.sensors.LightLevelHandler;
 import org.eclipse.smarthome.binding.hue.internal.handler.sensors.PresenceHandler;
@@ -58,7 +59,8 @@ public class HueThingHandlerFactory extends BaseThingHandlerFactory {
     public static final Set<ThingTypeUID> SUPPORTED_THING_TYPES = Collections.unmodifiableSet(Stream
             .of(HueBridgeHandler.SUPPORTED_THING_TYPES.stream(), HueLightHandler.SUPPORTED_THING_TYPES.stream(),
                     DimmerSwitchHandler.SUPPORTED_THING_TYPES.stream(), PresenceHandler.SUPPORTED_THING_TYPES.stream(),
-                    TemperatureHandler.SUPPORTED_THING_TYPES.stream(), LightLevelHandler.SUPPORTED_THING_TYPES.stream())
+                    TemperatureHandler.SUPPORTED_THING_TYPES.stream(), LightLevelHandler.SUPPORTED_THING_TYPES.stream(),
+                    HueSceneHandler.SUPPORTED_THING_TYPES.stream())
             .flatMap(i -> i).collect(Collectors.toSet()));
 
     private final Map<ThingUID, @Nullable ServiceRegistration<?>> discoveryServiceRegs = new HashMap<>();
@@ -77,6 +79,9 @@ public class HueThingHandlerFactory extends BaseThingHandlerFactory {
                 || LightLevelHandler.SUPPORTED_THING_TYPES.contains(thingTypeUID)) {
             ThingUID hueSensorUID = getSensorUID(thingTypeUID, thingUID, configuration, bridgeUID);
             return super.createThing(thingTypeUID, configuration, hueSensorUID, bridgeUID);
+        } else if (HueSceneHandler.SUPPORTED_THING_TYPES.contains(thingTypeUID)) {
+            ThingUID hueSceneUID = getSceneUID(thingTypeUID, thingUID, configuration, bridgeUID);
+            return super.createThing(thingTypeUID, configuration, hueSceneUID, bridgeUID);
         }
 
         throw new IllegalArgumentException("The thing type " + thingTypeUID + " is not supported by the hue binding.");
@@ -105,6 +110,15 @@ public class HueThingHandlerFactory extends BaseThingHandlerFactory {
         }
     }
 
+    private ThingUID getSceneUID(ThingTypeUID thingTypeUID, @Nullable ThingUID thingUID, Configuration configuration,
+            @Nullable ThingUID bridgeUID) {
+        if (thingUID != null) {
+            return thingUID;
+        } else {
+            return getThingUID(thingTypeUID, configuration.get(SCENE_ID).toString(), bridgeUID);
+        }
+    }
+
     private ThingUID getThingUID(ThingTypeUID thingTypeUID, String id, @Nullable ThingUID bridgeUID) {
         if (bridgeUID != null) {
             return new ThingUID(thingTypeUID, id, bridgeUID.getId());
@@ -129,6 +143,8 @@ public class HueThingHandlerFactory extends BaseThingHandlerFactory {
             return new TemperatureHandler(thing);
         } else if (LightLevelHandler.SUPPORTED_THING_TYPES.contains(thing.getThingTypeUID())) {
             return new LightLevelHandler(thing);
+        } else if (HueSceneHandler.SUPPORTED_THING_TYPES.contains(thing.getThingTypeUID())) {
+            return new HueSceneHandler(thing);
         } else {
             return null;
         }

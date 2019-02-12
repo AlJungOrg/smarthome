@@ -103,6 +103,9 @@ public class HueBindingConstants {
     public static final ThingTypeUID THING_TYPE_PN_JZ_RGBW_Z01 = new ThingTypeUID(BINDING_ID, "JZ_RGBW_Z01");
     //<--- ESH-Mod see IBN-638 <---
 
+    //Thing Type UID for hue scene
+    public static final ThingTypeUID THING_TYPE_SCENE = new ThingTypeUID(BINDING_ID, "scene");
+
     // List all channels
     public static final String CHANNEL_COLORTEMPERATURE = "color_temperature";
     public static final String CHANNEL_COLOR = "color";
@@ -131,6 +134,7 @@ public class HueBindingConstants {
     // Light config properties
     public static final String LIGHT_ID = "lightId";
     public static final String SENSOR_ID = "sensorId";
+    public static final String SCENE_ID = "sceneId";
     public static final String PRODUCT_NAME = "productName";
     public static final String UNIQUE_ID = "uniqueId";
 }

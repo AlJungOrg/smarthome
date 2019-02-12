@@ -17,6 +17,7 @@ import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.binding.hue.internal.ConfigUpdate;
 import org.eclipse.smarthome.binding.hue.internal.FullLight;
 import org.eclipse.smarthome.binding.hue.internal.FullSensor;
+import org.eclipse.smarthome.binding.hue.internal.Scene;
 import org.eclipse.smarthome.binding.hue.internal.StateUpdate;
 
 /**
@@ -62,6 +63,22 @@ public interface HueClient {
     boolean unregisterSensorStatusListener(SensorStatusListener sensorStatusListener);
 
     /**
+     * Register a scene status listener.
+     *
+     * @param sceneStatusListener the scene status listener
+     * @return {@code true} if the collection of listeners has changed as a result of this call
+     */
+    boolean registerSceneStatusListener(SceneStatusListener sceneStatusListener);
+
+    /**
+     * Unregister a scene status listener.
+     *
+     * @param sceneStatusListener the scene status listener
+     * @return {@code true} if the collection of listeners has changed as a result of this call
+     */
+    boolean unregisterSceneStatusListener(SceneStatusListener sceneStatusListener);
+
+    /**
      * Get the light by its ID.
      *
      * @param lightId the light ID
@@ -80,6 +97,15 @@ public interface HueClient {
     FullSensor getSensorById(String sensorId);
 
     /**
+     * Get the scene by its ID.
+     *
+     * @param sceneId the scene ID
+     * @return the scene representation of {@code null} if it could not be found
+     */
+    @Nullable
+    Scene getSceneById(String sceneId);
+
+    /**
      * Updates the given light.
      *
      * @param light the light to be updated
@@ -94,4 +120,12 @@ public interface HueClient {
      * @param configUpdate the config update
      */
     void updateSensorConfig(FullSensor sensor, ConfigUpdate configUpdate);
+
+    /**
+     * Updates the given scenes config.
+     *
+     * @param scene the scene to be updated
+     * @param configUpdate the config update
+     */
+    void updateSceneConfig(Scene scene, ConfigUpdate configUpdate);
 }

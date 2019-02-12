@@ -27,6 +27,7 @@ public class HueBridgeConfig {
     private @Nullable String userName;
     private int pollingInterval = 10;
     private int sensorPollingInterval = 500;
+    private int scenePollingInterval = 10;
 
     public String getIpAddress() {
         return ipAddress;
@@ -58,5 +59,13 @@ public class HueBridgeConfig {
 
     public void setSensorPollingInterval(int sensorPollingInterval) {
         this.sensorPollingInterval = sensorPollingInterval;
+    }
+
+    public int getScenePollingInterval() {
+        return scenePollingInterval;
+    }
+
+    public void setScenePollingInterval(int scenePollingInterval) {
+        this.scenePollingInterval = scenePollingInterval;
     }
 }
