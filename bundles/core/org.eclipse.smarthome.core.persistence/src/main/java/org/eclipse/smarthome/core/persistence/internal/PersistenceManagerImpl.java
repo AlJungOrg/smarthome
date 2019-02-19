@@ -42,6 +42,7 @@ import org.eclipse.smarthome.core.persistence.config.SimpleAllConfig;
 import org.eclipse.smarthome.core.persistence.config.SimpleConfig;
 import org.eclipse.smarthome.core.persistence.config.SimpleGroupConfig;
 import org.eclipse.smarthome.core.persistence.config.SimpleItemConfig;
+import org.eclipse.smarthome.core.persistence.config.SimpleTagConfig;
 import org.eclipse.smarthome.core.persistence.strategy.SimpleCronStrategy;
 import org.eclipse.smarthome.core.persistence.strategy.SimpleStrategy;
 import org.eclipse.smarthome.core.scheduler.CronExpression;
@@ -208,6 +209,13 @@ public class PersistenceManagerImpl implements PersistenceManager, ItemRegistryC
                 } catch (Exception e) {
                 }
             }
+            if (itemCfg instanceof SimpleTagConfig) {
+                SimpleTagConfig tagItemCfg = (SimpleTagConfig) itemCfg;
+                String tag = tagItemCfg.getTag();
+                if (item.hasTag(tag)) {
+                    return true;
+                }
+            }
         }
         return false;
     }
@@ -250,6 +258,12 @@ public class PersistenceManagerImpl implements PersistenceManager, ItemRegistryC
                 } catch (ItemNotFoundException e) {
                     logger.debug("Item group '{}' does not exist.", groupName);
                 }
+            }
+            if (itemCfg instanceof SimpleTagConfig) {
+                SimpleTagConfig tagItemCfg = (SimpleTagConfig) itemCfg;
+                String tag = tagItemCfg.getTag();
+                Collection<Item> itemsByTag = itemRegistry.getItemsByTag(tag);
+                items.addAll(itemsByTag);
             }
         }
         return items;
