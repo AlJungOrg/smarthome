@@ -12,6 +12,8 @@
  */
 package org.eclipse.smarthome.core.library.types;
 
+import static org.eclipse.smarthome.core.types.UnmodifiedType.UNMODIFIED;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Set;
@@ -556,7 +558,7 @@ public interface ArithmeticGroupFunction extends GroupFunction {
                 if (isLower) {
                     return lowerState;
                 }
-                return null;
+                return UNMODIFIED;
             } else {
                 // if we do not have any items, we return the passive state
                 return lowerState;

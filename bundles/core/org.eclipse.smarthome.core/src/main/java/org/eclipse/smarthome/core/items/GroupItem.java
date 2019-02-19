@@ -12,6 +12,8 @@
  */
 package org.eclipse.smarthome.core.items;
 
+import static org.eclipse.smarthome.core.types.UnmodifiedType.UNMODIFIED;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -370,9 +372,11 @@ public class GroupItem extends GenericItem implements StateChangeListener {
         State oldState = this.state;
         if (function != null && baseItem != null) {
             State calculatedState = function.calculate(getStateMembers(getMembers()));
-            calculatedState = itemStateConverter.convertToAcceptedState(calculatedState, baseItem);
-            sendGroupStateEvent(item.getName(), calculatedState);
-            setState(calculatedState);
+            if (calculatedState != UNMODIFIED) {
+                calculatedState = itemStateConverter.convertToAcceptedState(calculatedState, baseItem);
+                sendGroupStateEvent(item.getName(), calculatedState);
+                setState(calculatedState);
+            }
         }
         if (!oldState.equals(this.state)) {
             sendGroupStateChangedEvent(item.getName(), this.state, oldState);
