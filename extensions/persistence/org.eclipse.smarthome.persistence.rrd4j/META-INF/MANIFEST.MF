@@ -8,8 +8,13 @@ Bundle-SymbolicName: org.eclipse.smarthome.persistence.rrd4j
 Bundle-Vendor: Eclipse.org/SmartHome
 Bundle-Version: 0.10.0.qualifier
 Import-Package: com.google.common.base,
+ io.swagger.annotations,
+ javax.annotation.security,
+ javax.ws.rs,
+ javax.ws.rs.core,
  org.eclipse.jdt.annotation;resolution:=optional,
  org.eclipse.smarthome.config.core,
+ org.eclipse.smarthome.core.auth,
  org.eclipse.smarthome.core.common,
  org.eclipse.smarthome.core.common.registry,
  org.eclipse.smarthome.core.events,
@@ -19,6 +24,7 @@ Import-Package: com.google.common.base,
  org.eclipse.smarthome.core.library.types,
  org.eclipse.smarthome.core.persistence,
  org.eclipse.smarthome.core.types,
+ org.eclipse.smarthome.io.rest,
  org.osgi.framework,
  org.slf4j
 Service-Component: OSGI-INF/*.xml
