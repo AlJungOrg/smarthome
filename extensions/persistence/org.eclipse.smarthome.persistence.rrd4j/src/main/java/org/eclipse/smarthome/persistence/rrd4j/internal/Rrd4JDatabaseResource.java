@@ -148,6 +148,19 @@ public class Rrd4JDatabaseResource implements RESTResource {
         }
     }
 
+    @RolesAllowed(ADMIN)
+    @DELETE
+    @ApiOperation("Delete all databases.")
+    @ApiResponses(@ApiResponse(code = 200, message = "OK"))
+    public Response deleteDatabases() throws IOException {
+        try (DirectoryStream<java.nio.file.Path> paths = databasePaths()) {
+            for (java.nio.file.Path path : paths) {
+            	Files.deleteIfExists(path);
+            }
+        }
+        return Response.ok().build();
+    }
+
     @RolesAllowed({ USER, ADMIN })
     @GET
     @Path("/{itemName: [a-zA-Z_0-9]*}")
