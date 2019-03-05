@@ -21,6 +21,9 @@ import static org.eclipse.smarthome.core.auth.Role.USER;
 import static org.eclipse.smarthome.persistence.rrd4j.internal.Rrd4JDatabaseUtil.databasePath;
 import static org.eclipse.smarthome.persistence.rrd4j.internal.Rrd4JDatabaseUtil.databasePaths;
 import static org.eclipse.smarthome.persistence.rrd4j.internal.Rrd4JDatabaseUtil.itemName;
+import static org.eclipse.smarthome.persistence.rrd4j.internal.Rrd4JPersistenceService.ARCHIVES;
+import static org.eclipse.smarthome.persistence.rrd4j.internal.Rrd4JPersistenceService.DATASOURCE;
+import static org.eclipse.smarthome.persistence.rrd4j.internal.Rrd4JPersistenceService.DATASOURCE_NAME;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -30,6 +33,7 @@ import java.io.OutputStream;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.util.Base64;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipInputStream;
@@ -39,6 +43,7 @@ import javax.annotation.security.RolesAllowed;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
+import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -50,6 +55,10 @@ import javax.ws.rs.core.UriInfo;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.smarthome.io.rest.RESTResource;
 import org.osgi.service.component.annotations.Component;
+import org.rrd4j.core.RrdDb;
+import org.rrd4j.core.RrdDef;
+import org.rrd4j.core.Sample;
+import org.rrd4j.core.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,6 +80,38 @@ public class Rrd4JDatabaseResource implements RESTResource {
     @NonNullByDefault({})
     @Context
     UriInfo uriInfo;
+
+    @POST
+    @Path("/stress")
+    public void populate() throws IOException {
+        long time = Util.getTime();
+        for (int i = 1; i < 1001; i++)
+        	populate("test_persistence_" + i, time);
+    }
+
+    private void populate(String itemName, long time) throws IOException {
+    	ThreadLocalRandom random = ThreadLocalRandom.current();
+    	java.nio.file.Path path = databasePath(itemName);
+    	RrdDb db = write(path, time);
+    	for (int i = 1; i < 100_001; i++)
+    		insert(db, time + i, random.nextDouble(256));
+    }
+
+    private RrdDb write(java.nio.file.Path path, long time) throws IOException {
+        if (Files.exists(path)) {
+            return new RrdDb(path.toString());
+        }
+        RrdDef def = new RrdDef(path.toString(), time, 1L);
+        def.addDatasource(DATASOURCE);
+        def.addArchive(ARCHIVES);
+        return new RrdDb(def);
+    }
+
+    private void insert(RrdDb db, long time, double value) throws IOException {
+        Sample sample = db.createSample(time);
+        sample.setValue(DATASOURCE_NAME, value);
+        sample.update();
+    }
 
     @RolesAllowed({ USER, ADMIN })
     @GET

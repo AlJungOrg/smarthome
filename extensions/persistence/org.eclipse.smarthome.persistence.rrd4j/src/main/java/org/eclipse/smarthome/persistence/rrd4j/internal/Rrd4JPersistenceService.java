@@ -77,9 +77,9 @@ import org.slf4j.LoggerFactory;
 @NonNullByDefault
 @Component(service = { PersistenceService.class, QueryablePersistenceService.class })
 public class Rrd4JPersistenceService implements QueryablePersistenceService {
-    private static final String DATASOURCE_NAME = "state";
-    private static final DsDef DATASOURCE = new DsDef(DATASOURCE_NAME, GAUGE, 60, NaN, NaN);
-    private static final ArcDef[] ARCHIVES = {
+    static final String DATASOURCE_NAME = "state";
+    static final DsDef DATASOURCE = new DsDef(DATASOURCE_NAME, GAUGE, 60, NaN, NaN);
+    static final ArcDef[] ARCHIVES = {
         new ArcDef(AVERAGE, .5, 1, 600), //    1s over 10m
         new ArcDef(AVERAGE, .5, 5, 360), //    5s over 30m
         new ArcDef(AVERAGE, .5, 15, 480), //  15s over  2h 
