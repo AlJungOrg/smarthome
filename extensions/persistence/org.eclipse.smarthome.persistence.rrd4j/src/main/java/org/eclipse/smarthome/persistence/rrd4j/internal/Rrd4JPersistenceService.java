@@ -80,12 +80,13 @@ public class Rrd4JPersistenceService implements QueryablePersistenceService {
     private static final String DATASOURCE_NAME = "state";
     private static final DsDef DATASOURCE = new DsDef(DATASOURCE_NAME, GAUGE, 60, NaN, NaN);
     private static final ArcDef[] ARCHIVES = {
-        new ArcDef(AVERAGE, .5, 1, 600), //    1s over 10m
-        new ArcDef(AVERAGE, .5, 5, 360), //    5s over 30m
-        new ArcDef(AVERAGE, .5, 15, 480), //  15s over  2h 
-        new ArcDef(AVERAGE, .5, 60, 720), //   1m over 12h
-        new ArcDef(AVERAGE, .5, 600, 720), // 10m over  5d
-        new ArcDef(AVERAGE, .5, 7200, 720) //  2h over 60d  
+        new ArcDef(AVERAGE, .5, 1, 60), //       1s over  1m
+        new ArcDef(AVERAGE, .5, 30, 120), //    30s over  1h
+        new ArcDef(AVERAGE, .5, 60, 288), //     1m over  1d
+        new ArcDef(AVERAGE, .5, 900, 672), //   15m over  7d
+        new ArcDef(AVERAGE, .5, 3600, 720), //   1h over 30d
+        new ArcDef(AVERAGE, .5, 21600, 1460), // 6h over  1y
+        new ArcDef(AVERAGE, .5, 86400, 1825) //  1d over  5y
     };
 
 	private final Logger logger = LoggerFactory.getLogger(Rrd4JPersistenceService.class);
@@ -308,7 +309,7 @@ public class Rrd4JPersistenceService implements QueryablePersistenceService {
         if (date == null) {
             return Util.getTime();
         }
-        
+
         return Util.getTimestamp(GregorianCalendar.from(date));
     }
 
