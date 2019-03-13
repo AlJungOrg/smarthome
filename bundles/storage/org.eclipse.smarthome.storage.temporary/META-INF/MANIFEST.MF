@@ -1,0 +1,15 @@
+Manifest-Version: 1.0
+Bundle-ClassPath: .
+Bundle-License: https://www.eclipse.org/legal/epl-2.0/
+Bundle-ManifestVersion: 2
+Bundle-Name: Eclipse SmartHome Temporary Storage Service
+Bundle-RequiredExecutionEnvironment: JavaSE-1.8
+Bundle-SymbolicName: org.eclipse.smarthome.storage.temporary;singleton:=true
+Bundle-Vendor: Eclipse.org/SmartHome
+Bundle-Version: 0.10.0.qualifier
+Import-Package: 
+ org.eclipse.jdt.annotation;resolution:=optional,
+ org.eclipse.smarthome.core.storage,
+ org.osgi.framework
+Service-Component: OSGI-INF/*.xml
+Automatic-Module-Name: org.eclipse.smarthome.storage.temporary
