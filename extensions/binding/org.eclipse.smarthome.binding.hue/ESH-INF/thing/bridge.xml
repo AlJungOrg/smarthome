@@ -32,7 +32,7 @@
 				<label>Polling Interval</label>
 				<description>Seconds between fetching values from the Bridge.</description>
 				<required>true</required>
-				<default>10</default>
+				<default>1</default>
 			</parameter>
 			<parameter name="sensorPollingInterval" type="integer" min="50" step="1" unit="ms">
 				<label>Sensor Polling Interval</label>

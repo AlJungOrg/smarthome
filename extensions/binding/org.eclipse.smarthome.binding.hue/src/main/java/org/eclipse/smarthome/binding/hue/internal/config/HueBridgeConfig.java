@@ -25,7 +25,7 @@ import org.eclipse.smarthome.binding.hue.internal.handler.HueBridgeHandler;
 public class HueBridgeConfig {
     private @NonNullByDefault({}) String ipAddress;
     private @Nullable String userName;
-    private int pollingInterval = 10;
+    private int pollingInterval = 1;
     private int sensorPollingInterval = 500;
     private int scenePollingInterval = 10;
 

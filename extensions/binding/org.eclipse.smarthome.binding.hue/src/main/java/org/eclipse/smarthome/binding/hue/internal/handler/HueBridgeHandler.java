@@ -80,7 +80,7 @@ import org.slf4j.LoggerFactory;
 @NonNullByDefault
 public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueClient {
 
-    private static final int DEFAULT_POLLING_INTERVAL = 10; // in seconds
+    private static final int DEFAULT_POLLING_INTERVAL = 1; // in seconds
     private static final int DEFAULT_SENSOR_POLLING_INTERVAL = 500; // in milliseconds
     private static final int DEFAULT_SCENE_POLLING_INTERVAL = 10; // in seconds
 
@@ -210,7 +210,7 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
                     }
                 }
             }
-            
+
         }
     };
 
@@ -697,7 +697,7 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
         });
         return ret != null ? ret : Collections.emptyList();
     }
-    
+
     public List<Scene> getScenes() {
         List<Scene> ret = withReAuthentication("search for new scenes", () -> {
             return hueBridge.getScenes();
