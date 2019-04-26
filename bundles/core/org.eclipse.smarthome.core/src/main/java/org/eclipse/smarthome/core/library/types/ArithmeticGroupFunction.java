@@ -30,8 +30,8 @@ import org.eclipse.smarthome.core.types.UnDefType;
  * for its calculations.
  *
  * @author Kai Kreuzer - Initial contribution and API
- * @author Thomas Eichstädt-Engelen - Added "N" functions
- * @author Gaël L'hopital - Added count function
+ * @author Thomas Eichst��dt-Engelen - Added "N" functions
+ * @author Ga��l L'hopital - Added count function
  *
  */
 public interface ArithmeticGroupFunction extends GroupFunction {
@@ -377,6 +377,35 @@ public interface ArithmeticGroupFunction extends GroupFunction {
             return new State[0];
         }
     }
+    
+    /**
+     * Every member state event leads to a new group state event
+     */
+    static class Sync implements GroupFunction {
+
+        public Sync() {
+        }
+
+        @Override
+        public State calculate(Set<Item> items) {
+            return new DecimalType(System.nanoTime());
+        }
+
+        @Override
+        public <T extends State> T getStateAs(Set<Item> items, Class<T> stateClass) {
+            State state = calculate(items);
+            if (stateClass.isInstance(state)) {
+                return stateClass.cast(state);
+            } else {
+                return null;
+            }
+        }
+
+        @Override
+        public State[] getParameters() {
+            return new State[0];
+        }
+    }
 
     /**
      * This calculates the minimum value of all item states of decimal type.
@@ -545,7 +574,7 @@ public interface ArithmeticGroupFunction extends GroupFunction {
             if (items != null && items.size() > 0) {
                 boolean isLower = true;
                 for (Item item : items) {
-                    DecimalType itemState = (DecimalType) item.getStateAs(DecimalType.class);
+                    DecimalType itemState = item.getStateAs(DecimalType.class);
                     if (itemState != null) {
                         itemState = new DecimalType(itemState.toBigDecimal().multiply(factor.toBigDecimal()));
                         if (upperLimit.compareTo(itemState) < 0) {

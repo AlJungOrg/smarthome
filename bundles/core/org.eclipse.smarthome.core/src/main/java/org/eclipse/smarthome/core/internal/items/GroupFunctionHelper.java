@@ -130,6 +130,8 @@ public class GroupFunctionHelper {
                 return new ArithmeticGroupFunction.Avg();
             case "SUM":
                 return new ArithmeticGroupFunction.Sum();
+            case "SYNC":
+                return new ArithmeticGroupFunction.Sync();
             case "MIN":
                 return new ArithmeticGroupFunction.Min();
             case "MAX":
