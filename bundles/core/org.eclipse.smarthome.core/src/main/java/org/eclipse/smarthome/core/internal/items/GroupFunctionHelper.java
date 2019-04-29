@@ -130,8 +130,6 @@ public class GroupFunctionHelper {
                 return new ArithmeticGroupFunction.Avg();
             case "SUM":
                 return new ArithmeticGroupFunction.Sum();
-            case "SYNC":
-                return new ArithmeticGroupFunction.Sync();
             case "MIN":
                 return new ArithmeticGroupFunction.Min();
             case "MAX":
@@ -143,6 +141,8 @@ public class GroupFunctionHelper {
             case "EQUAL":
             case "EQUALITY":
                 return new GroupFunction.Equality();
+            case "EVERY_MEMBER_CHANGE":
+                return new GroupFunction.EveryMemberChange();
             case "THRESHOLD":
                 if (function.params != null && (function.params.length == 4 || function.params.length == 5)) {
                 	// NOTE: ESH refuses to let us know which state types the group item accepts, or parse them beforehand.

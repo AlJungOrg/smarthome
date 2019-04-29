@@ -15,6 +15,7 @@ package org.eclipse.smarthome.core.items;
 import java.util.Iterator;
 import java.util.Set;
 
+import org.eclipse.smarthome.core.library.types.DecimalType;
 import org.eclipse.smarthome.core.types.State;
 import org.eclipse.smarthome.core.types.UnDefType;
 
@@ -74,6 +75,36 @@ public interface GroupFunction {
             } else {
                 return UnDefType.UNDEF;
             }
+        }
+
+        @Override
+        public <T extends State> T getStateAs(Set<Item> items, Class<T> stateClass) {
+            State state = calculate(items);
+            if (stateClass.isInstance(state)) {
+                return stateClass.cast(state);
+            } else {
+                return null;
+            }
+        }
+
+        @Override
+        public State[] getParameters() {
+            return new State[0];
+        }
+    }
+    
+    /**
+     * Every member state event leads to a new group state in form of a
+     * monotonically progressing nanosecond timestamp. 
+     */
+    static class EveryMemberChange implements GroupFunction {
+
+        public EveryMemberChange() {
+        }
+
+        @Override
+        public State calculate(Set<Item> items) {
+            return new DecimalType(System.nanoTime());
         }
 
         @Override
