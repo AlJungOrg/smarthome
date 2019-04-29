@@ -97,9 +97,9 @@ public interface GroupFunction {
      * Every member state event leads to a new group state in form of a
      * monotonically progressing nanosecond timestamp. 
      */
-    static class EveryMemberChange implements GroupFunction {
+    static class EveryMemberUpdate implements GroupFunction {
 
-        public EveryMemberChange() {
+        public EveryMemberUpdate() {
         }
 
         @Override
