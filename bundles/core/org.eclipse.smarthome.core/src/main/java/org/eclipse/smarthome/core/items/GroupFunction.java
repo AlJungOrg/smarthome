@@ -98,18 +98,20 @@ public interface GroupFunction {
      * monotonically progressing nanosecond timestamp. 
      */
     static class EveryMemberUpdate implements GroupFunction {
+    	private DecimalType timestamp;
 
         public EveryMemberUpdate() {
         }
 
         @Override
         public State calculate(Set<Item> items) {
-            return new DecimalType(System.nanoTime());
+        	timestamp = new DecimalType(System.nanoTime());
+            return timestamp;
         }
 
         @Override
         public <T extends State> T getStateAs(Set<Item> items, Class<T> stateClass) {
-            State state = calculate(items);
+            State state = timestamp;
             if (stateClass.isInstance(state)) {
                 return stateClass.cast(state);
             } else {
