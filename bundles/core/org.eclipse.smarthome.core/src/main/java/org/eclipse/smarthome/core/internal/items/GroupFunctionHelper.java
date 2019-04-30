@@ -141,6 +141,8 @@ public class GroupFunctionHelper {
             case "EQUAL":
             case "EQUALITY":
                 return new GroupFunction.Equality();
+            case "EVERY_MEMBER_UPDATE":
+                return new GroupFunction.EveryMemberUpdate();
             case "THRESHOLD":
                 if (function.params != null && (function.params.length == 4 || function.params.length == 5)) {
                 	// NOTE: ESH refuses to let us know which state types the group item accepts, or parse them beforehand.
