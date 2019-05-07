@@ -141,7 +141,7 @@ public class GroupFunctionHelper {
             case "EQUAL":
             case "EQUALITY":
                 return new GroupFunction.Equality();
-            case "EVERY_MEMBER_UPDATE":
+            case "EVERYMEMBERUPDATE":
                 return new GroupFunction.EveryMemberUpdate();
             case "THRESHOLD":
                 if (function.params != null && (function.params.length == 4 || function.params.length == 5)) {
