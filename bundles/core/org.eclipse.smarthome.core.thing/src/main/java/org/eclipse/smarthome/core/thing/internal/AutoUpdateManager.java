@@ -199,10 +199,6 @@ public class AutoUpdateManager {
             }
             onlineChannelUIDs.add(channelUID);
         }
-        if (!linkedChannelUIDs.isEmpty() && onlineChannelUIDs.isEmpty()) {
-            // none of the linked channels is able to process the command
-            return Recommendation.REVERT;
-        }
 
         for (ChannelUID channelUID : onlineChannelUIDs) {
             Thing thing = thingRegistry.get(channelUID.getThingUID());
