@@ -12,9 +12,11 @@
  */
 package org.eclipse.smarthome.binding.hue.internal.discovery;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.eclipse.smarthome.binding.hue.internal.HueBindingConstants.*;
 
 import java.util.AbstractMap.SimpleEntry;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -44,6 +46,7 @@ import org.eclipse.smarthome.binding.hue.internal.handler.sensors.TemperatureHan
 import org.eclipse.smarthome.config.discovery.AbstractDiscoveryService;
 import org.eclipse.smarthome.config.discovery.DiscoveryResult;
 import org.eclipse.smarthome.config.discovery.DiscoveryResultBuilder;
+import org.eclipse.smarthome.core.common.ThreadPoolManager;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingTypeUID;
 import org.eclipse.smarthome.core.thing.ThingUID;
@@ -74,6 +77,9 @@ public class HueLightDiscoveryService extends AbstractDiscoveryService
     private final Logger logger = LoggerFactory.getLogger(HueLightDiscoveryService.class);
 
     private static final int SEARCH_TIME = 10;
+    private static final int DISCOVERY_SCAN_DELAY = 0;
+
+    private ScheduledExecutorService scheduler;
 
     // @formatter:off
     private static final Map<String, @Nullable String> TYPE_TO_ZIGBEE_ID_MAP = Stream.of(
@@ -97,6 +103,7 @@ public class HueLightDiscoveryService extends AbstractDiscoveryService
     public HueLightDiscoveryService(HueBridgeHandler hueBridgeHandler) {
         super(SEARCH_TIME);
         this.hueBridgeHandler = hueBridgeHandler;
+        scheduler = ThreadPoolManager.getScheduledPool(BINDING_ID);
     }
 
     public void activate() {
@@ -121,20 +128,23 @@ public class HueLightDiscoveryService extends AbstractDiscoveryService
 
     @Override
     public void startScan() {
-        List<FullLight> lights = hueBridgeHandler.getFullLights();
-        for (FullLight l : lights) {
-            onLightAddedInternal(l);
-        }
-        List<FullSensor> sensors = hueBridgeHandler.getFullSensors();
-        for (FullSensor s : sensors) {
-            onSensorAddedInternal(s);
-        }
-        List<Scene> scenes = hueBridgeHandler.getScenes();
-        for (Scene s : scenes) {
-            onSceneAddedInternal(s);
-        }
-        // search for unpaired lights
-        hueBridgeHandler.startSearch();
+        Runnable command = () -> {
+            List<FullLight> lights = hueBridgeHandler.getFullLights();
+            for (FullLight l : lights) {
+                onLightAddedInternal(l);
+            }
+            List<FullSensor> sensors = hueBridgeHandler.getFullSensors();
+            for (FullSensor s : sensors) {
+                onSensorAddedInternal(s);
+            }
+            List<Scene> scenes = hueBridgeHandler.getScenes();
+            for (Scene s : scenes) {
+                onSceneAddedInternal(s);
+            }
+            // search for unpaired lights
+            hueBridgeHandler.startSearch();
+        };
+        scheduler.schedule(command, DISCOVERY_SCAN_DELAY, SECONDS);
     }
 
     @Override
