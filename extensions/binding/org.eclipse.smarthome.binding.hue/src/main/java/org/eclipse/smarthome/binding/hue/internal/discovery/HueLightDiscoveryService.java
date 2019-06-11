@@ -12,11 +12,10 @@
  */
 package org.eclipse.smarthome.binding.hue.internal.discovery;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.eclipse.smarthome.binding.hue.internal.HueBindingConstants.*;
 
 import java.util.AbstractMap.SimpleEntry;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ExecutorService;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -77,9 +76,8 @@ public class HueLightDiscoveryService extends AbstractDiscoveryService
     private final Logger logger = LoggerFactory.getLogger(HueLightDiscoveryService.class);
 
     private static final int SEARCH_TIME = 10;
-    private static final int DISCOVERY_SCAN_DELAY = 0;
 
-    private ScheduledExecutorService scheduler;
+    private ExecutorService scheduler;
 
     // @formatter:off
     private static final Map<String, @Nullable String> TYPE_TO_ZIGBEE_ID_MAP = Stream.of(
@@ -103,7 +101,7 @@ public class HueLightDiscoveryService extends AbstractDiscoveryService
     public HueLightDiscoveryService(HueBridgeHandler hueBridgeHandler) {
         super(SEARCH_TIME);
         this.hueBridgeHandler = hueBridgeHandler;
-        scheduler = ThreadPoolManager.getScheduledPool(BINDING_ID);
+        scheduler = ThreadPoolManager.getPool(BINDING_ID);
     }
 
     public void activate() {
@@ -128,7 +126,7 @@ public class HueLightDiscoveryService extends AbstractDiscoveryService
 
     @Override
     public void startScan() {
-        Runnable command = () -> {
+        scheduler.submit(() -> {
             List<FullLight> lights = hueBridgeHandler.getFullLights();
             for (FullLight l : lights) {
                 onLightAddedInternal(l);
@@ -143,8 +141,7 @@ public class HueLightDiscoveryService extends AbstractDiscoveryService
             }
             // search for unpaired lights
             hueBridgeHandler.startSearch();
-        };
-        scheduler.schedule(command, DISCOVERY_SCAN_DELAY, SECONDS);
+        });
     }
 
     @Override
