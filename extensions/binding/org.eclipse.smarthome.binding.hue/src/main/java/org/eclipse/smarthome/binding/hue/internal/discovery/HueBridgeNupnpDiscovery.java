@@ -59,7 +59,7 @@ public class HueBridgeNupnpDiscovery extends AbstractDiscoveryService {
 
     protected static final String PHOSCON_GW_INDICATOR = "FFFF";
 
-    private static final String[] DISCOVERY_URLS = {"https://www.meethue.com/api/nupnp", "http://dresden-light.appspot.com/discover"};
+    private static final String[] DISCOVERY_URLS = {"https://discovery.meethue.com", "http://dresden-light.appspot.com/discover"};
 
     protected static final String LABEL_PATTERN = "Philips hue (IP)";
 
