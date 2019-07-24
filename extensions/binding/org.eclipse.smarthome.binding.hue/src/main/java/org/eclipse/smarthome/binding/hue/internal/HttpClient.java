@@ -18,12 +18,26 @@ import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.ProtocolException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.security.PublicKey;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
 import java.util.LinkedList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
+
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+import javax.ws.rs.HttpMethod;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
@@ -41,6 +55,12 @@ public class HttpClient {
     private final Logger logger = LoggerFactory.getLogger(HttpClient.class);
     private final LinkedList<AsyncPutParameters> commandsQueue = new LinkedList<>();
     private @Nullable Future<?> job;
+    private PublicKey pub;
+    private final String ip;
+
+    public HttpClient(String ip) {
+        this.ip = ip;
+    }
 
     @SuppressWarnings({ "null", "unused" })
     private void executeCommands() {
@@ -75,15 +95,15 @@ public class HttpClient {
     }
 
     public Result get(String address) throws IOException {
-        return doNetwork(address, "GET");
+        return doNetwork(address, HttpMethod.GET);
     }
 
     public Result post(String address, String body) throws IOException {
-        return doNetwork(address, "POST", body);
+        return doNetwork(address, HttpMethod.POST, body);
     }
 
     public Result put(String address, String body) throws IOException {
-        return doNetwork(address, "PUT", body);
+        return doNetwork(address, HttpMethod.PUT, body);
     }
 
     public CompletableFuture<Result> putAsync(String address, String body, long delay,
@@ -105,7 +125,7 @@ public class HttpClient {
     }
 
     public Result delete(String address) throws IOException {
-        return doNetwork(address, "DELETE");
+        return doNetwork(address, HttpMethod.DELETE);
     }
 
     protected Result doNetwork(String address, String requestMethod) throws IOException {
@@ -113,30 +133,146 @@ public class HttpClient {
     }
 
     protected Result doNetwork(String address, String requestMethod, @Nullable String body) throws IOException {
-        HttpURLConnection conn = (HttpURLConnection) new URL(address).openConnection();
+        HttpURLConnection conn = null;
         try {
-            conn.setRequestMethod(requestMethod);
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setConnectTimeout(timeout);
-            conn.setReadTimeout(timeout);
-
-            if (body != null && !"".equals(body)) {
-                conn.setDoOutput(true);
-                try (Writer out = new OutputStreamWriter(conn.getOutputStream())) {
-                    out.write(body);
-                }
-            }
-
-            try (InputStream in = conn.getInputStream(); ByteArrayOutputStream result = new ByteArrayOutputStream()) {
-                byte[] buffer = new byte[1024];
-                int length;
-                while ((length = in.read(buffer)) != -1) {
-                    result.write(buffer, 0, length);
-                }
-                return new Result(result.toString(StandardCharsets.UTF_8.name()), conn.getResponseCode());
+            // first try to use https
+            conn = enrichConnection(doHttps(address), requestMethod);
+            return getResult(conn, body);
+        } catch(Exception httpsEx) {
+            logger.debug("hue bridge not reachable over https");
+            try {
+                // then try to use http
+                conn = enrichConnection(doHttp(address), requestMethod);
+                return getResult(conn, body);
+            } catch(Exception httpEx) {
+                logger.debug("hue bridge not reachable over http");
             }
         } finally {
-            conn.disconnect();
+            try {
+                // clean up connection
+                conn.disconnect();
+            } catch(NullPointerException e) {
+                // no connection to close
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Configure https connection
+     * 
+     * @param address relative url
+     * @return HttpsURLConnection
+     * @throws MalformedURLException
+     * @throws IOException
+     */
+    private HttpsURLConnection doHttps(String address) throws MalformedURLException, IOException {
+        HttpsURLConnection conn = (HttpsURLConnection) new URL("https://" + ip + ":443" + address).openConnection();
+
+        // trusting anything
+        TrustManager[] permitAll = new TrustManager[] {
+            new X509TrustManager() {
+                @Override
+                public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                    return null;
+                }
+
+                @Override
+                public void checkClientTrusted(java.security.cert.X509Certificate[] certs, String authType) {
+                }
+
+                @Override
+                public void checkServerTrusted(java.security.cert.X509Certificate[] certs, String authType) {
+                }
+            }
+        };
+
+        // verifying anything
+        HostnameVerifier hsv = new HostnameVerifier() {
+            @Override
+            public boolean verify(String ip, SSLSession ssls) {
+                try {
+                    X509Certificate x509c = (X509Certificate) ssls.getPeerCertificates()[0];
+                    PublicKey newPub = x509c.getPublicKey();
+                    if (pub != newPub) {
+                        // public key changed
+                        logger.warn("hue bridge certificate public key has changed");
+                    }
+                } catch(SSLPeerUnverifiedException e) {
+                    logger.warn("hue bridge certificate isn't valid");
+                }
+                // we can't use the default verification because the certificates identification
+                // hostname (hue mac address) isn't matching the specified host (hue ip address)
+                return true;
+            }
+        };
+
+        try {
+            SSLContext sc = SSLContext.getInstance("SSL");
+            sc.init(null, permitAll, new SecureRandom());
+            conn.setSSLSocketFactory(sc.getSocketFactory());
+        } catch(Exception e) {
+            logger.error("Failed configuring ssl socket connection!");
+            return null;
+        }
+        conn.setHostnameVerifier(hsv);
+        return conn;
+    }
+
+    /**
+     * Configure http connection
+     * 
+     * @param address relative url
+     * @return HttpURLConnection
+     * @throws MalformedURLException
+     * @throws IOException
+     */
+    private HttpURLConnection doHttp(String address) throws MalformedURLException, IOException {
+        return (HttpURLConnection) new URL("http://" + ip + address).openConnection();
+    }
+
+    /**
+     * Set connection params
+     * 
+     * @param conn connection
+     * @param requestMethod http request method
+     * @return HttpURLConnection
+     */
+    private HttpURLConnection enrichConnection(HttpURLConnection conn, String requestMethod) {
+        try {
+            conn.setRequestMethod(requestMethod);
+        } catch(ProtocolException e) {
+            logger.error("Use 'HttpMethod' to specify method!");
+        }
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setConnectTimeout(timeout);
+        conn.setReadTimeout(timeout);
+        return conn;
+    }
+
+    /**
+     * Send request and return result
+     * 
+     * @param conn connection
+     * @param body text for the request body
+     * @return Result
+     * @throws IOException
+     */
+    private Result getResult(HttpURLConnection conn, @Nullable String body) throws IOException {
+        if (body != null && !"".equals(body)) {
+            conn.setDoOutput(true);
+            try (Writer out = new OutputStreamWriter(conn.getOutputStream())) {
+                out.write(body);
+            }
+        }
+        try (InputStream in = conn.getInputStream(); ByteArrayOutputStream result = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[1024];
+            int length;
+            while ((length = in.read(buffer)) != -1) {
+                result.write(buffer, 0, length);
+            }
+            return new Result(result.toString(StandardCharsets.UTF_8.name()), conn.getResponseCode());
         }
     }
 
