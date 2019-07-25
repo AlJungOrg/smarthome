@@ -59,7 +59,7 @@ public class HueBridge {
     private @Nullable String username;
 
     private final Gson gson = new GsonBuilder().setDateFormat(DATE_FORMAT).create();
-    private HttpClient http = new HttpClient();
+    private HttpClient http;
     private final ScheduledExecutorService scheduler;
 
     @Nullable
@@ -73,6 +73,7 @@ public class HueBridge {
     public HueBridge(String ip, ScheduledExecutorService scheduler) {
         this.ip = ip;
         this.scheduler = scheduler;
+        this.http = new HttpClient(ip);
     }
 
     /**
@@ -88,6 +89,7 @@ public class HueBridge {
     public HueBridge(String ip, String username, ScheduledExecutorService scheduler) throws IOException, ApiException {
         this.ip = ip;
         this.scheduler = scheduler;
+        this.http = new HttpClient(ip);
         authenticate(username);
     }
 
@@ -811,7 +813,7 @@ public class HueBridge {
     private @Nullable ScheduleCommand handleCommandCallback(ScheduleCallback callback) throws ApiException {
         // Temporarily reroute requests to a fake HTTP client
         HttpClient realClient = http;
-        http = new HttpClient() {
+        http = new HttpClient(this.ip) {
             @Override
             protected Result doNetwork(String address, String requestMethod, @Nullable String body) throws IOException {
                 // GET requests cannot be scheduled, so will continue working normally for convenience
@@ -1061,7 +1063,7 @@ public class HueBridge {
     }
 
     private String getRelativeURL(String path) {
-        String relativeUrl = "http://" + ip + "/api";
+        String relativeUrl = "/api";
         if (username != null) {
             relativeUrl += "/" + enc(username);
         }

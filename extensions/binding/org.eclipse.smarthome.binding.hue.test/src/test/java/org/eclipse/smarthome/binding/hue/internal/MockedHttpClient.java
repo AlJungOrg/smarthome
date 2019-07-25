@@ -13,5 +13,7 @@
 package org.eclipse.smarthome.binding.hue.internal;
 
 public class MockedHttpClient extends HttpClient {
-
+    public MockedHttpClient() {
+        super("1.2.3.4");
+    }
 }
