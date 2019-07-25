@@ -24,6 +24,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.LinkedList;
 import java.util.concurrent.CompletableFuture;
@@ -55,7 +56,7 @@ public class HttpClient {
     private final Logger logger = LoggerFactory.getLogger(HttpClient.class);
     private final LinkedList<AsyncPutParameters> commandsQueue = new LinkedList<>();
     private @Nullable Future<?> job;
-    private PublicKey pub;
+    private @Nullable PublicKey pub;
     private final String ip;
 
     public HttpClient(String ip) {
@@ -148,15 +149,13 @@ public class HttpClient {
                 logger.debug("hue bridge not reachable over http");
             }
         } finally {
-            try {
+            if (conn != null) {
                 // clean up connection
                 conn.disconnect();
-            } catch(NullPointerException e) {
-                // no connection to close
             }
         }
 
-        return null;
+        return new Result("hue bridge not reachable", 500);
     }
 
     /**
@@ -173,31 +172,35 @@ public class HttpClient {
         // trusting anything
         TrustManager[] permitAll = new TrustManager[] {
             new X509TrustManager() {
+
                 @Override
                 public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-                    return null;
+                    return new X509Certificate[0];
                 }
 
                 @Override
-                public void checkClientTrusted(java.security.cert.X509Certificate[] certs, String authType) {
+                public void checkClientTrusted(X509Certificate @Nullable [] chain, @Nullable String authType) throws CertificateException {
                 }
 
                 @Override
-                public void checkServerTrusted(java.security.cert.X509Certificate[] certs, String authType) {
+                public void checkServerTrusted(X509Certificate @Nullable [] chain, @Nullable String authType) throws CertificateException {
                 }
             }
         };
 
         // verifying anything
         HostnameVerifier hsv = new HostnameVerifier() {
+
             @Override
-            public boolean verify(String ip, SSLSession ssls) {
+            public boolean verify(@Nullable String hostname, @Nullable SSLSession session) {
                 try {
-                    X509Certificate x509c = (X509Certificate) ssls.getPeerCertificates()[0];
-                    PublicKey newPub = x509c.getPublicKey();
-                    if (pub != newPub) {
-                        // public key changed
-                        logger.warn("hue bridge certificate public key has changed");
+                    if (session != null) {
+                        X509Certificate x509c = (X509Certificate) session.getPeerCertificates()[0];
+                        PublicKey newPub = x509c.getPublicKey();
+                        if (pub != null && pub != newPub) {
+                            // public key changed
+                            logger.warn("hue bridge certificate public key has changed");
+                        }
                     }
                 } catch(SSLPeerUnverifiedException e) {
                     logger.warn("hue bridge certificate isn't valid");
@@ -214,7 +217,6 @@ public class HttpClient {
             conn.setSSLSocketFactory(sc.getSocketFactory());
         } catch(Exception e) {
             logger.error("Failed configuring ssl socket connection!");
-            return null;
         }
         conn.setHostnameVerifier(hsv);
         return conn;
