@@ -93,29 +93,37 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
                 pollingLock.lock();
                 try {
                     // polls to see if the hue bridge is still connected and if not tries to reconnect
+                    String username = "invalid";
+                    if (hueBridge != null && hueBridge.getUsername() != null) {
+                        username = hueBridge.getUsername();
+                    }
+                    if (!isReachable(hueBridge.getIPAddress(), username)) {
+                        // not recoverable, just continue to poll till bridge reachable
+                        throw new Exception();
+                    }
                     if (!lastBridgeConnectionState) {
-                        lastBridgeConnectionState = tryResumeBridgeConnection();
+                        // initial bridge connection
+                        throw new UnauthorizedException();
                     }
-                    if (lastBridgeConnectionState) {
-                        doConnectedRun();
-                    }
+                    doConnectedRun();
                 } catch (UnauthorizedException | IllegalStateException e) {
-                    if (isReachable(hueBridge.getIPAddress())) {
-                        lastBridgeConnectionState = false;
-                        onNotAuthenticated();
+                    // username was not valid, let's try to get a valid one
+                    if (tryResumeBridgeConnection()) {
+                        lastBridgeConnectionState = true;
+                        doConnectedRun();
                     } else {
-                        if (lastBridgeConnectionState || thing.getStatus() == ThingStatus.INITIALIZING) {
-                            lastBridgeConnectionState = false;
-                            onConnectionLost();
-                        }
+                        lastBridgeConnectionState = false;
                     }
                 } catch (Exception e) {
                     if (hueBridge != null) {
-                        if (lastBridgeConnectionState) {
+                        // if we got a hue bridge the connection is lost
+                        if (lastBridgeConnectionState || thing.getStatus() == ThingStatus.INITIALIZING) {
                             logger.debug("Connection to Hue Bridge {} lost.", hueBridge.getIPAddress());
                             lastBridgeConnectionState = false;
                             onConnectionLost();
                         }
+                        // bridge was not connected previously
+                        handleBridgeNotReachable();
                     }
                 }
             } catch (Throwable t) {
@@ -127,14 +135,14 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
 
         protected abstract void doConnectedRun() throws IOException, ApiException;
 
-        private boolean isReachable(String ipAddress) {
+        private boolean isReachable(String ipAddress, String username) throws UnauthorizedException {
             try {
                 // note that InetAddress.isReachable is unreliable, see
                 // http://stackoverflow.com/questions/9922543/why-does-inetaddress-isreachable-return-false-when-i-can-ping-the-ip-address
                 // That's why we do an HTTP access instead
 
                 // If there is no connection, this line will fail
-                hueBridge.authenticate("invalid");
+                hueBridge.authenticate(username);
             } catch (IOException e) {
                 return false;
             } catch (ApiException e) {
@@ -144,7 +152,7 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
                     return false;
                 } else {
                     // this seems to be only an authentication issue
-                    return true;
+                    throw new UnauthorizedException(e.getMessage());
                 }
             }
             return true;
@@ -582,6 +590,12 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
             logger.warn("Unable to update configuration of Hue bridge.");
             logger.warn("Please configure the following user name manually: {}", userName);
         }
+    }
+
+    private void handleBridgeNotReachable() {
+        logger.warn("Not connected to Hue Bridge {}.", hueBridge.getIPAddress());
+        updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.OFFLINE.COMMUNICATION_ERROR,
+                "@text/offline.bridge-connection-lost");
     }
 
     private void handleAuthenticationFailure(Exception ex, String userName) {
