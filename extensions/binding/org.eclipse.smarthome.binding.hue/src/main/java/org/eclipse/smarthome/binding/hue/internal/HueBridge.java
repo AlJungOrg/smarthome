@@ -864,11 +864,12 @@ public class HueBridge {
 
     /**
      * Authenticate on the bridge as the specified user.
-     * This function verifies that the specified username is valid and will use
-     * it for subsequent requests if it is, otherwise an UnauthorizedException
-     * is thrown and the internal username is not changed.
+     * This function verifies that the specified username is valid, otherwise an
+     * UnauthorizedException is thrown. If the bridge is not reachable an
+     * IOException will be thrown.
      *
      * @param username username to authenticate
+     * @throws IOException thrown if the bridge is not reachable
      * @throws UnauthorizedException thrown if authentication failed
      */
     public void authenticate(String username) throws IOException, ApiException {
@@ -876,8 +877,7 @@ public class HueBridge {
             this.username = username;
             getLights();
         } catch (Exception e) {
-            this.username = null;
-            throw new UnauthorizedException(e.toString());
+            throw e;
         }
     }
 
