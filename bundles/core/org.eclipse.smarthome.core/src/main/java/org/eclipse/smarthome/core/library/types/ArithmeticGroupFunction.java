@@ -579,6 +579,14 @@ public interface ArithmeticGroupFunction extends GroupFunction {
         public State[] getParameters() {
             return new State[] { upperState, lowerState, upperLimit, lowerLimit, factor };
         }
+
+        public State getUpperLimit() {
+            return this.upperLimit;
+        }
+
+        public State getLowerLimit() {
+            return this.lowerLimit;
+        }
     }
 
 
