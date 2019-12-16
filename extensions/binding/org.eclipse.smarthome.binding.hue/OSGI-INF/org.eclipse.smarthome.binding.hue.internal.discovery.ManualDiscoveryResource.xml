@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scr:component xmlns:scr="http://www.osgi.org/xmlns/scr/v1.1.0" immediate="true" name="org.eclipse.smarthome.binding.hue.internal.discovery.ManualDiscoveryResource">
+    <implementation class="org.eclipse.smarthome.binding.hue.internal.discovery.ManualDiscoveryResource"/>
+    <service>
+        <provide interface="org.eclipse.smarthome.io.rest.RESTResource"/>
+        <provide interface="org.eclipse.smarthome.binding.hue.internal.discovery.ManualDiscoveryResource"/>
+    </service>
+    <reference bind="setHueBridgeNupnpDiscovery" cardinality="1..1" interface="org.eclipse.smarthome.binding.hue.internal.discovery.HueBridgeNupnpDiscovery" name="HueBridgeNupnpDiscovery" policy="static" unbind="unsetHueBridgeNupnpDiscovery"/>
+</scr:component>
