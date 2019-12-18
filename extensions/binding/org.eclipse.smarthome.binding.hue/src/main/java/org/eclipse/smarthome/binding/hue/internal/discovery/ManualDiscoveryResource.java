@@ -27,7 +27,6 @@ import org.eclipse.smarthome.config.discovery.DiscoveryResult;
 import org.eclipse.smarthome.core.auth.Role;
 import org.eclipse.smarthome.io.rest.JSONResponse;
 import org.eclipse.smarthome.io.rest.RESTResource;
-import org.osgi.service.component.annotations.Component;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -44,7 +43,6 @@ import io.swagger.annotations.ApiResponses;
 @Path(ManualDiscoveryResource.PATH_DISCOVERY)
 @RolesAllowed({ Role.ADMIN })
 @Api(value = ManualDiscoveryResource.PATH_DISCOVERY)
-@Component(service = { RESTResource.class, ManualDiscoveryResource.class })
 public class ManualDiscoveryResource implements RESTResource {
 
     /** The URI path to this resource */
@@ -61,14 +59,20 @@ public class ManualDiscoveryResource implements RESTResource {
     @ApiResponses(value = {
             @ApiResponse(code = 200, message = "OK", response = String.class) })
     public Response putDiscovery(@PathParam("ip") @ApiParam(value = "ip") final String ip) {
-        if (this.hueBridgeNupnpDiscovery == null) {
-            this.hueBridgeNupnpDiscovery = new HueBridgeNupnpDiscovery();
-        }
         DiscoveryResult bridge = this.hueBridgeNupnpDiscovery.addDiscovery(ip);
         if (bridge == null) {
             return JSONResponse.createErrorResponse(Status.NOT_FOUND, "Bridge not found");
         }
         return Response.ok(bridge).build();
+    }
+
+
+    protected void setHueBridgeNupnpDiscovery(HueBridgeNupnpDiscovery hueBridgeNupnpDiscovery) {
+        this.hueBridgeNupnpDiscovery = hueBridgeNupnpDiscovery;
+    }
+
+    protected void unsetHueBridgeNupnpDiscovery(HueBridgeNupnpDiscovery hueBridgeNupnpDiscovery) {
+        this.hueBridgeNupnpDiscovery = null;
     }
 
 }
