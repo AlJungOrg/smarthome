@@ -877,6 +877,7 @@ public class HueBridge {
             this.username = username;
             getLights();
         } catch (Exception e) {
+            this.username = null;
             throw e;
         }
     }
