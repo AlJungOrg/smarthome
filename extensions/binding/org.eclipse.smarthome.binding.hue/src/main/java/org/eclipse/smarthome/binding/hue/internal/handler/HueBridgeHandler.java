@@ -440,7 +440,12 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
         } else {
             if (hueBridge == null) {
                 try {
-                    hueBridge = new HueBridge(hueBridgeConfig.getIpAddress(), hueBridgeConfig.getUserName(), scheduler);
+                    String username = hueBridgeConfig.getUserName();
+                    if (username != null) {
+                        hueBridge = new HueBridge(hueBridgeConfig.getIpAddress(), username, scheduler);
+                    } else {
+                        hueBridge = new HueBridge(hueBridgeConfig.getIpAddress(), scheduler);
+                    }
                     hueBridge.setTimeout(5000);
                 } catch(IOException | ApiException e) {
                     // authenticating with the config params didn't work, try a new connection
