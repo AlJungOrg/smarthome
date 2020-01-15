@@ -420,6 +420,10 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
             sensorPollingJob.cancel(true);
             sensorPollingJob = null;
         }
+        if (scenePollingJob != null && !scenePollingJob.isCancelled()) {
+            scenePollingJob.cancel(true);
+            scenePollingJob = null;
+        }
         if (hueBridge != null) {
             hueBridge = null;
         }
@@ -435,8 +439,18 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
                     "@text/offline.conf-error-no-ip-address");
         } else {
             if (hueBridge == null) {
-                hueBridge = new HueBridge(hueBridgeConfig.getIpAddress(), scheduler);
-                hueBridge.setTimeout(5000);
+                try {
+                    String username = hueBridgeConfig.getUserName();
+                    if (username != null) {
+                        hueBridge = new HueBridge(hueBridgeConfig.getIpAddress(), username, scheduler);
+                    } else {
+                        hueBridge = new HueBridge(hueBridgeConfig.getIpAddress(), scheduler);
+                    }
+                    hueBridge.setTimeout(5000);
+                } catch(IOException | ApiException e) {
+                    // authenticating with the config params didn't work, try a new connection
+                    hueBridge = null;
+                }
             }
             onUpdate();
         }
