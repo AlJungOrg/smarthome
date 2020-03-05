@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scr:component xmlns:scr="http://www.osgi.org/xmlns/scr/v1.2.0" configuration-pid="discovery.hue" name="org.eclipse.smarthome.binding.hue.internal.discovery.HueBridgeNupnpDiscovery">
+   <service>
+      <provide interface="org.eclipse.smarthome.config.discovery.DiscoveryService"/>
+      <provide interface="org.eclipse.smarthome.binding.hue.internal.discovery.HueBridgeNupnpDiscovery"/>
+   </service>
+   <implementation class="org.eclipse.smarthome.binding.hue.internal.discovery.HueBridgeNupnpDiscovery"/>
+</scr:component>
