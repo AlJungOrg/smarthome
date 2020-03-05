@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scr:component xmlns:scr="http://www.osgi.org/xmlns/scr/v1.0.0" name="org.eclipse.smarthome.binding.hue.internal.discovery.HueBridgeDiscoveryParticipant">
+    <service>
+        <provide interface="org.eclipse.smarthome.config.discovery.upnp.UpnpDiscoveryParticipant"/>
+    </service>
+    <implementation class="org.eclipse.smarthome.binding.hue.internal.discovery.HueBridgeDiscoveryParticipant"/>
+</scr:component>
