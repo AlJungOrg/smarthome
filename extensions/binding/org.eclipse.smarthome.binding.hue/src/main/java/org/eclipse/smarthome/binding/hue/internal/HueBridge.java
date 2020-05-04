@@ -239,7 +239,7 @@ public class HueBridge {
         return sceneList;
     }
 
-    private Group getGroupById(List<Group> groups, String groupId)
+    private @Nullable Group getGroupById(List<Group> groups, String groupId)
     {
         if (groupId == null )
             return null;
