@@ -39,6 +39,7 @@ import org.eclipse.smarthome.binding.hue.internal.ConfigUpdate;
 import org.eclipse.smarthome.binding.hue.internal.FullConfig;
 import org.eclipse.smarthome.binding.hue.internal.FullLight;
 import org.eclipse.smarthome.binding.hue.internal.FullSensor;
+import org.eclipse.smarthome.binding.hue.internal.Group;
 import org.eclipse.smarthome.binding.hue.internal.HueBridge;
 import org.eclipse.smarthome.binding.hue.internal.HueConfigStatusMessage;
 import org.eclipse.smarthome.binding.hue.internal.Scene;
@@ -83,9 +84,8 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
     private static final int DEFAULT_POLLING_INTERVAL = 1; // in seconds
     private static final int DEFAULT_SENSOR_POLLING_INTERVAL = 500; // in milliseconds
     private static final int DEFAULT_SCENE_POLLING_INTERVAL = 10; // in seconds
-
     final ReentrantLock pollingLock = new ReentrantLock();
-
+    
     abstract class PollingRunnable implements Runnable {
         @Override
         public void run() {
@@ -192,9 +192,9 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
         protected void doConnectedRun() throws IOException, ApiException {
             Map<String, Scene> lastSceneStateCopy = new HashMap<>(lastSceneStates);
 
-            List<Scene> scenes;
-            scenes = hueBridge.getScenes();
-
+            List<Group> groups = hueBridge.getGroups();
+            List<Scene> scenes = hueBridge.getScenes(groups);
+            
             for (final Scene scene : scenes) {
                 final String sceneId = scene.getId();
                 if (lastSceneStateCopy.containsKey(sceneId)) {
@@ -205,7 +205,7 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
                     notifySceneStatusListeners(scene, STATE_ADDED);
                 }
             }
-
+            
             // check for removed scenes
             for (Entry<String, Scene> sceneEntry : lastSceneStateCopy.entrySet()) {
                 lastSceneStates.remove(sceneEntry.getKey());
@@ -218,7 +218,6 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
                     }
                 }
             }
-
         }
     };
 
@@ -241,7 +240,6 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
                     lastSensorStates.put(sensorId, sensor);
                     logger.debug("Hue sensor '{}' added.", sensorId);
                     notifySensorStatusListeners(sensor, STATE_ADDED);
-
                 }
             }
 
@@ -271,7 +269,7 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
             } else {
                 lights = hueBridge.getFullConfig().getLights();
             }
-
+            
             for (final FullLight fullLight : lights) {
                 final String lightId = fullLight.getId();
                 if (lastLightStateCopy.containsKey(lightId)) {
@@ -287,6 +285,7 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
                     logger.debug("Hue light '{}' added.", lightId);
                     notifyLightStatusListeners(fullLight, STATE_ADDED);
                 }
+                
             }
 
             // Check for removed lights
@@ -468,6 +467,8 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
                 }
                 pollingJob = scheduler.scheduleWithFixedDelay(pollingRunnable, 1, pollingInterval, TimeUnit.SECONDS);
             }
+            
+            
             if (sensorPollingJob == null || sensorPollingJob.isCancelled()) {
                 int sensorPollingInterval = DEFAULT_SENSOR_POLLING_INTERVAL;
                 if (hueBridgeConfig.getSensorPollingInterval() < 50) {
@@ -479,6 +480,8 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
                 sensorPollingJob = scheduler.scheduleWithFixedDelay(sensorPollingRunnable, 1, sensorPollingInterval,
                         TimeUnit.MILLISECONDS);
             }
+            
+            
             if (scenePollingJob == null || scenePollingJob.isCancelled()) {
                 int scenePollingInterval = DEFAULT_SCENE_POLLING_INTERVAL;
                 if (hueBridgeConfig.getScenePollingInterval() < 50) {
@@ -725,10 +728,17 @@ public class HueBridgeHandler extends ConfigStatusBridgeHandler implements HueCl
         });
         return ret != null ? ret : Collections.emptyList();
     }
-
-    public List<Scene> getScenes() {
+    
+    public List<Scene> getScenes(List<Group> groups) {
         List<Scene> ret = withReAuthentication("search for new scenes", () -> {
-            return hueBridge.getScenes();
+            return hueBridge.getScenes(groups);
+        });
+        return ret != null ? ret : Collections.emptyList();
+    }
+    
+    public List<Group> getGroups() {
+        List<Group> ret = withReAuthentication("search for new groups", () -> {
+            return hueBridge.getGroups();
         });
         return ret != null ? ret : Collections.emptyList();
     }

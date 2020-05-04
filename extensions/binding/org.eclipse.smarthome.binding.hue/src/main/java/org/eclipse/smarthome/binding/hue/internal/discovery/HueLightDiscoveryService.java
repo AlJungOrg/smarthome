@@ -30,6 +30,7 @@ import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.smarthome.binding.hue.internal.FullHueObject;
 import org.eclipse.smarthome.binding.hue.internal.FullLight;
 import org.eclipse.smarthome.binding.hue.internal.FullSensor;
+import org.eclipse.smarthome.binding.hue.internal.Group;
 import org.eclipse.smarthome.binding.hue.internal.HueBridge;
 import org.eclipse.smarthome.binding.hue.internal.Scene;
 import org.eclipse.smarthome.binding.hue.internal.handler.HueBridgeHandler;
@@ -135,7 +136,9 @@ public class HueLightDiscoveryService extends AbstractDiscoveryService
             for (FullSensor s : sensors) {
                 onSensorAddedInternal(s);
             }
-            List<Scene> scenes = hueBridgeHandler.getScenes();
+            
+            List<Group> groups = hueBridgeHandler.getGroups();
+            List<Scene> scenes = hueBridgeHandler.getScenes(groups);
             for (Scene s : scenes) {
                 onSceneAddedInternal(s);
             }
