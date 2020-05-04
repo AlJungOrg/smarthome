@@ -36,7 +36,6 @@ import org.eclipse.smarthome.binding.hue.internal.exceptions.GroupTableFullExcep
 import org.eclipse.smarthome.binding.hue.internal.exceptions.InvalidCommandException;
 import org.eclipse.smarthome.binding.hue.internal.exceptions.LinkButtonException;
 import org.eclipse.smarthome.binding.hue.internal.exceptions.UnauthorizedException;
-
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
@@ -221,28 +220,39 @@ public class HueBridge {
 
     }
     
-    public List<Scene> getScenes() throws IOException, ApiException {
+    public List<Scene> getScenes(List<Group> groups) throws IOException, ApiException {
         requireAuthentication();
-
         Result result = http.get(getRelativeURL("scenes"));
-
         Map<String, Scene> sceneMap = safeFromJson(result.getBody(), Scene.GSON_TYPE);
         ArrayList<Scene> sceneList = new ArrayList<>();
-
         for (String id : sceneMap.keySet()) {
             Scene scene = sceneMap.get(id);
             scene.setId(id);
             // we need the group config as well, because we want to display the room name for the scenes
-            FullGroup group = getGroupAttributes(scene.getGroup());
+            Group group = getGroupById(groups, scene.getGroup());
+                      
             if (group != null) {
                 scene.setRoom(group.getName());
                 sceneList.add(scene);
             }
         }
-
         return sceneList;
     }
 
+    private @Nullable Group getGroupById(List<Group> groups, String groupId)
+    {
+        if (groupId == null )
+            return null;
+        
+        for (Group group : groups) {
+            if ( groupId.equals(group.getId()) ) {
+                return group;
+            }
+        }
+        return null;
+    }
+    
+    
     /**
      * Returns the last time a search for new lights was started.
      * If a search is currently running, the current time will be
