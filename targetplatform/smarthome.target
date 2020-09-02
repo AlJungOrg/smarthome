@@ -137,7 +137,7 @@
 <unit id="org.eclipse.soda.dk.comm.armv6hf" version="0.0.0"/>
 <unit id="org.eclipse.soda.dk.comm.x86_64" version="0.0.0"/>
 <unit id="org.eclipse.paho.client.mqttv3" version="0.0.0"/>
-<repository location="http://eclipse.github.io/smarthome/third-party/target/repository"/>
+<repository location="http://eclipse-archived.github.io/smarthome/third-party/target/repository"/>
 </location>
 <location includeAllPlatforms="false" includeConfigurePhase="false" includeMode="planner" includeSource="true" type="InstallableUnit">
 <unit id="org.jmdns.feature.feature.group" version="0.0.0"/>
